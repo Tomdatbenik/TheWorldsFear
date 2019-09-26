@@ -20,7 +20,7 @@ public class Hazard : MonoBehaviour
     {
         if (collision.gameObject.tag == "Player")
         {
-            Destroy(collision.gameObject, .5f);
+            Destroy(collision.gameObject);
         }
     }
 
