@@ -6,25 +6,38 @@ public class PlayerMovement : MonoBehaviour
 {
 
     public float Movementspeed = 5f;
-
+    private float ms;
     public Rigidbody2D rb;
     public Animator animator;
     private bool move = true;
 
     private Vector2 movement;
 
+    private void Start()
+    {
+        ms = Movementspeed;
+    }
+
     // Update is called once per frame
     void Update()
     {
         if (move)
         {
-            Movementspeed = 5;
+            Movementspeed = ms;
             movement.x = Input.GetAxis("Horizontal");
             movement.y = Input.GetAxis("Vertical");
         }
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
             Movementspeed = 2.5f;
+            if (movement.x == 0 && movement.y == 0)
+            {
+                move = false;
+            }
+            else
+            {
+                Movementspeed = ms/2;
+            }
         }
         if (Input.GetKeyUp(KeyCode.Mouse0))
         {
