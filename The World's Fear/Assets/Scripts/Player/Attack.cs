@@ -5,6 +5,7 @@ using UnityEngine;
 public class Attack : MonoBehaviour
 {
     Vector2 direction;
+    Vector2 storeddirection;
     float x;
     float y;
     public Animator animator;
@@ -18,17 +19,19 @@ public class Attack : MonoBehaviour
         {
             direction.x = Input.GetAxisRaw("Horizontal");
             direction.y = Input.GetAxisRaw("Vertical");
+            if (Input.GetKey(KeyCode.Mouse0) && direction.x !=0 && direction.y == 0)
+            {
+                storeddirection = direction;
+            }
         }
-        x = direction.x;
-        y = direction.y;
+        
         if (Input.GetKey(KeyCode.Mouse0))
         {
             attack = true;
         }
         animator.SetBool("Attack", attack);
-        animator.SetFloat("Attack Horizontal", x);
-        animator.SetFloat("Attack Vertical", y);
-        Debug.Log(new Vector2(x,y));
+        animator.SetFloat("Attack Horizontal", storeddirection.x);
+        animator.SetFloat("Attack Vertical", storeddirection.y);
     }
 
     private void FixedUpdate()

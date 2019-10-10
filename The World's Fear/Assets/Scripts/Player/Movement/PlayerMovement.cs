@@ -24,8 +24,15 @@ public class PlayerMovement : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
-            move = false;
-            Movementspeed = 2.5f;
+
+            if (movement.x == 0 && movement.y == 0)
+            {
+                move = false;
+            }
+            else
+            {
+                Movementspeed = 2.5f;
+            }
         }
         if (Input.GetKeyUp(KeyCode.Mouse0))
         {
