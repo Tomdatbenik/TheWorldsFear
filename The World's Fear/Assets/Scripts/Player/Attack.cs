@@ -15,23 +15,18 @@ public class Attack : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (attack == false)
-        {
-            direction.x = Input.GetAxisRaw("Horizontal");
-            direction.y = Input.GetAxisRaw("Vertical");
-            if (Input.GetKey(KeyCode.Mouse0) && direction.x !=0 && direction.y == 0)
-            {
-                storeddirection = direction;
-            }
-        }
         
+        direction.x = Input.GetAxisRaw("Horizontal");
+        direction.y = Input.GetAxisRaw("Vertical");
+        
+
         if (Input.GetKey(KeyCode.Mouse0))
         {
             attack = true;
         }
         animator.SetBool("Attack", attack);
-        animator.SetFloat("Attack Horizontal", storeddirection.x);
-        animator.SetFloat("Attack Vertical", storeddirection.y);
+        animator.SetFloat("Attack Horizontal", direction.x);
+        animator.SetFloat("Attack Vertical", direction.y);
     }
 
     private void FixedUpdate()
