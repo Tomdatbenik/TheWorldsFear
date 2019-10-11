@@ -533,6 +533,7 @@ GameObject:
   - component: {fileID: 681034414}
   - component: {fileID: 681034415}
   - component: {fileID: 681034416}
+  - component: {fileID: 681034417}
   m_Layer: 0
   m_Name: Hero
   m_TagString: Player
@@ -697,6 +698,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 681034415}
+--- !u!114 &681034417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 681034409}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d31138bb06aaf3e4aa72b31c0ea967ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1382892071
 GameObject:
   m_ObjectHideFlags: 0
@@ -1017,6 +1030,7 @@ GameObject:
   - component: {fileID: 1945942099}
   - component: {fileID: 1945942098}
   - component: {fileID: 1945942097}
+  - component: {fileID: 1945942101}
   m_Layer: 0
   m_Name: Spider
   m_TagString: Enemie
@@ -1123,6 +1137,32 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 8
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!61 &1945942101
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1945942096}
+  m_Enabled: 1
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_UsedByComposite: 0
+  m_Offset: {x: -0.0686605, y: -0.014705181}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.5}
+    oldSize: {x: 2, y: 2}
+    newSize: {x: 16, y: 16}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 0
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  serializedVersion: 2
+  m_Size: {x: 1.3722463, y: 1.0098433}
+  m_EdgeRadius: 0
 --- !u!1 &1968832831
 GameObject:
   m_ObjectHideFlags: 0
@@ -1135,7 +1175,7 @@ GameObject:
   - component: {fileID: 1968832835}
   - component: {fileID: 1968832834}
   - component: {fileID: 1968832833}
-  m_Layer: 0
+  m_Layer: 8
   m_Name: Treant
   m_TagString: Enemie
   m_Icon: {fileID: 0}
@@ -1226,7 +1266,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 1
   m_Sprite: {fileID: 21300000, guid: 06a287cc97cb64df8a11af10f2352365, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
