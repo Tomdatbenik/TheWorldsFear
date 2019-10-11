@@ -5,8 +5,7 @@ using UnityEngine;
 public class PlayerMovement : MonoBehaviour
 {
 
-    public float Movementspeed = 5f;
-    private float ms;
+    public Speed speed;
     public Rigidbody2D rb;
     public Animator animator;
     private bool move = true;
@@ -15,7 +14,7 @@ public class PlayerMovement : MonoBehaviour
 
     private void Start()
     {
-        ms = Movementspeed;
+
     }
 
     // Update is called once per frame
@@ -23,17 +22,17 @@ public class PlayerMovement : MonoBehaviour
     {
         if (move)
         {
-            Movementspeed = ms;
             movement.x = Input.GetAxis("Horizontal");
             movement.y = Input.GetAxis("Vertical");
         }
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
-            Movementspeed = 2.5f;
+            speed.DecreaseSpeed(speed.GetSpeed()/2);
         }
         if (Input.GetKeyUp(KeyCode.Mouse0))
         {
             move = true;
+            speed.RestoreBackToInit();
         }
 
         animator.SetFloat("Horizontal", movement.x);
@@ -43,7 +42,8 @@ public class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        rb.MovePosition(rb.position + movement * Movementspeed * Time.fixedDeltaTime);
+        Debug.Log(speed.GetSpeed());
+        rb.MovePosition(rb.position + movement * speed.GetSpeed() * Time.fixedDeltaTime);
     }
 
 }
