@@ -533,6 +533,9 @@ GameObject:
   - component: {fileID: 681034414}
   - component: {fileID: 681034415}
   - component: {fileID: 681034416}
+  - component: {fileID: 681034419}
+  - component: {fileID: 681034418}
+  - component: {fileID: 681034417}
   m_Layer: 0
   m_Name: Hero
   m_TagString: Player
@@ -578,7 +581,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aea22c8220a38db4a990f03c2ef5c9d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Movementspeed: 10
+  speed: {fileID: 681034417}
   rb: {fileID: 681034414}
   animator: {fileID: 681034415}
 --- !u!212 &681034412
@@ -697,6 +700,46 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 681034415}
+--- !u!114 &681034417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 681034409}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e755489e0c6e3f54bbeb66cf09f9a524, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SpeedPoints: 5
+  InitSpeed: 0
+--- !u!114 &681034418
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 681034409}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 423772e759cdf514abbb09ee44fe87b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  DefencePoints: 5
+--- !u!114 &681034419
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 681034409}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 196b292771d34d345a714ff954e5d660, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Strength: 5
 --- !u!1 &1382892071
 GameObject:
   m_ObjectHideFlags: 0
@@ -1226,7 +1269,7 @@ SpriteRenderer:
   m_LightmapParameters: {fileID: 0}
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 9999
   m_Sprite: {fileID: 21300000, guid: 06a287cc97cb64df8a11af10f2352365, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
