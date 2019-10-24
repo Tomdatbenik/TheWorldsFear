@@ -12,6 +12,8 @@ public class PlayerMovement : MonoBehaviour
 
     private Vector2 movement;
 
+    public Joystick joystick;
+
     private void Start()
     {
 
@@ -22,8 +24,8 @@ public class PlayerMovement : MonoBehaviour
     {
         if (move)
         {
-            movement.x = Input.GetAxis("Horizontal");
-            movement.y = Input.GetAxis("Vertical");
+            movement.x = joystick.Direction.x;
+            movement.y = joystick.Direction.y;
         }
         if (Input.GetKeyDown(KeyCode.Mouse0))
         {
