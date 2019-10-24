@@ -15,8 +15,8 @@ TagManager:
   - 
   - 
   - BOIS
-  - 
-  - 
+  - Hero
+  - Background
   - 
   - 
   - 
@@ -39,8 +39,14 @@ TagManager:
   - 
   - 
   m_SortingLayers:
+  - name: Hero
+    uniqueID: 2807018881
+    locked: 0
   - name: Bois
     uniqueID: 541144443
+    locked: 0
+  - name: Monsters
+    uniqueID: 2520649085
     locked: 0
   - name: Default
     uniqueID: 0
