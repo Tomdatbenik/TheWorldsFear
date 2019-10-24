@@ -14,12 +14,12 @@ TagManager:
   - UI
   - 
   - 
-  - BOIS
-  - Hero
+  - Boss
+  - Vegitation
+  - Monsters
+  - Decorating
   - Background
-  - 
-  - 
-  - 
+  - Hero
   - 
   - 
   - 
@@ -39,15 +39,24 @@ TagManager:
   - 
   - 
   m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  - name: Background
+    uniqueID: 1832259147
+    locked: 0
+  - name: Vegitation
+    uniqueID: 2599358453
+    locked: 0
   - name: Hero
     uniqueID: 2807018881
     locked: 0
-  - name: Bois
+  - name: Boss
     uniqueID: 541144443
     locked: 0
   - name: Monsters
     uniqueID: 2520649085
     locked: 0
-  - name: Default
-    uniqueID: 0
+  - name: Decorating
+    uniqueID: 3330746545
     locked: 0
