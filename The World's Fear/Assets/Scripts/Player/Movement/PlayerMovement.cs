@@ -42,7 +42,6 @@ public class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        Debug.Log(speed.GetSpeed());
         rb.MovePosition(rb.position + movement * speed.GetSpeed() * Time.fixedDeltaTime);
     }
 
