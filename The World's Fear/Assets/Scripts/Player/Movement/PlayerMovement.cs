@@ -32,7 +32,7 @@ public class PlayerMovement : MonoBehaviour
         if (Input.GetKeyUp(KeyCode.Mouse0))
         {
             move = true;
-            speed.RestoreBackToInit();
+            speed.ResetSpeed();
         }
 
         animator.SetFloat("Horizontal", movement.x);

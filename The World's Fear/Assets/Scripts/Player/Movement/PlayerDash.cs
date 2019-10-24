@@ -4,52 +4,49 @@ using UnityEngine;
 
 public class PlayerDash : MonoBehaviour
 {
-    private Vector2 movement;
-    public int dashspeed = 100;
+    private PlayerMovement playermovementscript;
 
-    private float coolDowntime = 5f;
-    private float nextCastTime;
-    private float dashDuration = 0.5f;
-    private float dashStopTime;
+    private int DashDuration;
+    public float Dashspeed = 20;
 
-    private Rigidbody2D rb;
-    // Start is called before the first frame update
-    void Start()
+    private bool dash = false;
+
+    private void Start()
     {
-        rb = gameObject.GetComponent<Rigidbody2D>();
+        playermovementscript = gameObject.GetComponent<PlayerMovement>();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        //when you're able to dash
-        if (Time.time > nextCastTime)
+
+        if (Input.GetKeyDown(KeyCode.RightShift) && !dash)
         {
-            movement.x = Input.GetAxis("Horizontal");
-            movement.y = Input.GetAxis("Vertical");
-            if (Input.GetKeyDown(KeyCode.LeftShift))
-            {
-                Debug.Log("dash");
-                //set timers for the cooldown and the dash duration
-                nextCastTime = Time.time + coolDowntime;
-                dashStopTime = Time.time + dashDuration;
-            }
-        }
-        else
-        {
-            if (Input.GetKeyDown(KeyCode.LeftShift))
-            {
-                Debug.Log("recharge");
-            }
+            DashDuration = 5;
+            Dash();
         }
     }
 
     private void FixedUpdate()
     {
-        if(Time.time <= dashStopTime)
+        //if dash is activated
+        if (dash)
         {
-            Debug.Log("test");
-            rb.MovePosition(movement * dashspeed * Time.deltaTime);
+            //and the dash timer is still going
+            if(DashDuration != 0)
+            {
+                DashDuration--;
+                playermovementscript.speed.SetSpeed(Dashspeed);
+            }
+            else
+            {
+                dash = false;
+                playermovementscript.speed.ResetSpeed();
+            }
         }
+    }
+
+    public void Dash()
+    {
+        dash = true;
     }
 }

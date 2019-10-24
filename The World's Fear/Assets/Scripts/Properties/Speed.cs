@@ -22,12 +22,17 @@ public class Speed : MonoBehaviour
         this.SpeedPoints += sp;
     }
 
+    public void SetSpeed(float sp)
+    {
+        this.SpeedPoints = sp;
+    }
+
     public void DecreaseSpeed(float sp)
     {
         this.SpeedPoints -= sp;
     }
 
-    public void RestoreBackToInit()
+    public void ResetSpeed()
     {
         SpeedPoints = InitSpeed;
     }
