@@ -1195,7 +1195,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fc145e2a872751b4098ffa0f39fa0cb6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Dashspeed: 30
+  Dashspeed: 25
 --- !u!114 &681034418
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4465,6 +4465,7 @@ GameObject:
   - component: {fileID: 1968832835}
   - component: {fileID: 1968832834}
   - component: {fileID: 1968832833}
+  - component: {fileID: 1968832832}
   m_Layer: 8
   m_Name: Treant
   m_TagString: Enemie
@@ -4472,6 +4473,19 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &1968832832
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1968832831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93ce6f64e4d34154b8ca0fbe59619a2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Fireball: {fileID: 0}
 --- !u!61 &1968832833
 BoxCollider2D:
   m_ObjectHideFlags: 0

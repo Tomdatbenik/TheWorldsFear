@@ -27,15 +27,15 @@ public class PlayerMovement : MonoBehaviour
             movement.x = joystick.Direction.x;
             movement.y = joystick.Direction.y;
         }
-        if (Input.GetKeyDown(KeyCode.Mouse0))
-        {
-            speed.DecreaseSpeed(speed.GetSpeed()/2);
-        }
-        if (Input.GetKeyUp(KeyCode.Mouse0))
-        {
-            move = true;
-            speed.ResetSpeed();
-        }
+        //if (Input.GetKeyDown(KeyCode.Mouse0))
+        //{
+        //    speed.DecreaseSpeed(speed.GetSpeed()/2);
+        //}
+        //if (Input.GetKeyUp(KeyCode.Mouse0))
+        //{
+        //    move = true;
+        //    speed.ResetSpeed();
+        //}
 
         animator.SetFloat("Horizontal", movement.x);
         animator.SetFloat("Vertical", movement.y);

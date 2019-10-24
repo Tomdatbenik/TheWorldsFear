@@ -4,30 +4,25 @@ using UnityEngine;
 
 public class BossFireAttack : MonoBehaviour
 {
+    //PLAYFIELD:
     //left top x = -19 y = 26
     //right down x = 19, y = 6
-    private Random xpicker;
-    private Random ypicker;
-    int x = Random.Range(-19, 26);
-    int y = Random.Range(6, 19);
+    public GameObject Fireball;
+    
+    
+    private Vector2 Firebal1;
+    private Vector2 Firebal2;
+    private Vector2 Firebal3;
 
-    void PickCoordinate()
+    Vector2 PickCoordinate()
     {
-        //int x = Random.Range(-19, 26);
-        //int y = Random.Range(6, 19);
+        Vector2 firebal = new Vector2(Random.Range(-19, 26), Random.Range(6, 19));
+        return firebal;
     }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            Debug.Log(x);
-            Debug.Log(y);
-        }
-    }
-
+    
     void ShootFireball()
     {
-
+        Fireball.transform.position = PickCoordinate();
+        Instantiate(Fireball);
     }
 }
