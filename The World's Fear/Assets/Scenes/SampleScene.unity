@@ -753,7 +753,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   HealthPoints: 0
-  defence: {fileID: 0}
+  defence: {fileID: 681034419}
 --- !u!114 &681034421
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1089,6 +1089,10 @@ GameObject:
   - component: {fileID: 1945942097}
   - component: {fileID: 1945942101}
   - component: {fileID: 1945942102}
+  - component: {fileID: 1945942103}
+  - component: {fileID: 1945942106}
+  - component: {fileID: 1945942105}
+  - component: {fileID: 1945942104}
   m_Layer: 0
   m_Name: Spider
   m_TagString: Enemie
@@ -1131,7 +1135,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Target: {fileID: 681034413}
   rb: {fileID: 1945942097}
-  movementspeed: 1
+  speed: {fileID: 1945942103}
 --- !u!212 &1945942099
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -1240,6 +1244,59 @@ Animator:
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorControllerStateOnDisable: 0
+--- !u!114 &1945942103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1945942096}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e755489e0c6e3f54bbeb66cf09f9a524, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  SpeedPoints: 2.5
+--- !u!114 &1945942104
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1945942096}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5c558bae361ffca46903e6576bf5094a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  HealthPoints: 0
+  defence: {fileID: 1945942105}
+--- !u!114 &1945942105
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1945942096}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 423772e759cdf514abbb09ee44fe87b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  DefencePoints: 0
+--- !u!114 &1945942106
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1945942096}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 196b292771d34d345a714ff954e5d660, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Strength: 0
 --- !u!1 &1968832831
 GameObject:
   m_ObjectHideFlags: 0
