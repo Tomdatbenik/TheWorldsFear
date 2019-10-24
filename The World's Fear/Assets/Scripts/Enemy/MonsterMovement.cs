@@ -7,7 +7,7 @@ public class MonsterMovement : MonoBehaviour
     // Start is called before the first frame update
     public Transform Target;
     public Rigidbody2D rb;
-    public float movementspeed = 5f;
+    public Speed speed;
     private Vector2 movement;
 
     public void Update()
@@ -27,6 +27,6 @@ public class MonsterMovement : MonoBehaviour
 
     void moveCharacter(Vector2 direction)
     {
-        rb.MovePosition((Vector2)transform.position + (direction * movementspeed * Time.deltaTime));
+        rb.MovePosition((Vector2)transform.position + (direction * speed.GetSpeed() * Time.deltaTime));
     }
 }
