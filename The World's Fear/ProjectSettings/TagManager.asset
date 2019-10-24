@@ -15,7 +15,7 @@ TagManager:
   - 
   - 
   - Boss
-  - 
+  - Vegitation
   - Monsters
   - Decorating
   - Background
@@ -44,6 +44,9 @@ TagManager:
     locked: 0
   - name: Background
     uniqueID: 1832259147
+    locked: 0
+  - name: Vegitation
+    uniqueID: 2599358453
     locked: 0
   - name: Hero
     uniqueID: 2807018881
