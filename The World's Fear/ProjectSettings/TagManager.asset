@@ -15,11 +15,11 @@ TagManager:
   - 
   - 
   - Boss
-  - Hero
+  - 
   - Monsters
-  - 
+  - Decorating
   - Background
-  - 
+  - Hero
   - 
   - 
   - 
@@ -53,4 +53,7 @@ TagManager:
     locked: 0
   - name: Monsters
     uniqueID: 2520649085
+    locked: 0
+  - name: Decorating
+    uniqueID: 3330746545
     locked: 0
