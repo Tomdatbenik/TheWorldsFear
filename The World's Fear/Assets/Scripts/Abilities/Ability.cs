@@ -9,7 +9,7 @@ public class Ability
     public bool isCasted = false;
     public bool canCast = true;
 
-    public Ability(int cooldowntime)
+    public void SetCooldownTime(int cooldowntime)
     {
         Cooldowntime = cooldowntime;
     }
@@ -19,7 +19,6 @@ public class Ability
         Counter++;
         if(Counter >= Cooldowntime && !canCast)
         {
-            Debug.Log("recharged");
             isCasted = false;
             canCast = true;
             Counter = 0;
