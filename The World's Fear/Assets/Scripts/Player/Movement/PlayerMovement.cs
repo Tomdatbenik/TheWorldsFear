@@ -26,6 +26,9 @@ public class PlayerMovement : MonoBehaviour
         {
             movement.x = joystick.Direction.x;
             movement.y = joystick.Direction.y;
+
+            //movement.x = Input.GetAxis("Horizontal");
+            //movement.y = Input.GetAxis("Vertical");
         }
         //if (Input.GetKeyDown(KeyCode.Mouse0))
         //{
