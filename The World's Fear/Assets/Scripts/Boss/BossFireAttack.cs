@@ -8,21 +8,35 @@ public class BossFireAttack : MonoBehaviour
     //left top x = -19 y = 26
     //right down x = 19, y = 6
     public GameObject Fireball;
-    
-    
-    private Vector2 Firebal1;
-    private Vector2 Firebal2;
-    private Vector2 Firebal3;
+    private Vector2 Position;
 
-    Vector2 PickCoordinate()
+
+    List<Vector2> PickCoordinates()
     {
-        Vector2 firebal = new Vector2(Random.Range(-19, 26), Random.Range(6, 19));
-        return firebal;
+        List<Vector2> Fireballs = new List<Vector2>();
+        for (int i = 0; i < 3; i++)
+        {
+            Vector2 pos = new Vector2(Random.Range(-19, 19), Random.Range(6, 29));
+            Fireballs.Add(pos);
+        }
+        return Fireballs;
     }
     
-    void ShootFireball()
+    void ShootFireball(List<Vector2> fireballs)
     {
-        Fireball.transform.position = PickCoordinate();
-        Instantiate(Fireball);
+        for(int i = 0; i < 3; i++)
+        {
+            GameObject fireball = Fireball;
+            fireball.transform.position = fireballs[i]; 
+            Instantiate(fireball);
+        }
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            ShootFireball(PickCoordinates());
+        }
     }
 }
