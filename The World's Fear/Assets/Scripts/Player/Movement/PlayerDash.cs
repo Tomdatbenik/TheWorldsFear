@@ -6,14 +6,17 @@ public class PlayerDash : MonoBehaviour
 {
     private PlayerMovement playermovementscript;
 
-    private int DashDuration;
+    public int DashDuration;
     public float Dashspeed = 20;
+
+    private int duration;
 
     private bool dash = false;
 
     private void Start()
     {
         playermovementscript = gameObject.GetComponent<PlayerMovement>();
+        duration = DashDuration;
     }
 
     private void Update()
@@ -21,7 +24,6 @@ public class PlayerDash : MonoBehaviour
         //PC input
         if (Input.GetKeyDown(KeyCode.RightShift) && !dash)
         {
-            DashDuration = 5;
             Dash();
         }
     }
@@ -31,16 +33,17 @@ public class PlayerDash : MonoBehaviour
         //if dash is activated
         if (dash)
         {
-            Debug.Log("Dash");
+             Debug.Log("Dash");
             //and the dash timer is still going
-            if(DashDuration != 0)
+            if(duration != 0)
             {
-                DashDuration--;
+                duration--;
                 playermovementscript.speed.SetSpeed(Dashspeed);
             }
             else
             {
                 dash = false;
+                duration = DashDuration;
                 playermovementscript.speed.ResetSpeed();
             }
         }
@@ -51,7 +54,6 @@ public class PlayerDash : MonoBehaviour
         //Mobile input
         if (!dash)
         {
-            DashDuration = 5;
             dash = true;
         }
     }
