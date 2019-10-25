@@ -21,7 +21,7 @@ TagManager:
   - Decorating
   - Background
   - Hero
-  - 
+  - Walls
   - 
   - 
   - 
@@ -42,6 +42,9 @@ TagManager:
   m_SortingLayers:
   - name: Default
     uniqueID: 0
+    locked: 0
+  - name: Walls
+    uniqueID: 2279355711
     locked: 0
   - name: Background
     uniqueID: 1832259147
