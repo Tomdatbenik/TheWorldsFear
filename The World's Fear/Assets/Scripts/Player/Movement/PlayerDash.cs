@@ -18,7 +18,7 @@ public class PlayerDash : MonoBehaviour
 
     private void Update()
     {
-
+        //PC input
         if (Input.GetKeyDown(KeyCode.RightShift) && !dash)
         {
             DashDuration = 5;
@@ -31,6 +31,7 @@ public class PlayerDash : MonoBehaviour
         //if dash is activated
         if (dash)
         {
+            Debug.Log("Dash");
             //and the dash timer is still going
             if(DashDuration != 0)
             {
@@ -47,6 +48,11 @@ public class PlayerDash : MonoBehaviour
 
     public void Dash()
     {
-        dash = true;
+        //Mobile input
+        if (!dash)
+        {
+            DashDuration = 5;
+            dash = true;
+        }
     }
 }
