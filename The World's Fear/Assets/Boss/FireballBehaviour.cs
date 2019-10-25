@@ -7,26 +7,18 @@ public class FireballBehaviour : MonoBehaviour
     public GameObject Firebal;
     public int fireballspeed = 10;
     public GameObject Fireballshadow;
+    private bool hitground = false;
     private int stayduration = 500;
-    public GameObject FireImpact;
-    
-
-    private void Start()
-    {
-        
-    }
 
     private void FixedUpdate()
     {
-        if (Firebal.transform.localPosition.y >= 0.4f)
+        if (!hitground)
         {
             Firebal.transform.position = Firebal.transform.position + new Vector3(0f, -1f * fireballspeed * Time.fixedDeltaTime);
         }
         else
         {
             stayduration--;
-            
-            Firebal.SetActive(false);
         }
         if(stayduration == 0)
         {
@@ -34,6 +26,12 @@ public class FireballBehaviour : MonoBehaviour
         }
     }
 
-    
+    public void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.tag == "Fireball")
+        {
+            hitground = true;
+        }
+    }
 
 }
