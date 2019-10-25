@@ -52,12 +52,12 @@ TagManager:
   - name: Hero
     uniqueID: 2807018881
     locked: 0
-  - name: Boss
-    uniqueID: 541144443
-    locked: 0
   - name: Monsters
     uniqueID: 2520649085
     locked: 0
   - name: Decorating
     uniqueID: 3330746545
+    locked: 0
+  - name: Boss
+    uniqueID: 541144443
     locked: 0
