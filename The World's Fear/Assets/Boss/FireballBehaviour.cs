@@ -9,11 +9,12 @@ public class FireballBehaviour : MonoBehaviour
     public GameObject Fireballshadow;
     private int stayduration = 500;
     public GameObject FireImpact;
+    public Animator Fireimpactanim;
     
 
     private void Start()
     {
-        
+        FireImpact.SetActive(false);
     }
 
     private void FixedUpdate()
@@ -26,8 +27,9 @@ public class FireballBehaviour : MonoBehaviour
         {
             stayduration--;
             Firebal.SetActive(false);
+            FireImpact.SetActive(true);
         }
-        if(stayduration == 0)
+        if (stayduration == 0)
         {
             Destroy(gameObject);
         }
