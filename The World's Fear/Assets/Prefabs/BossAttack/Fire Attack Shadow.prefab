@@ -157,7 +157,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3626427239110438714}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -19, y: 6, z: 0}
+  m_LocalPosition: {x: -19, y: 17, z: 0}
   m_LocalScale: {x: 1, y: 3, z: 1}
   m_Children:
   - {fileID: 3626427239008783788}
@@ -256,6 +256,7 @@ MonoBehaviour:
   fireballspeed: 10
   Fireballshadow: {fileID: 3626427239110438714}
   FireImpact: {fileID: 7499079084674151493}
+  Fireimpactanim: {fileID: 0}
 --- !u!50 &3626427239110438711
 Rigidbody2D:
   serializedVersion: 4
