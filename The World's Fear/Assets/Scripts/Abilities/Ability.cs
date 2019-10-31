@@ -15,7 +15,7 @@ public class Ability
     private GameObject particals; //Swinging sword or leaving dust with dashes. can be assigned when creating ability
 
 
-    public List<AbilityBehavoir> Behavoirs { get { return behavoirs; } set { this.behavoirs = Behavoirs } }
+    public List<AbilityBehavoir> Behavoirs { get { return behavoirs; } set { this.behavoirs = Behavoirs; } }
 
     public Ability(BasicAbilityInfo basicInfo)
     {

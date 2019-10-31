@@ -17,5 +17,10 @@ public abstract class AbilityBehavoir : MonoBehaviour
         Debug.LogWarning("No behaivor added!");
     }
 
+    public virtual void PreformBehavior(Vector2 startPosition)
+    {
+        Debug.LogWarning("No behaivor added!");
+    }
+
     public BasicAbilityInfo BasicInfo { get { return basicAbilityInfo; } set { this.basicAbilityInfo = BasicInfo; } }
 }
