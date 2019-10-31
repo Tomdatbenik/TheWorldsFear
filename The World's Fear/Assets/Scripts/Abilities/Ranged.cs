@@ -9,36 +9,33 @@ public class Ranged : AbilityBehavoir
     private const string description = "A ranged attack!";
 
 
-    private float minDistance;
-    private float maxDistance;
+    public float minDistance;
+    public float maxDistance;
 
     private float lifeDistance;
 
     public Ranged(float minDistance, float maxDistance) : base(new BasicAbilityInfo(name,description,BehaviorStartTime.Start))
     {
-
+        this.minDistance = minDistance;
+        this.maxDistance = maxDistance;
     }
     
-    public override void PreformBehavior(Vector2 startPosition)
+    public override void PreformBehavior(Vector2 startPosition, GameObject go)
     {
         this.lifeDistance = maxDistance;
 
-        StartCoroutine(checkDistance(startPosition));
-
+        StartCoroutine(checkDistance(startPosition, go));
     }
 
-    private IEnumerator checkDistance(Vector2 startPosition)
+    private IEnumerator checkDistance(Vector2 startPosition,GameObject go)
     {
-        float tempDistance = Vector2.Distance(startPosition, this.transform.position);
+        Debug.Log("Test");
+        float tempDistance = Vector2.Distance(startPosition, go.transform.position);
 
-        while (tempDistance < lifeDistance)
-        {
-            tempDistance = Vector2.Distance(startPosition, this.transform.position);           
-        }
+           tempDistance = Vector2.Distance(startPosition, go.transform.position);
 
-        this.gameObject.SetActive(false); //objecct pooling maybe?
-        yield return null;
-       
+        //GameObject.Destroy(go); //objecct pooling maybe?
+        yield return null;  
     }
 
 }
