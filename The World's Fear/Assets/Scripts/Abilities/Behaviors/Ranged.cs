@@ -14,28 +14,19 @@ public class Ranged : AbilityBehavoir
 
     private float lifeDistance;
 
+    GameObject caster;
+    GameObject prefab;
+
+
     public Ranged(float minDistance, float maxDistance) : base(new BasicAbilityInfo(name,description,BehaviorStartTime.Start))
     {
         this.minDistance = minDistance;
         this.maxDistance = maxDistance;
     }
     
-    public override void PreformBehavior(Vector2 startPosition, GameObject go)
+    public override void PreformBehavior(GameObject caster, GameObject prefab)
     {
-        this.lifeDistance = maxDistance;
-
-        StartCoroutine(checkDistance(startPosition, go));
-    }
-
-    private IEnumerator checkDistance(Vector2 startPosition,GameObject go)
-    {
-        Debug.Log("Test");
-        float tempDistance = Vector2.Distance(startPosition, go.transform.position);
-
-           tempDistance = Vector2.Distance(startPosition, go.transform.position);
-
-        //GameObject.Destroy(go); //objecct pooling maybe?
-        yield return null;  
+        
     }
 
 }

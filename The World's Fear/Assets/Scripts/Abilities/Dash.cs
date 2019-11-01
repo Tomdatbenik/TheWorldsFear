@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Arrow : Ability 
+public class Dash : Ability
 {
     private const string name = "Arrow";
     private const string description = "Schoots an arrow!";
@@ -10,16 +10,16 @@ public class Arrow : Ability
     public List<AbilityBehavoir> behavoirs;
     //private const Sprite sprite = Resources.Load("Arrow");
 
-    public void Cast(GameObject caster, GameObject prefab, List<AbilityBehavoir> behavoirs)
+    public void Cast(GameObject caster)
     {
         base.Caster = caster;
-        base.Prefab = prefab;
 
-        prefab.transform.rotation = caster.transform.rotation;
-        prefab.transform.position = caster.transform.position;
+        List<AbilityBehavoir> behavoirs = new List<AbilityBehavoir>();
+
+        behavoirs.Add(new Leap());
 
         this.Behavoirs = behavoirs;
-        this.Prefab = GameObject.Instantiate<GameObject>(base.Prefab);
+
         base.PreformAbility();
     }
 }

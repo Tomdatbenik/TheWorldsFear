@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public abstract class AbilityBehavoir : MonoBehaviour
+public abstract class AbilityBehavoir
 {
 
     private BasicAbilityInfo basicAbilityInfo;
@@ -17,26 +17,19 @@ public abstract class AbilityBehavoir : MonoBehaviour
         startTime = BehaviorStartTime.Start;
     }
 
-    public AbilityBehavoir(BasicAbilityInfo basicAbilityInfo, BehaviorStartTime startTime)
-    {
-        this.basicAbilityInfo = basicAbilityInfo;
-        this.startTime = startTime;
-    }
-
     public virtual void PreformBehavior()
     {
         Debug.LogWarning("No behaivor added!");
     }
 
-    public virtual void PreformBehavior(Vector2 startPosition)
+    public virtual void PreformBehavior(GameObject caster)
     {
         Debug.LogWarning("No behaivor added!");
     }
 
-    public virtual void PreformBehavior(Vector2 startPosition, GameObject go)
+    public virtual void PreformBehavior(GameObject caster, GameObject prefab)
     {
         Debug.LogWarning("No behaivor added!");
     }
 
- 
 }
