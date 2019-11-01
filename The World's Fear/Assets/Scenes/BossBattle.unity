@@ -1794,8 +1794,6 @@ RectTransform:
   m_PrefabInstance: {fileID: 1859091989219322781}
   m_PrefabAsset: {fileID: 0}
 
->>>>>>> a813c7e4d3ff4ffff6516fbd04be09ea360a704c
-
 
 --- !u!1 &2051910921 stripped
 GameObject:
@@ -2479,8 +2477,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1859091987343530044, guid: 0e112c26056fb3548a235b48cbc0fb8b,
 
-    - target: {fileID: 776157805841158613, guid: 0e112c26056fb3548a235b48cbc0fb8b,
->>>>>>> a813c7e4d3ff4ffff6516fbd04be09ea360a704c
+    - target: {fileID: 776157805841158613, guid: 0e112c26056fb3548a235b48cbc0fb8b
 
     - target: {fileID: 4089770687464691595, guid: c5bc78d672d74ff4f9a13d9881cc41b7,
         type: 3}
