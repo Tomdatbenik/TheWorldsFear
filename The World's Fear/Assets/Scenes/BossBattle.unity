@@ -243,6 +243,11 @@ PrefabInstance:
       propertyPath: m_Pivot.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 776157806573747206, guid: 0e112c26056fb3548a235b48cbc0fb8b,
+        type: 3}
+      propertyPath: m_AdditionalShaderChannelsFlag
+      value: 25
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 0e112c26056fb3548a235b48cbc0fb8b, type: 3}
 --- !u!1 &212231467
