@@ -20,7 +20,6 @@ public class FistAttack : MonoBehaviour
         }
         if (lefthandcollider.IsTouching(playercollider) || righthandcollider.IsTouching(playercollider))
         {
-            Debug.Log("player entered");
             lefthand.SetBool("Initiate", true);
             righthand.SetBool("Initiate", true);
         }
