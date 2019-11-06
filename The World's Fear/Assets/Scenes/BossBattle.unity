@@ -467,7 +467,9 @@ GameObject:
   m_Component:
   - component: {fileID: 717920400}
   - component: {fileID: 717920401}
-  m_Layer: 0
+  - component: {fileID: 717920402}
+  - component: {fileID: 717920403}
+  m_Layer: 13
   m_Name: sword
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -481,8 +483,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 717920399}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 794374487}
@@ -523,9 +525,9 @@ SpriteRenderer:
   m_AutoUVMaxDistance: 0.5
   m_AutoUVMaxAngle: 89
   m_LightmapParameters: {fileID: 0}
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingLayerID: -1487948415
+  m_SortingLayer: 4
+  m_SortingOrder: 1
   m_Sprite: {fileID: 21300000, guid: a30a05c7fb644c346ac454d3aced8fff, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
@@ -537,6 +539,42 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!114 &717920402
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 717920399}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9450191730eb0b343b132b47108e0eb3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  wielder: {fileID: 1065403179}
+  animator: {fileID: 1065403186}
+  rb: {fileID: 717920403}
+--- !u!50 &717920403
+Rigidbody2D:
+  serializedVersion: 4
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 717920399}
+  m_BodyType: 0
+  m_Simulated: 1
+  m_UseFullKinematicContacts: 0
+  m_UseAutoMass: 0
+  m_Mass: 0.0001
+  m_LinearDrag: 0
+  m_AngularDrag: 0.05
+  m_GravityScale: 0
+  m_Material: {fileID: 0}
+  m_Interpolate: 0
+  m_SleepingMode: 1
+  m_CollisionDetection: 0
+  m_Constraints: 0
 --- !u!4 &794374487 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4983166449564110178, guid: 240b6bbaf150de84a9a9246320f25cc8,
@@ -831,6 +869,18 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1065403179 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4983166449564110182, guid: 240b6bbaf150de84a9a9246320f25cc8,
+    type: 3}
+  m_PrefabInstance: {fileID: 1268138707}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &1065403186 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 4983166449564110176, guid: 240b6bbaf150de84a9a9246320f25cc8,
+    type: 3}
+  m_PrefabInstance: {fileID: 1268138707}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1161432483
 PrefabInstance:
   m_ObjectHideFlags: 0
