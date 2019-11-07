@@ -7,7 +7,7 @@ public class PlayerDash : MonoBehaviour
     private PlayerMovement playermovementscript;
 
     public int DashDuration;
-    public float Dashspeed = 20;
+    private float Dashspeed = 20;
 
     private int duration;
 
@@ -17,6 +17,7 @@ public class PlayerDash : MonoBehaviour
     {
         playermovementscript = gameObject.GetComponent<PlayerMovement>();
         duration = DashDuration;
+        Dashspeed = playermovementscript.speed.GetSpeed() * 5;
     }
 
     private void Update()

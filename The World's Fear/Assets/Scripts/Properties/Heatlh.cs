@@ -8,8 +8,14 @@ public class Heatlh : MonoBehaviour
     public Defence defence;
     public Debuff debuff;
 
+    public void Start()
+    {
+        HealthPoints = Random.Range(HealthPoints - 10, HealthPoints + 10);
+    }
+
     public Heatlh(int hp)
     {
+        hp = Random.Range(hp - 2, hp + 2);
         this.HealthPoints = hp;
     }
 
