@@ -11,8 +11,11 @@ public class Damage : MonoBehaviour
 
     public void Start()
     {
-        Strength = Random.Range(Strength - 2, Strength + 2);
-        InitStrength = Strength;
+        if (gameObject.tag == "Player")
+        {
+            Strength = Random.Range(Strength - 2, Strength + 2);
+            InitStrength = Strength;
+        }
     }
 
     public int GetStrength()

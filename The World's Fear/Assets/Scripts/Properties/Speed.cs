@@ -9,8 +9,11 @@ public class Speed : MonoBehaviour
 
     private void Start()
     {
-        SpeedPoints = Random.Range(SpeedPoints - 2, SpeedPoints + 2);
-        InitSpeed = SpeedPoints;
+        if(gameObject.tag == "Player")
+        {
+            SpeedPoints = Random.Range(SpeedPoints - 2, SpeedPoints + 2);
+            InitSpeed = SpeedPoints;
+        }
     }
 
     public float GetSpeed()

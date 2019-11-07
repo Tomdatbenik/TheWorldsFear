@@ -14,7 +14,10 @@ public class Heatlh : MonoBehaviour
 
     public void Start()
     {
-        HealthPoints = Random.Range(HealthPoints - 10, HealthPoints + 10);
+        if (gameObject.tag == "Player")
+        {
+            HealthPoints = Random.Range(HealthPoints - 10, HealthPoints + 10);
+        }
     }
 
     public Heatlh(int hp)
@@ -44,7 +47,12 @@ public class Heatlh : MonoBehaviour
         {
             int dmg = damage.GetStrength() - defence.GetDefence();
 
-            HealthPoints -= dmg;
+
+            if(dmg > 0)
+            {
+                HealthPoints -= dmg;
+            }
+  
             CanTakeDamage = false;
         }
     }
@@ -62,6 +70,41 @@ public class Heatlh : MonoBehaviour
             else
             {
                 cd++;
+            }
+        }
+    }
+
+    public void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (gameObject.tag != "Enemie" && gameObject.tag != "Damage")
+        {
+            if (collision.gameObject.tag == "Enemie" || collision.gameObject.tag == "Damage") // this string is your newly created tag
+            {
+                GameObject enemy = collision.gameObject;
+
+                Damage damage = gameObject.GetComponent(typeof(Damage)) as Damage;
+
+                this.ApplyDamage(damage);
+
+                Rigidbody2D rb = gameObject.GetComponent(typeof(Rigidbody2D)) as Rigidbody2D;
+                Debug.Log("Knockback");
+                Vector2 Direction = (collision.transform.position - gameObject.transform.position).normalized;
+
+                Vector3 newPosition = gameObject.transform.position + (gameObject.transform.position - collision.transform.position);
+
+                Debug.DrawLine(collision.transform.position, newPosition , Color.white,1000);
+
+                Debug.Log(Direction);
+
+
+                PlayerMovement movement = gameObject.GetComponent(typeof(PlayerMovement)) as PlayerMovement;
+
+                movement.CanMove = false;
+
+                rb.MovePosition(newPosition);
+
+
+                //movement.CanMove = true;
             }
         }
     }

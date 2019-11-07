@@ -14,9 +14,11 @@ public class PlayerMovement : MonoBehaviour
 
     public Joystick joystick;
 
+    public bool CanMove = true;
+
     private void Start()
     {
-
+        CanMove = true;
     }
 
     // Update is called once per frame
@@ -47,7 +49,11 @@ public class PlayerMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        rb.MovePosition(rb.position + movement * speed.GetSpeed() * Time.fixedDeltaTime);
+        if(CanMove)
+        {
+            rb.MovePosition(rb.position + movement * speed.GetSpeed() * Time.fixedDeltaTime);
+        }
+
     }
 
 }
