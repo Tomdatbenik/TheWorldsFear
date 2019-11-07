@@ -7,6 +7,7 @@ public class Heatlh : MonoBehaviour
     public int HealthPoints;
     public Defence defence;
     public Debuff debuff;
+    private Animator animator;
 
     public int DamageCooldown;
 
@@ -14,6 +15,7 @@ public class Heatlh : MonoBehaviour
 
     public void Start()
     {
+        animator = gameObject.GetComponent<Animator>();
         if (gameObject.tag == "Player")
         {
             HealthPoints = Random.Range(HealthPoints - 10, HealthPoints + 10);
@@ -43,6 +45,8 @@ public class Heatlh : MonoBehaviour
 
     public void ApplyDamage(Damage damage)
     {
+        animator.SetBool("Damage", true);
+        animator.SetBool("Damage", false);
         if(CanTakeDamage && !isDead())
         {
       
@@ -61,6 +65,7 @@ public class Heatlh : MonoBehaviour
 
             CanTakeDamage = false;
         }
+
     }
 
     int cd = 0;
