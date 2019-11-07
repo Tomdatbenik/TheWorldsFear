@@ -80,6 +80,7 @@ public class Heatlh : MonoBehaviour
             else
             {
                 cd = 0;
+                animator.SetBool("Damage", false);
                 CanTakeDamage = true;
             }
         }
