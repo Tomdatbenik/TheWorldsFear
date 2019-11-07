@@ -14,11 +14,11 @@ public class PlayerMovement : MonoBehaviour
 
     public Joystick joystick;
 
-    public bool CanMove = true;
+    private bool knockback = false;
 
     private void Start()
     {
-        CanMove = true;
+
     }
 
     // Update is called once per frame
@@ -28,9 +28,11 @@ public class PlayerMovement : MonoBehaviour
         {
             //movement.x = joystick.Direction.x;
             //movement.y = joystick.Direction.y;
-
-            movement.x = Input.GetAxis("Horizontal");
-            movement.y = Input.GetAxis("Vertical");
+            if(!knockback)
+            {
+                movement.x = Input.GetAxis("Horizontal");
+                movement.y = Input.GetAxis("Vertical");
+            }
         }
         //if (Input.GetKeyDown(KeyCode.Mouse0))
         //{
@@ -47,13 +49,41 @@ public class PlayerMovement : MonoBehaviour
         animator.SetFloat("Speed", movement.sqrMagnitude);
     }
 
+    int counter = 0;
+
     private void FixedUpdate()
     {
-        if(CanMove)
+        if(knockback)
+        {
+            if(counter < 2)
+            {
+                counter++;
+                speed.SetSpeed(speed.GetSpeed() * 2);
+                Debug.Log("Should move to: " + movement);
+                rb.MovePosition(movement * speed.GetSpeed() * Time.fixedDeltaTime);
+                Debug.Log("Moves to: " + rb.transform.position);
+
+                Debug.DrawLine(movement, rb.transform.position, Color.green, 1);
+                speed.ResetSpeed();
+            }
+            else
+            {
+                knockback = false;
+                counter = 0;
+            }
+        }
+        else
         {
             rb.MovePosition(rb.position + movement * speed.GetSpeed() * Time.fixedDeltaTime);
         }
+          
+    }
 
+    public void Knockback(Vector2 position)
+    {
+        knockback = true;
+        movement.x = position.x;
+        movement.y = position.y;
     }
 
 }
