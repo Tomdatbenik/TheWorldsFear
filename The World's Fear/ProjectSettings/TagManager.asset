@@ -52,6 +52,9 @@ TagManager:
   - name: Vegitation
     uniqueID: 2599358453
     locked: 0
+  - name: Attack
+    uniqueID: 912230647
+    locked: 0
   - name: Hero
     uniqueID: 2807018881
     locked: 0
