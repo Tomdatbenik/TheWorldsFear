@@ -1309,6 +1309,11 @@ PrefabInstance:
       propertyPath: DamageCooldown
       value: 30
       objectReference: {fileID: 0}
+    - target: {fileID: 4983166449564110203, guid: 240b6bbaf150de84a9a9246320f25cc8,
+        type: 3}
+      propertyPath: animator
+      value: 
+      objectReference: {fileID: 1065403186}
     - target: {fileID: 4983166449564110204, guid: 240b6bbaf150de84a9a9246320f25cc8,
         type: 3}
       propertyPath: DefencePoints
@@ -1733,18 +1738,6 @@ Rigidbody2D:
     type: 3}
   m_PrefabInstance: {fileID: 1531398605}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &2051910931
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2051910921}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b263adb023fd7d245a7faeb2f19d1fad, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &2051910932
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2124,6 +2117,12 @@ PrefabInstance:
       propertyPath: m_IsTrigger
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 8203751265439827688, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: Fireball
+      value: 
+      objectReference: {fileID: 3626427239110438714, guid: 6b44f4d7d4c4d2049a3a65c45606a1cf,
+        type: 3}
     - target: {fileID: 4890113026888280952, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -2149,11 +2148,5 @@ PrefabInstance:
       propertyPath: m_SortingLayer
       value: 6
       objectReference: {fileID: 0}
-    - target: {fileID: 8203751265439827688, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
-        type: 3}
-      propertyPath: Fireball
-      value: 
-      objectReference: {fileID: 3626427239110438714, guid: 6b44f4d7d4c4d2049a3a65c45606a1cf,
-        type: 3}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6467b8b413ada5342a487ef7e3fe4fdc, type: 3}

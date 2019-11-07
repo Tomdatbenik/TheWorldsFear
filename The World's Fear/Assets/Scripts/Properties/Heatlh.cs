@@ -46,7 +46,6 @@ public class Heatlh : MonoBehaviour
     public void ApplyDamage(Damage damage)
     {
         animator.SetBool("Damage", true);
-        animator.SetBool("Damage", false);
         if(CanTakeDamage && !isDead())
         {
       
