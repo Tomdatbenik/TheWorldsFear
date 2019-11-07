@@ -10,6 +10,7 @@ public class Heatlh : MonoBehaviour
 
     public Heatlh(int hp)
     {
+        HealthPoints = Random.Range(HealthPoints - 2, HealthPoints + 2);
         this.HealthPoints = hp;
     }
 

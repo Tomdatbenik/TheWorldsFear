@@ -10,6 +10,7 @@ public class Damage : MonoBehaviour
 
     public Damage()
     {
+        Strength = Random.Range(Strength - 2, Strength + 2);
         InitStrength = Strength;
     }
 

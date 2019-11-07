@@ -9,6 +9,7 @@ public class Defence : MonoBehaviour
 
     public Defence()
     {
+        DefencePoints = Random.Range(DefencePoints - 2, DefencePoints + 2);
         InitPoints = DefencePoints;
     }
 
