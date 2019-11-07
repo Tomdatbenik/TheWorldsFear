@@ -8,7 +8,8 @@ public class Damage : MonoBehaviour
     public int Strength;
     private int InitStrength;
 
-    public Damage()
+
+    public void Start()
     {
         Strength = Random.Range(Strength - 2, Strength + 2);
         InitStrength = Strength;
