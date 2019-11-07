@@ -87,24 +87,17 @@ public class Heatlh : MonoBehaviour
                 this.ApplyDamage(damage);
 
                 Rigidbody2D rb = gameObject.GetComponent(typeof(Rigidbody2D)) as Rigidbody2D;
-                Debug.Log("Knockback");
-                Vector2 Direction = (collision.transform.position - gameObject.transform.position).normalized;
 
-                Vector3 newPosition = gameObject.transform.position + (gameObject.transform.position - collision.transform.position);
+                Vector2 newPosition = gameObject.transform.position + (gameObject.transform.position - collision.transform.position);
 
                 Debug.DrawLine(collision.transform.position, newPosition , Color.white,1000);
 
-                Debug.Log(Direction);
 
 
                 PlayerMovement movement = gameObject.GetComponent(typeof(PlayerMovement)) as PlayerMovement;
 
-                movement.CanMove = false;
-
-                rb.MovePosition(newPosition);
-
-
-                //movement.CanMove = true;
+                Debug.DrawLine(newPosition.normalized, newPosition, Color.red, 1000);
+                movement.Knockback(((Vector2)collision.transform.position + newPosition));
             }
         }
     }
