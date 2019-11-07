@@ -43,8 +43,9 @@ public class Heatlh : MonoBehaviour
 
     public void ApplyDamage(Damage damage)
     {
-        if(CanTakeDamage)
+        if(CanTakeDamage && !isDead())
         {
+      
             int dmg = damage.GetStrength() - defence.GetDefence();
 
 
@@ -52,7 +53,12 @@ public class Heatlh : MonoBehaviour
             {
                 HealthPoints -= dmg;
             }
-  
+
+            if (isDead())
+            {
+                HealthPoints = 0;
+            }
+
             CanTakeDamage = false;
         }
     }
@@ -65,16 +71,27 @@ public class Heatlh : MonoBehaviour
         {
             if(cd < DamageCooldown)
             {
-                CanTakeDamage = true;
+                cd++;
             }
             else
             {
-                cd++;
+                cd = 0;
+                CanTakeDamage = true;
             }
         }
     }
 
+    public void OnTriggerStay2D(Collider2D collision)
+    {
+        TakeDamage(collision);
+    }
+
     public void OnTriggerEnter2D(Collider2D collision)
+    {
+        TakeDamage(collision);
+    }
+
+    public void TakeDamage(Collider2D collision)
     {
         if (gameObject.tag != "Enemie" && gameObject.tag != "Damage")
         {
@@ -82,22 +99,22 @@ public class Heatlh : MonoBehaviour
             {
                 GameObject enemy = collision.gameObject;
 
-                Damage damage = gameObject.GetComponent(typeof(Damage)) as Damage;
+                Damage damage = collision.gameObject.GetComponent(typeof(Damage)) as Damage;
 
                 this.ApplyDamage(damage);
 
-                Rigidbody2D rb = gameObject.GetComponent(typeof(Rigidbody2D)) as Rigidbody2D;
+                //Rigidbody2D rb = gameObject.GetComponent(typeof(Rigidbody2D)) as Rigidbody2D;
 
-                Vector2 newPosition = gameObject.transform.position + (gameObject.transform.position - collision.transform.position);
+                //Vector2 newPosition = gameObject.transform.position + (gameObject.transform.position - collision.transform.position);
 
-                Debug.DrawLine(collision.transform.position, newPosition , Color.white,1000);
+                //Debug.DrawLine(collision.transform.position, newPosition, Color.white, 1000);
 
 
 
-                PlayerMovement movement = gameObject.GetComponent(typeof(PlayerMovement)) as PlayerMovement;
+                //PlayerMovement movement = gameObject.GetComponent(typeof(PlayerMovement)) as PlayerMovement;
 
-                Debug.DrawLine(newPosition.normalized, newPosition, Color.red, 1000);
-                movement.Knockback(((Vector2)collision.transform.position + newPosition));
+                //Debug.DrawLine(newPosition.normalized, newPosition, Color.red, 1000);
+                //movement.Knockback(((Vector2)collision.transform.position + newPosition));
             }
         }
     }
