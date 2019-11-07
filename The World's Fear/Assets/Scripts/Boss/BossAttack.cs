@@ -13,24 +13,59 @@ public class BossAttack : MonoBehaviour
     //RiskSpotAttack
     public Animator animator;
     public BoxCollider2D boxCollider;
-    
+
+    public bool Casting = false;
+    public int timer = 0;
    
     private void Update()
     {
-        FistAttackDetection();
-        RiskSpotDetection();
+        //the 2 if make sure that if the colliders overlap that fist attack will be prioritised
+        if(Casting == false)
+        {
+            FistAttackDetection();
+            if(Casting == false)
+            {
+                RiskSpotDetection();
+            }
+            if(Casting == false)
+            {
+                Shootfireball();
+            }
+        }
+        if (animator.GetCurrentAnimatorStateInfo(0).IsName("RiskSpotAttack"))
+        {
+            DeactivateRiskSpotAttack();
+        }
+        if (lefthand.GetCurrentAnimatorStateInfo(0).IsName("LeftHandAttack") && righthand.GetCurrentAnimatorStateInfo(0).IsName("RightHandAttack"))
+        {
+            DeactivateFistAttack();
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (Casting)
+        {
+            timer++;
+            if(timer == 200)
+            {
+                Casting = false;
+                timer = 0;
+            }
+        }
     }
 
     #region FistAttack
     public void FistAttackDetection()
     {
-        if (lefthand.GetCurrentAnimatorStateInfo(0).IsName("LeftHandAttack") && righthand.GetCurrentAnimatorStateInfo(0).IsName("RightHandAttack"))
-        {
-            DeactivateFistAttack();
-        }
         if (lefthandcollider.IsTouching(playercollider) || righthandcollider.IsTouching(playercollider))
         {
             ActivateFistAttack();
+            Casting = true;
+        }
+        if (lefthand.GetCurrentAnimatorStateInfo(0).IsName("LeftHandAttack") && righthand.GetCurrentAnimatorStateInfo(0).IsName("RightHandAttack"))
+        {
+            DeactivateFistAttack();
         }
     }
 
@@ -52,6 +87,8 @@ public class BossAttack : MonoBehaviour
         if (boxCollider.IsTouching(playercollider))
         {
             ActivateRiskSpotAttack();
+            Casting = true;
+            
         }
         if (animator.GetCurrentAnimatorStateInfo(0).IsName("RiskSpotAttack"))
         {
@@ -69,5 +106,35 @@ public class BossAttack : MonoBehaviour
         animator.SetBool("Initiate", false);
     }
     #endregion
+    #region Fireball
+    public GameObject Fireball;
+    private Vector2 Position;
 
+    public void Shootfireball()
+    {
+        CreateFireballs(PickCoordinates());
+        Casting = true;
+    }
+
+    List<Vector2> PickCoordinates()
+    {
+        List<Vector2> Fireballs = new List<Vector2>();
+        for (int i = 0; i < 3; i++)
+        {
+            Vector2 pos = new Vector2(Random.Range(-19, 19), Random.Range(6, 29));
+            Fireballs.Add(pos);
+        }
+        return Fireballs;
+    }
+
+    void CreateFireballs(List<Vector2> fireballs)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            GameObject fireball = Fireball;
+            fireball.transform.position = fireballs[i];
+            Instantiate(fireball);
+        }
+    }
+    #endregion
 }
