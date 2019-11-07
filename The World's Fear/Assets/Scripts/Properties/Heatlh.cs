@@ -8,6 +8,10 @@ public class Heatlh : MonoBehaviour
     public Defence defence;
     public Debuff debuff;
 
+    public int DamageCooldown;
+
+    private bool CanTakeDamage = true;
+
     public void Start()
     {
         HealthPoints = Random.Range(HealthPoints - 10, HealthPoints + 10);
@@ -36,9 +40,30 @@ public class Heatlh : MonoBehaviour
 
     public void ApplyDamage(Damage damage)
     {
-        int dmg = damage.GetStrength() - defence.GetDefence();
+        if(CanTakeDamage)
+        {
+            int dmg = damage.GetStrength() - defence.GetDefence();
 
-        HealthPoints -= dmg;
+            HealthPoints -= dmg;
+            CanTakeDamage = false;
+        }
+    }
+
+    int cd = 0;
+
+    public void Update()
+    {
+        if(!CanTakeDamage)
+        {
+            if(cd < DamageCooldown)
+            {
+                CanTakeDamage = true;
+            }
+            else
+            {
+                cd++;
+            }
+        }
     }
 
 }
