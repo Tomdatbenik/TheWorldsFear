@@ -7,10 +7,12 @@ public class Damage : MonoBehaviour
 
     public int Strength;
     private int InitStrength;
+    Animator animator;
 
 
     public void Start()
     {
+        animator = gameObject.GetComponent<Animator>();
         if (gameObject.tag == "Player")
         {
             Strength = Random.Range(Strength - 2, Strength + 2);
@@ -38,4 +40,11 @@ public class Damage : MonoBehaviour
         Strength = InitStrength;
     }
 
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.tag == "RiskSpot")
+        {
+            animator.SetBool("RiskSpot", true);
+        }
+    }
 }
