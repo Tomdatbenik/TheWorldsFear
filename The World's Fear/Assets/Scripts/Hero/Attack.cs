@@ -9,7 +9,12 @@ public class Attack : MonoBehaviour
     float y;
     public Animator animator;
     bool attack = false;
+    public GameObject sword;
 
+    private void Start()
+    {
+        sword.SetActive(false);
+    }
     // Update is called once per frame
     void Update()
     {
@@ -18,13 +23,15 @@ public class Attack : MonoBehaviour
         direction.y = Input.GetAxisRaw("Vertical");
 
         //detect if the player is attacking or not
-        if (Input.GetKey(KeyCode.Mouse0))
+        if (Input.GetKeyDown(KeyCode.Mouse0))
         {
             attack = true;
+            sword.SetActive(true);
         }
         if (Input.GetKeyUp(KeyCode.Mouse0))
         {
             attack = false;
+            sword.SetActive(false);
         }
         
         //dectect if the player has last moved into one of the four animation directions
@@ -41,7 +48,7 @@ public class Attack : MonoBehaviour
         animator.SetBool("Attack", attack);
         animator.SetFloat("Attack Horizontal", direction.x);
         animator.SetFloat("Attack Vertical", direction.y);
-        //dectect if the player is moving at all
+        //detect if the player is moving at all
         if (direction.x == 0 && direction.y == 0)
         {
             animator.SetFloat("Attack Horizontal", x);
