@@ -67,3 +67,6 @@ TagManager:
   - name: Decorating
     uniqueID: 3330746545
     locked: 0
+  - name: HealthBar
+    uniqueID: 3819352329
+    locked: 0

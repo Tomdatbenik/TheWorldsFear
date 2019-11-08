@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Heatlh : MonoBehaviour
+public class Health : MonoBehaviour
 {
     public int HealthPoints;
     public Defence defence;
@@ -22,7 +22,7 @@ public class Heatlh : MonoBehaviour
         }
     }
 
-    public Heatlh(int hp)
+    public Health(int hp)
     {
         hp = Random.Range(hp - 2, hp + 2);
         this.HealthPoints = hp;
