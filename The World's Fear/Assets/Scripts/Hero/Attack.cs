@@ -5,12 +5,10 @@ using UnityEngine;
 public class Attack : MonoBehaviour
 {
     Vector2 direction;
-    Vector2 storeddirection;
     float x;
     float y;
     public Animator animator;
     bool attack = false;
-    int cooldown = 20;
 
     // Update is called once per frame
     void Update()
@@ -50,20 +48,5 @@ public class Attack : MonoBehaviour
             animator.SetFloat("Attack Vertical", y);
         }
         
-
     }
-
-    private void FixedUpdate()
-    {
-        //    if(attack == true)
-        //    {
-        //        cooldown--;
-        //        if (cooldown == 0)
-        //        {
-        //            attack = false;
-        //            cooldown = 20;
-        //        }
-        //    }
-    }
-    
 }
