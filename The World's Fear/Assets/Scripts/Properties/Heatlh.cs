@@ -98,7 +98,7 @@ public class Heatlh : MonoBehaviour
 
     public void TakeDamage(Collider2D collision)
     {
-        if (gameObject.tag != "Enemie" && gameObject.tag != "Damage")
+        if (gameObject.tag != "Enemie" && gameObject.tag != "untagged")
         {
             if (collision.gameObject.tag == "Enemie" || collision.gameObject.tag == "Damage") // this string is your newly created tag
             {
