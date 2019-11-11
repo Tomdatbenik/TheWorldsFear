@@ -1376,6 +1376,7 @@ MonoBehaviour:
   boxCollider: {fileID: 1945924466}
   Casting: 0
   timer: 0
+  health: {fileID: 1493728977}
   Fireball: {fileID: 3626427239110438714, guid: 6b44f4d7d4c4d2049a3a65c45606a1cf,
     type: 3}
 --- !u!1001 &2070777954

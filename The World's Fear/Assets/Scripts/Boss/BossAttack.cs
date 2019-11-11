@@ -16,6 +16,7 @@ public class BossAttack : MonoBehaviour
 
     public bool Casting = false;
     public int timer = 0;
+    public Health health;
    
     private void Update()
     {
@@ -52,6 +53,10 @@ public class BossAttack : MonoBehaviour
                 Casting = false;
                 timer = 0;
             }
+        }
+        if(health.isDead())
+        {
+            this.gameObject.SetActive(false);
         }
     }
 
