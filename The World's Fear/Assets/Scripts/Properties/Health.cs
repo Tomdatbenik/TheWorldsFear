@@ -115,13 +115,11 @@ public class Health : MonoBehaviour
 
     public void TakeDamageAsEnemy(Collider2D collision)
     {
-        Debug.Log(collision.name);
         if (gameObject.tag == "Sword")
         {
             GameObject hero = collision.gameObject;
             Damage damage = collision.gameObject.GetComponent(typeof(Damage)) as Damage;
             this.ApplyDamage(damage);
-            
         }
     }
 
