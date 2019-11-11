@@ -64,6 +64,7 @@ public class Health : MonoBehaviour
             if (isDead())
             {
                 HealthPoints = 0;
+                //TODO gebruik setactive hier
             }
 
             CanTakeDamage = false;

@@ -13,6 +13,9 @@ public class BossAttack : MonoBehaviour
     //RiskSpotAttack
     public Animator animator;
     public BoxCollider2D boxCollider;
+    //FistAttackClose
+    public Animator fistattackcloseanimator;
+    public BoxCollider2D fistattackclosecollider;
 
     public bool Casting = false;
     public int timer = 0;
@@ -24,7 +27,11 @@ public class BossAttack : MonoBehaviour
         if(Casting == false)
         {
             FistAttackDetection();
-            if(Casting == false)
+            if (Casting == false)
+            {
+                FistAttackCloseDetection();
+            }
+            if (Casting == false)
             {
                 RiskSpotDetection();
             }
@@ -142,4 +149,27 @@ public class BossAttack : MonoBehaviour
         }
     }
     #endregion
+
+    public void FistAttackCloseDetection()
+    {
+        if (fistattackclosecollider.IsTouching(playercollider))
+        {
+            ActivateFistAttackClose();
+            Casting = true;
+        }
+        if (fistattackcloseanimator.GetCurrentAnimatorStateInfo(0).IsName("FistAttackClose"))
+        {
+            DeactivateFistAttackClose();
+        }
+    }
+
+    public void ActivateFistAttackClose()
+    {
+        fistattackcloseanimator.SetBool("Initiate", true);
+    }
+
+    public void DeactivateFistAttackClose()
+    {
+        fistattackcloseanimator.SetBool("Initiate", false);
+    }
 }
