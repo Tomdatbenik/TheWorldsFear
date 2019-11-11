@@ -88,15 +88,17 @@ public class Health : MonoBehaviour
 
     public void OnTriggerStay2D(Collider2D collision)
     {
-        TakeDamage(collision);
+        TakeDamageAsPLayer(collision);
+        TakeDamageAsEnemy(collision);
     }
 
     public void OnTriggerEnter2D(Collider2D collision)
     {
-        TakeDamage(collision);
+        TakeDamageAsPLayer(collision);
+        TakeDamageAsEnemy(collision);
     }
 
-    public void TakeDamage(Collider2D collision)
+    public void TakeDamageAsPLayer(Collider2D collision)
     {
         if (gameObject.tag != "Enemie" && gameObject.tag != "untagged")
         {
@@ -107,20 +109,19 @@ public class Health : MonoBehaviour
                 Damage damage = collision.gameObject.GetComponent(typeof(Damage)) as Damage;
 
                 this.ApplyDamage(damage);
-
-                //Rigidbody2D rb = gameObject.GetComponent(typeof(Rigidbody2D)) as Rigidbody2D;
-
-                //Vector2 newPosition = gameObject.transform.position + (gameObject.transform.position - collision.transform.position);
-
-                //Debug.DrawLine(collision.transform.position, newPosition, Color.white, 1000);
-
-
-
-                //PlayerMovement movement = gameObject.GetComponent(typeof(PlayerMovement)) as PlayerMovement;
-
-                //Debug.DrawLine(newPosition.normalized, newPosition, Color.red, 1000);
-                //movement.Knockback(((Vector2)collision.transform.position + newPosition));
             }
+        }
+    }
+
+    public void TakeDamageAsEnemy(Collider2D collision)
+    {
+        Debug.Log(collision.name);
+        if (gameObject.tag == "Sword")
+        {
+            GameObject hero = collision.gameObject;
+            Damage damage = collision.gameObject.GetComponent(typeof(Damage)) as Damage;
+            this.ApplyDamage(damage);
+            
         }
     }
 
