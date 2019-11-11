@@ -34,7 +34,6 @@ public class PlayerDash : MonoBehaviour
         //if dash is activated
         if (dash)
         {
-             Debug.Log("Dash");
             //and the dash timer is still going
             if(duration != 0)
             {
