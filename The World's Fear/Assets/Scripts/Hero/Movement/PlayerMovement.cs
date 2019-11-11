@@ -16,6 +16,8 @@ public class PlayerMovement : MonoBehaviour
 
     private bool knockback = false;
 
+    public Health health;
+
     private void Start()
     {
 
@@ -24,7 +26,7 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (move)
+        if (move && !health.isDead())
         {
             //movement.x = joystick.Direction.x;
             //movement.y = joystick.Direction.y;
@@ -33,6 +35,10 @@ public class PlayerMovement : MonoBehaviour
                 movement.x = Input.GetAxis("Horizontal");
                 movement.y = Input.GetAxis("Vertical");
             }
+        }
+        else
+        {
+            this.gameObject.SetActive(false);
         }
         //if (Input.GetKeyDown(KeyCode.Mouse0))
         //{
