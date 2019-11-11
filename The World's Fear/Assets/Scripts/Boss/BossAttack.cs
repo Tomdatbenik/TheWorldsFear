@@ -14,7 +14,6 @@ public class BossAttack : MonoBehaviour
     public Animator animator;
     public BoxCollider2D boxCollider;
     //FistAttackClose
-    public Animator fistattackcloseanimator;
     public BoxCollider2D fistattackclosecollider;
 
     public bool Casting = false;
@@ -47,6 +46,10 @@ public class BossAttack : MonoBehaviour
         if (lefthand.GetCurrentAnimatorStateInfo(0).IsName("LeftHandAttack") && righthand.GetCurrentAnimatorStateInfo(0).IsName("RightHandAttack"))
         {
             DeactivateFistAttack();
+        }
+        if (lefthand.GetCurrentAnimatorStateInfo(0).IsName("LeftFistAttackClose") && righthand.GetCurrentAnimatorStateInfo(0).IsName("RightFistAttackClose"))
+        {
+            DeactivateFistAttackClose();
         }
     }
 
@@ -157,7 +160,7 @@ public class BossAttack : MonoBehaviour
             ActivateFistAttackClose();
             Casting = true;
         }
-        if (fistattackcloseanimator.GetCurrentAnimatorStateInfo(0).IsName("FistAttackClose"))
+        if (lefthand.GetCurrentAnimatorStateInfo(0).IsName("LeftFistAttackClose") && righthand.GetCurrentAnimatorStateInfo(0).IsName("RightFistAttackClose"))
         {
             DeactivateFistAttackClose();
         }
@@ -165,11 +168,13 @@ public class BossAttack : MonoBehaviour
 
     public void ActivateFistAttackClose()
     {
-        fistattackcloseanimator.SetBool("Initiate", true);
+        lefthand.SetBool("Initiate C", true);
+        righthand.SetBool("Initiate C", true);
     }
 
     public void DeactivateFistAttackClose()
     {
-        fistattackcloseanimator.SetBool("Initiate", false);
+        lefthand.SetBool("Initiate C", false);
+        righthand.SetBool("Initiate C", false);
     }
 }
