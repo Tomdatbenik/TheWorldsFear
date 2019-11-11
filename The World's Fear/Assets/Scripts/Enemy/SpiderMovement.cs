@@ -39,5 +39,6 @@ public class SpiderMovement : MonoBehaviour
     void moveCharacter(Vector2 direction)
     {
         SpiderBody.MovePosition((Vector2)SpiderBody.transform.position + (direction * speed.GetSpeed() * Time.deltaTime));
+        healthbar.transform.position = SpiderBody.position + new Vector2(0, 1);
     }
 }
