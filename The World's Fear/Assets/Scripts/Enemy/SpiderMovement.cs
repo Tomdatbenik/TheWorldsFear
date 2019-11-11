@@ -6,9 +6,10 @@ public class SpiderMovement : MonoBehaviour
 {
     // Start is called before the first frame update
     public Transform Target;
-    public Rigidbody2D rb;
+    public Rigidbody2D SpiderBody;
     public Speed speed;
     private Vector2 movement;
+    public GameObject healthbar;
 
     public Health health;
 
@@ -16,7 +17,7 @@ public class SpiderMovement : MonoBehaviour
     {
         Vector3 Direction = Target.position - transform.position;
         float angle = Mathf.Atan2(Direction.y, Direction.x) * Mathf.Rad2Deg;
-        rb.rotation = angle;
+        SpiderBody.rotation = angle;
         Direction.Normalize();
         movement = Direction;
     }
@@ -37,6 +38,6 @@ public class SpiderMovement : MonoBehaviour
 
     void moveCharacter(Vector2 direction)
     {
-        rb.MovePosition((Vector2)transform.position + (direction * speed.GetSpeed() * Time.deltaTime));
+        SpiderBody.MovePosition((Vector2)SpiderBody.transform.position + (direction * speed.GetSpeed() * Time.deltaTime));
     }
 }
