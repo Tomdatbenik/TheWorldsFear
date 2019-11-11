@@ -147,7 +147,7 @@ PrefabInstance:
     - target: {fileID: 776157806573747205, guid: 0e112c26056fb3548a235b48cbc0fb8b,
         type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 776157805841158613, guid: 0e112c26056fb3548a235b48cbc0fb8b,
         type: 3}
@@ -1684,10 +1684,20 @@ PrefabInstance:
       propertyPath: Target
       value: 
       objectReference: {fileID: 794374487}
+    - target: {fileID: 6262011705906778709, guid: 487261623b89b7a4588b5617ca68c5e3,
+        type: 3}
+      propertyPath: DefencePoints
+      value: 15
+      objectReference: {fileID: 0}
     - target: {fileID: 6262011705906778708, guid: 487261623b89b7a4588b5617ca68c5e3,
         type: 3}
       propertyPath: HealthPoints
-      value: 20
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 6329211050032069576, guid: 487261623b89b7a4588b5617ca68c5e3,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 487261623b89b7a4588b5617ca68c5e3, type: 3}

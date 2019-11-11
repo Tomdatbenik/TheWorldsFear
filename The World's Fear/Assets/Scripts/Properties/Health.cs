@@ -45,7 +45,11 @@ public class Health : MonoBehaviour
 
     public void ApplyDamage(Damage damage)
     {
-        animator.SetBool("Damage", true);
+        if(gameObject.tag != "Enemie" && gameObject.tag != "untagged")
+        {
+            animator.SetBool("Damage", true);
+        }
+
         if(CanTakeDamage && !isDead())
         {
       
@@ -80,7 +84,10 @@ public class Health : MonoBehaviour
             else
             {
                 cd = 0;
-                animator.SetBool("Damage", false);
+                if (gameObject.tag != "Enemie" && gameObject.tag != "untagged")
+                {
+                    animator.SetBool("Damage", false);
+                }
                 CanTakeDamage = true;
             }
         }
@@ -106,7 +113,7 @@ public class Health : MonoBehaviour
             {
                 GameObject enemy = collision.gameObject;
 
-                Damage damage = collision.gameObject.GetComponent(typeof(Damage)) as Damage;
+                Damage damage = enemy.GetComponent(typeof(Damage)) as Damage;
 
                 this.ApplyDamage(damage);
             }
@@ -115,11 +122,16 @@ public class Health : MonoBehaviour
 
     public void TakeDamageAsEnemy(Collider2D collision)
     {
-        if (gameObject.tag == "Sword")
+        if (gameObject.tag == "Enemie" && gameObject.tag != "untagged")
         {
-            GameObject hero = collision.gameObject;
-            Damage damage = collision.gameObject.GetComponent(typeof(Damage)) as Damage;
-            this.ApplyDamage(damage);
+            if (collision.gameObject.tag == "Sword") // this string is your newly created tag
+            {
+                GameObject sword = collision.gameObject;
+
+                Damage damage = sword.GetComponent(typeof(Damage)) as Damage;
+
+                this.ApplyDamage(damage);
+            }
         }
     }
 
