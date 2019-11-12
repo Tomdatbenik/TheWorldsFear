@@ -11,8 +11,7 @@ public class BossAttack : MonoBehaviour
 
     public bool Casting = false;
     public int timer = 0;
-    public Health health;
-   
+    
     private void Update()
     {
         //the 2 if make sure that if the colliders overlap that fist attack will be prioritised
@@ -29,7 +28,7 @@ public class BossAttack : MonoBehaviour
             }
             if(Casting == false)
             {
-                bfa.Shootfireball();
+                Casting = bfa.Shootfireball();
             }
         }
         
@@ -48,10 +47,6 @@ public class BossAttack : MonoBehaviour
                 Casting = false;
                 timer = 0;
             }
-        }
-        if(health.isDead())
-        {
-            this.gameObject.SetActive(false);
         }
     }
 }

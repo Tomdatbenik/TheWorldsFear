@@ -1361,93 +1361,6 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 1579928718669918963}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &2056433716 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8203751265439827690, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
-    type: 3}
-  m_PrefabInstance: {fileID: 8203751267268568810}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &2056433717
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2056433716}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 93ce6f64e4d34154b8ca0fbe59619a2a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  Fireball: {fileID: 0}
---- !u!114 &2056433718
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2056433716}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6ee40c59540c85245bdf2dde86809a21, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  fa: {fileID: 2056433720}
-  rsa: {fileID: 2056433721}
-  fac: {fileID: 2056433719}
-  Casting: 0
-  timer: 0
-  health: {fileID: 1493728977}
-  Fireball: {fileID: 8593286039510837752, guid: 730454292b8185741806b8124c3fde8d,
-    type: 3}
---- !u!114 &2056433719
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2056433716}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2140c6f80ccd28644b507cca43e86963, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  lefthand: {fileID: 0}
-  righthand: {fileID: 0}
-  playercollider: {fileID: 0}
-  fistattackclosecollider: {fileID: 0}
---- !u!114 &2056433720
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2056433716}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8c8389de9662e334b8338f95d6ff64bd, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  lefthand: {fileID: 0}
-  righthand: {fileID: 0}
-  lefthandcollider: {fileID: 0}
-  righthandcollider: {fileID: 0}
-  playercollider: {fileID: 0}
---- !u!114 &2056433721
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2056433716}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 680723332af7f2548ab11038e8ffe8f8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  playercollider: {fileID: 0}
-  animator: {fileID: 0}
-  boxCollider: {fileID: 0}
 --- !u!1001 &2070777954
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1913,6 +1826,26 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 8938373093213962645, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: playercollider
+      value: 
+      objectReference: {fileID: 847266587}
+    - target: {fileID: 6060722568201433605, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: playercollider
+      value: 
+      objectReference: {fileID: 847266587}
+    - target: {fileID: 8381254388654725280, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: playercollider
+      value: 
+      objectReference: {fileID: 847266587}
+    - target: {fileID: 6931398051171160279, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: Bossarmor
+      value: 
+      objectReference: {fileID: 1493728972}
     - target: {fileID: 0}
       propertyPath: playercollider
       value: 
@@ -2121,10 +2054,5 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 6931398051171160279, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
-        type: 3}
-      propertyPath: Bossarmor
-      value: 
-      objectReference: {fileID: 1493728972}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6467b8b413ada5342a487ef7e3fe4fdc, type: 3}

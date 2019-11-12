@@ -491,7 +491,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 93ce6f64e4d34154b8ca0fbe59619a2a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Fireball: {fileID: 0}
+  Fireball: {fileID: 8593286039510837752, guid: 730454292b8185741806b8124c3fde8d,
+    type: 3}
 --- !u!114 &8381254388654725280
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -504,10 +505,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2140c6f80ccd28644b507cca43e86963, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lefthand: {fileID: 0}
-  righthand: {fileID: 0}
+  lefthand: {fileID: 8203751265765732815}
+  righthand: {fileID: 8203751266832421325}
   playercollider: {fileID: 0}
-  fistattackclosecollider: {fileID: 0}
+  fistattackclosecollider: {fileID: 3561627770694668372}
 --- !u!114 &6060722568201433605
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -520,10 +521,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8c8389de9662e334b8338f95d6ff64bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lefthand: {fileID: 0}
-  righthand: {fileID: 0}
-  lefthandcollider: {fileID: 0}
-  righthandcollider: {fileID: 0}
+  lefthand: {fileID: 8203751265765732815}
+  righthand: {fileID: 8203751266832421325}
+  lefthandcollider: {fileID: 8203751266278644671}
+  righthandcollider: {fileID: 8203751266345245700}
   playercollider: {fileID: 0}
 --- !u!114 &8938373093213962645
 MonoBehaviour:
@@ -538,8 +539,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playercollider: {fileID: 0}
-  animator: {fileID: 0}
-  boxCollider: {fileID: 0}
+  animator: {fileID: 5755418991001292903}
+  boxCollider: {fileID: 3314366149342276547}
 --- !u!114 &5875758005003858176
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -552,13 +553,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ee40c59540c85245bdf2dde86809a21, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fa: {fileID: 0}
-  rsa: {fileID: 0}
-  fac: {fileID: 0}
-  bfa: {fileID: 0}
+  fa: {fileID: 6060722568201433605}
+  rsa: {fileID: 8938373093213962645}
+  fac: {fileID: 8381254388654725280}
+  bfa: {fileID: 1577566333734158483}
   Casting: 0
   timer: 0
-  health: {fileID: 0}
 --- !u!1 &8203751265707106976
 GameObject:
   m_ObjectHideFlags: 0
