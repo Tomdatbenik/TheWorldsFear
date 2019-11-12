@@ -26,7 +26,7 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (move && !health.isDead())
+        if (move)
         {
             //movement.x = joystick.Direction.x;
             //movement.y = joystick.Direction.y;
@@ -36,10 +36,7 @@ public class PlayerMovement : MonoBehaviour
                 movement.y = Input.GetAxis("Vertical");
             }
         }
-        else
-        {
-            this.gameObject.SetActive(false);
-        }
+  
         //if (Input.GetKeyDown(KeyCode.Mouse0))
         //{
         //    speed.DecreaseSpeed(speed.GetSpeed()/2);

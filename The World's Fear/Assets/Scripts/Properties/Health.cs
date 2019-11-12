@@ -97,6 +97,11 @@ public class Health : MonoBehaviour
                 CanTakeDamage = true;
             }
         }
+
+        if(this.isDead())
+        {
+            this.gameObject.SetActive(false);
+        }
     }
 
     public void OnTriggerStay2D(Collider2D collision)
