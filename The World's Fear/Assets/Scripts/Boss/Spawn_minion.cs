@@ -15,6 +15,6 @@ public class Spawn_minion : MonoBehaviour
         Instantiate(spider);
 
         spider.transform.position = Vector2.zero;
-        spider.SetActive(true);
+        spider.SetActive(true); 
     }
 }

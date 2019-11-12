@@ -278,6 +278,16 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
       value: Dash
       objectReference: {fileID: 0}
+    - target: {fileID: 776157807034170803, guid: 0e112c26056fb3548a235b48cbc0fb8b,
+        type: 3}
+      propertyPath: snapY
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 776157807034170803, guid: 0e112c26056fb3548a235b48cbc0fb8b,
+        type: 3}
+      propertyPath: snapX
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 0e112c26056fb3548a235b48cbc0fb8b, type: 3}
 --- !u!1 &212231467
@@ -1666,11 +1676,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 381921093316718941, guid: 240b6bbaf150de84a9a9246320f25cc8,
-        type: 3}
-      propertyPath: joystick
-      value: 
-      objectReference: {fileID: 1946439276}
     - target: {fileID: 381921093316718915, guid: 240b6bbaf150de84a9a9246320f25cc8,
         type: 3}
       propertyPath: joystick
@@ -1681,6 +1686,11 @@ PrefabInstance:
       propertyPath: AttackDuration
       value: 10
       objectReference: {fileID: 0}
+    - target: {fileID: 381921093316718941, guid: 240b6bbaf150de84a9a9246320f25cc8,
+        type: 3}
+      propertyPath: joystick
+      value: 
+      objectReference: {fileID: 1946439276}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 240b6bbaf150de84a9a9246320f25cc8, type: 3}
 --- !u!1001 &5967449573941103035
@@ -1782,11 +1792,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: Boss
       objectReference: {fileID: 0}
-    - target: {fileID: 8203751266278644671, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+    - target: {fileID: 6931398051171160279, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
         type: 3}
-      propertyPath: m_IsTrigger
-      value: 1
-      objectReference: {fileID: 0}
+      propertyPath: Bossarmor
+      value: 
+      objectReference: {fileID: 1493728972}
+    - target: {fileID: 6931398051171160279, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: Spider
+      value: 
+      objectReference: {fileID: 5967449573397994524, guid: 487261623b89b7a4588b5617ca68c5e3,
+        type: 3}
+    - target: {fileID: 6931398051171160279, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: target
+      value: 
+      objectReference: {fileID: 794374487}
     - target: {fileID: 8203751265765732809, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
         type: 3}
       propertyPath: m_TagString
@@ -1806,6 +1827,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8203751266278644671, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: m_IsTrigger
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3561627770694668372, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
         type: 3}
@@ -1982,22 +2008,6 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 6931398051171160279, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
-        type: 3}
-      propertyPath: Bossarmor
-      value: 
-      objectReference: {fileID: 1493728972}
-    - target: {fileID: 6931398051171160279, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
-        type: 3}
-      propertyPath: Spider
-      value: 
-      objectReference: {fileID: 5967449573397994524, guid: 487261623b89b7a4588b5617ca68c5e3,
-        type: 3}
-    - target: {fileID: 6931398051171160279, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
-        type: 3}
-      propertyPath: target
-      value: 
-      objectReference: {fileID: 794374487}
     - target: {fileID: 8381254388654725280, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
         type: 3}
       propertyPath: playercollider

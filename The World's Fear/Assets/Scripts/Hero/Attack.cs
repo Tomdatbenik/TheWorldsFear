@@ -25,19 +25,14 @@ public class Attack : MonoBehaviour
         direction.x = animator.GetFloat("Horizontal");
         direction.y = animator.GetFloat("Vertical");
 
-        ////detect if the player is attacking or not
-        //if (Input.GetKeyDown(KeyCode.Mouse0))
-        //{
-        //    attack = true;
-        //    sword.SetActive(true);
-        //}
-        //if (Input.GetKeyUp(KeyCode.Mouse0))
-        //{
-        //    attack = false;
-        //    sword.SetActive(false);
-        //}
+        //detect if the player is attacking or not
+        if (Input.GetKeyDown(KeyCode.A))
+        {
+            attack = true;
+            timer = 0;
+        }
 
-        if(attack == true)
+        if (attack == true)
         {
             Debug.Log("Attacking");
             sword.SetActive(true);

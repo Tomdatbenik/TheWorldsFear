@@ -64,6 +64,8 @@ public class Sword : MonoBehaviour
             AnimatorFloats.y = LastRotation.y;
         }
 
+        Debug.Log(AnimatorFloats.x);
+        Debug.Log(AnimatorFloats.y);
         this.transform.position = new Vector2(wielder.transform.position.x + AnimatorFloats.x, wielder.transform.position.y + AnimatorFloats.y);
     }
 }
