@@ -435,6 +435,11 @@ GameObject:
   m_Component:
   - component: {fileID: 8203751265439827691}
   - component: {fileID: 6931398051171160279}
+  - component: {fileID: 1577566333734158483}
+  - component: {fileID: 8381254388654725280}
+  - component: {fileID: 6060722568201433605}
+  - component: {fileID: 8938373093213962645}
+  - component: {fileID: 5875758005003858176}
   m_Layer: 0
   m_Name: Boss
   m_TagString: Untagged
@@ -474,6 +479,86 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Bossarmor: {fileID: 0}
+--- !u!114 &1577566333734158483
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8203751265439827690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93ce6f64e4d34154b8ca0fbe59619a2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Fireball: {fileID: 0}
+--- !u!114 &8381254388654725280
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8203751265439827690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2140c6f80ccd28644b507cca43e86963, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lefthand: {fileID: 0}
+  righthand: {fileID: 0}
+  playercollider: {fileID: 0}
+  fistattackclosecollider: {fileID: 0}
+--- !u!114 &6060722568201433605
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8203751265439827690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c8389de9662e334b8338f95d6ff64bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lefthand: {fileID: 0}
+  righthand: {fileID: 0}
+  lefthandcollider: {fileID: 0}
+  righthandcollider: {fileID: 0}
+  playercollider: {fileID: 0}
+--- !u!114 &8938373093213962645
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8203751265439827690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 680723332af7f2548ab11038e8ffe8f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  playercollider: {fileID: 0}
+  animator: {fileID: 0}
+  boxCollider: {fileID: 0}
+--- !u!114 &5875758005003858176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8203751265439827690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ee40c59540c85245bdf2dde86809a21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fa: {fileID: 0}
+  rsa: {fileID: 0}
+  fac: {fileID: 0}
+  bfa: {fileID: 0}
+  Casting: 0
+  timer: 0
+  health: {fileID: 0}
 --- !u!1 &8203751265707106976
 GameObject:
   m_ObjectHideFlags: 0

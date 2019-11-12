@@ -10,6 +10,11 @@ public class BossFireAttack : MonoBehaviour
     public GameObject Fireball;
     private Vector2 Position;
 
+    public bool Shootfireball()
+    {
+        CreateFireballs(PickCoordinates());
+        return true;
+    }
 
     List<Vector2> PickCoordinates()
     {
@@ -21,22 +26,14 @@ public class BossFireAttack : MonoBehaviour
         }
         return Fireballs;
     }
-    
-    void ShootFireball(List<Vector2> fireballs)
+
+    void CreateFireballs(List<Vector2> fireballs)
     {
-        for(int i = 0; i < 3; i++)
+        for (int i = 0; i < 3; i++)
         {
             GameObject fireball = Fireball;
-            fireball.transform.position = fireballs[i]; 
+            fireball.transform.position = fireballs[i];
             Instantiate(fireball);
-        }
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            ShootFireball(PickCoordinates());
         }
     }
 }
