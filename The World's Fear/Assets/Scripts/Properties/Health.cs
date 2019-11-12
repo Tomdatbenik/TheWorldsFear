@@ -22,6 +22,11 @@ public class Health : MonoBehaviour
         }
     }
 
+    public int gethealthpoints()
+    {
+        return HealthPoints;
+    }
+
     public Health(int hp)
     {
         hp = Random.Range(hp - 2, hp + 2);
