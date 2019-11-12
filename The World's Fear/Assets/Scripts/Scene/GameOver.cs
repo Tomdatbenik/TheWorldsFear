@@ -17,8 +17,7 @@ public class GameOver : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        int hp = health.gethealthpoints();
-        if(hp <= 0)
+        if(health.isDead())
         {
             SceneManager.LoadScene("GameOver");
         }

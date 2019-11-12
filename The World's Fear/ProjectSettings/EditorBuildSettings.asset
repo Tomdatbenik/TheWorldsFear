@@ -5,7 +5,16 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
+  - enabled: 0
+    path: 
+    guid: 00000000000000000000000000000000
   - enabled: 1
-    path: Assets/Scenes/BossFight.unity
-    guid: 2cda990e2423bbf4892e6590ba056729
+    path: Assets/Scenes/StartSCreen.unity
+    guid: 9ebe818a0d4873c44bc86a9fea2aeef6
+  - enabled: 1
+    path: Assets/Scenes/GameOver.unity
+    guid: 7f720669eba653e4c870363896d0599e
+  - enabled: 1
+    path: Assets/Scenes/BossBattle.unity
+    guid: 9403f2bc18f8d83458be9b3044018bd1
   m_configObjects: {}

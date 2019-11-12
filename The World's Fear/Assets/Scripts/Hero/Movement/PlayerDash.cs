@@ -23,7 +23,7 @@ public class PlayerDash : MonoBehaviour
     private void Update()
     {
         //PC input
-        if (Input.GetKeyDown(KeyCode.RightShift) && !dash)
+        if (Input.GetKeyDown(KeyCode.LeftShift) && !dash)
         {
             Dash();
         }

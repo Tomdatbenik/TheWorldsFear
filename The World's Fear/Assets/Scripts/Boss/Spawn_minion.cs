@@ -4,22 +4,17 @@ using UnityEngine;
 
 public class Spawn_minion : MonoBehaviour
 {
-    public GameObject Bossarmor;
-    private Health health;
+    public GameObject Spider;
+    public Transform target;
 
-    // Start is called before the first frame update
-    void Start()
+    public void SpawnSpider()
     {
-       health = Bossarmor.GetComponent<Health>(); 
-    }
 
-    // Update is called once per frame
-    void Update()
-    {
-        int i = health.gethealthpoints();
-        if(i <= 500)
-        {
-            Debug.Log("spawn minion");
-        }
+        GameObject spider = Spider;
+
+        Instantiate(spider);
+
+        spider.transform.position = Vector2.zero;
+        spider.SetActive(true);
     }
 }

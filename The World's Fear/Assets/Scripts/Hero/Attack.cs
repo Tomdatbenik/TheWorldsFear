@@ -11,6 +11,9 @@ public class Attack : MonoBehaviour
     bool attack = false;
     public GameObject sword;
 
+    private int timer;
+    public int AttackDuration;
+
     private void Start()
     {
         sword.SetActive(false);
@@ -19,28 +22,54 @@ public class Attack : MonoBehaviour
     void Update()
     {
         //get the direction in which the player is moving
-        direction.x = Input.GetAxisRaw("Horizontal");
-        direction.y = Input.GetAxisRaw("Vertical");
+        direction.x = animator.GetFloat("Horizontal");
+        direction.y = animator.GetFloat("Vertical");
 
-        //detect if the player is attacking or not
-        if (Input.GetKeyDown(KeyCode.Mouse0))
+        ////detect if the player is attacking or not
+        //if (Input.GetKeyDown(KeyCode.Mouse0))
+        //{
+        //    attack = true;
+        //    sword.SetActive(true);
+        //}
+        //if (Input.GetKeyUp(KeyCode.Mouse0))
+        //{
+        //    attack = false;
+        //    sword.SetActive(false);
+        //}
+
+        if(attack == true)
         {
-            attack = true;
+            Debug.Log("Attacking");
             sword.SetActive(true);
+            timer++;
         }
-        if (Input.GetKeyUp(KeyCode.Mouse0))
+
+        if(timer > AttackDuration)
         {
             attack = false;
             sword.SetActive(false);
         }
-        
+
+        SetAnimatorValues();
+
+
+    }
+
+    public void CastAttack()
+    {
+        attack = true;
+        timer = 0;
+    }
+
+    private void SetAnimatorValues()
+    {
         //dectect if the player has last moved into one of the four animation directions
         if (direction.x != 0 && direction.y == 0)
         {
             x = direction.x;
             y = direction.y;
         }
-        if(direction.y != 0 && direction.x == 0)
+        if (direction.y != 0 && direction.x == 0)
         {
             x = direction.x;
             y = direction.y;
@@ -54,6 +83,5 @@ public class Attack : MonoBehaviour
             animator.SetFloat("Attack Horizontal", x);
             animator.SetFloat("Attack Vertical", y);
         }
-        
     }
 }

@@ -13,6 +13,11 @@ public class SpiderMovement : MonoBehaviour
 
     public Health health;
 
+    private void Start()
+    {
+        Target = GameObject.FindGameObjectsWithTag("Player")[0].transform;   
+    }
+
     public void Update()
     {
         Vector3 Direction = Target.position - transform.position;
