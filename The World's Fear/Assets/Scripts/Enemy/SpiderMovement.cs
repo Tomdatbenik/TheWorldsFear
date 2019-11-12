@@ -25,15 +25,7 @@ public class SpiderMovement : MonoBehaviour
     // Update is called once per frame
     void FixedUpdate()
     {
-        if(!health.isDead())
-        {
-            moveCharacter(movement);
-        }
-        else
-        {
-            this.gameObject.SetActive(false);
-        }
-
+        moveCharacter(movement);
     }
 
     void moveCharacter(Vector2 direction)

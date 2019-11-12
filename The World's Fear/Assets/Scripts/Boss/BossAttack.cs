@@ -49,9 +49,5 @@ public class BossAttack : MonoBehaviour
                 timer = 0;
             }
         }
-        if(health.isDead())
-        {
-            this.gameObject.SetActive(false);
-        }
     }
 }
