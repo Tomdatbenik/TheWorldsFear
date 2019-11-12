@@ -7,6 +7,8 @@ public class Sword : MonoBehaviour
     public GameObject wielder;
     public Animator animator;
     public Rigidbody2D rb;
+
+    private Vector2 LastRotation;
     // Start is called before the first frame update
     void Start()
     {
@@ -24,27 +26,42 @@ public class Sword : MonoBehaviour
 
         if (AnimatorFloats.x > 0)
         {
+            LastRotation.x = 1;
             AnimatorFloats.x = 1;
         }
         else if(AnimatorFloats.x < 0)
         {
+            LastRotation.x = -1;
             AnimatorFloats.x = -1;
+        }
+        else if(AnimatorFloats.x == 0 && AnimatorFloats.y != 0)
+        {
+            LastRotation.x = 0;
         }
 
         if (AnimatorFloats.y > 0)
         {
+            LastRotation.y = 1;
             AnimatorFloats.y = 1;
         }
         else if (AnimatorFloats.y < 0)
         {
+            LastRotation.y = -1;
             AnimatorFloats.y = -1;
         }
+        else if (AnimatorFloats.y == 0 && AnimatorFloats.x != 0)
+        {
+            LastRotation.y = 0;
+        }
 
-        if(AnimatorFloats == Vector2.zero)
+        Debug.Log("x " + LastRotation.x);
+        Debug.Log("y " + LastRotation.y);
+
+        if (AnimatorFloats == Vector2.zero)
         {
             //TODO Remember postion player is facing
-            AnimatorFloats.x = 0;
-            AnimatorFloats.y = -1;
+            AnimatorFloats.x = LastRotation.x;
+            AnimatorFloats.y = LastRotation.y;
         }
 
         this.transform.position = new Vector2(wielder.transform.position.x + AnimatorFloats.x, wielder.transform.position.y + AnimatorFloats.y);

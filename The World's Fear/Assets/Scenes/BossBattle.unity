@@ -1383,12 +1383,6 @@ Animator:
     type: 3}
   m_PrefabInstance: {fileID: 8203751267268568810}
   m_PrefabAsset: {fileID: 0}
---- !u!4 &2002073878 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 975122702763093249, guid: 487261623b89b7a4588b5617ca68c5e3,
-    type: 3}
-  m_PrefabInstance: {fileID: 3887166500044931614}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2056433716 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8203751265439827690, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
@@ -1781,6 +1775,11 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 975122703611645629, guid: 487261623b89b7a4588b5617ca68c5e3,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3887166499909048481, guid: 487261623b89b7a4588b5617ca68c5e3,
         type: 3}
       propertyPath: m_Name
@@ -1865,7 +1864,7 @@ PrefabInstance:
         type: 3}
       propertyPath: Target
       value: 
-      objectReference: {fileID: 2002073878}
+      objectReference: {fileID: 794374487}
     - target: {fileID: 975122703132040684, guid: 487261623b89b7a4588b5617ca68c5e3,
         type: 3}
       propertyPath: m_Constraints
@@ -1880,11 +1879,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 6931398051171160279, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
-        type: 3}
-      propertyPath: Bossarmor
-      value: 
-      objectReference: {fileID: 1493728972}
     - target: {fileID: 0}
       propertyPath: playercollider
       value: 
@@ -2093,5 +2087,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6931398051171160279, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: Bossarmor
+      value: 
+      objectReference: {fileID: 1493728972}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6467b8b413ada5342a487ef7e3fe4fdc, type: 3}
