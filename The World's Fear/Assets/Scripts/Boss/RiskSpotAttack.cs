@@ -4,20 +4,40 @@ using UnityEngine;
 
 public class RiskSpotAttack : MonoBehaviour
 {
+    public BoxCollider2D playercollider;
     public Animator animator;
     public BoxCollider2D boxCollider;
-    public BoxCollider2D playercollider;
 
-    // Update is called once per frame
-    void Update()
+    public bool RiskSpotDetection()
     {
         if (boxCollider.IsTouching(playercollider))
         {
-            animator.SetBool("Initiate", true);
+            ActivateRiskSpotAttack();
+            return true;
+
         }
         if (animator.GetCurrentAnimatorStateInfo(0).IsName("RiskSpotAttack"))
         {
-            animator.SetBool("Initiate", false);
+            DeactivateRiskSpotAttack();
+        }
+        return false;
+    }
+
+    public void ActivateRiskSpotAttack()
+    {
+        animator.SetBool("Initiate", true);
+    }
+
+    public void DeactivateRiskSpotAttack()
+    {
+        animator.SetBool("Initiate", false);
+    }
+
+    public void CheckForAnimationRunningRiskSpot()
+    {
+        if (animator.GetCurrentAnimatorStateInfo(0).IsName("RiskSpotAttack"))
+        {
+            DeactivateRiskSpotAttack();
         }
     }
 }

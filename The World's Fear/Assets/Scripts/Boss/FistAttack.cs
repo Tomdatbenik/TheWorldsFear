@@ -10,18 +10,37 @@ public class FistAttack : MonoBehaviour
     public BoxCollider2D righthandcollider;
     public BoxCollider2D playercollider;
 
-    // Update is called once per frame
-    void Update()
+    public bool FistAttackDetection()
+    {
+        if (lefthandcollider.IsTouching(playercollider) || righthandcollider.IsTouching(playercollider))
+        {
+            ActivateFistAttack();
+            return true;
+        }
+        if (lefthand.GetCurrentAnimatorStateInfo(0).IsName("LeftHandAttack") && righthand.GetCurrentAnimatorStateInfo(0).IsName("RightHandAttack"))
+        {
+            DeactivateFistAttack();
+        }
+        return false;
+    }
+
+    public void ActivateFistAttack()
+    {
+        lefthand.SetBool("Initiate", true);
+        righthand.SetBool("Initiate", true);
+    }
+
+    public void DeactivateFistAttack()
+    {
+        lefthand.SetBool("Initiate", false);
+        righthand.SetBool("Initiate", false);
+    }
+
+    public void CheckForAnimationRunningFist()
     {
         if (lefthand.GetCurrentAnimatorStateInfo(0).IsName("LeftHandAttack") && righthand.GetCurrentAnimatorStateInfo(0).IsName("RightHandAttack"))
         {
-            lefthand.SetBool("Initiate", false);
-            righthand.SetBool("Initiate", false);
+            DeactivateFistAttack();
         }
-        if (lefthandcollider.IsTouching(playercollider) || righthandcollider.IsTouching(playercollider))
-        {
-            lefthand.SetBool("Initiate", true);
-            righthand.SetBool("Initiate", true);
-        }
-    } 
+    }
 }
