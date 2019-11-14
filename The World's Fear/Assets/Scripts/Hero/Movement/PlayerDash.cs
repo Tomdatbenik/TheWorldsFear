@@ -12,12 +12,12 @@ public class PlayerDash : MonoBehaviour
     private int duration;
 
     private bool dash = false;
+    public Speed speed;
 
     private void Start()
     {
-        playermovementscript = gameObject.GetComponent<PlayerMovement>();
         duration = DashDuration;
-        Dashspeed = playermovementscript.speed.GetSpeed() * 5;
+        Dashspeed = speed.GetSpeed() * 5;
     }
 
     private void Update()
@@ -27,26 +27,28 @@ public class PlayerDash : MonoBehaviour
         {
             Dash();
         }
-    }
 
-    private void FixedUpdate()
-    {
         //if dash is activated
         if (dash)
         {
             //and the dash timer is still going
-            if(duration != 0)
+            if (duration != 0)
             {
                 duration--;
-                playermovementscript.speed.SetSpeed(Dashspeed);
+                speed.SetSpeed(Dashspeed);
             }
             else
             {
                 dash = false;
                 duration = DashDuration;
-                playermovementscript.speed.ResetSpeed();
+                speed.ResetSpeed();
             }
         }
+    }
+
+    private void FixedUpdate()
+    {
+
     }
 
     public void Dash()
@@ -54,6 +56,7 @@ public class PlayerDash : MonoBehaviour
         //Mobile input
         if (!dash)
         {
+            Debug.Log("dash");
             dash = true;
         }
     }
