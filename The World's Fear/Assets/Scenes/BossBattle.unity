@@ -4004,11 +4004,11 @@ AudioSource:
   m_Enabled: 1
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
-  m_audioClip: {fileID: 8300000, guid: bd5d9d8f649def04bb2c391c6e0b41c4, type: 3}
-  m_PlayOnAwake: 0
-  m_Volume: 0.425
+  m_audioClip: {fileID: 8300000, guid: 81dd6d430615ad7458f00acc4905fc11, type: 3}
+  m_PlayOnAwake: 1
+  m_Volume: 0.05
   m_Pitch: 1
-  Loop: 0
+  Loop: 1
   Mute: 0
   Spatialize: 0
   SpatializePostEffects: 0
@@ -4090,8 +4090,8 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &1852902514
-MonoBehaviour:
+--- !u!81 &1852902514
+AudioListener:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -4267,7 +4267,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2127345827}
   - component: {fileID: 2127345826}
-  - component: {fileID: 2127345825}
   - component: {fileID: 2127345828}
   m_Layer: 0
   m_Name: Main Camera
@@ -4276,14 +4275,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!81 &2127345825
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2127345824}
-  m_Enabled: 1
 --- !u!20 &2127345826
 Camera:
   m_ObjectHideFlags: 0
@@ -4515,16 +4506,6 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
-        type: 3}
-      propertyPath: snapX
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
-        type: 3}
-      propertyPath: snapY
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 3032180812830550762, guid: 042015468a36c994d87f01a6e46bfcd0,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -4628,6 +4609,16 @@ PrefabInstance:
     - target: {fileID: 3032180812830550762, guid: 042015468a36c994d87f01a6e46bfcd0,
         type: 3}
       propertyPath: m_Pivot.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
+        type: 3}
+      propertyPath: snapX
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
+        type: 3}
+      propertyPath: snapY
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
