@@ -13,7 +13,6 @@ public class FistAttackClose : MonoBehaviour
     {
         if (fistattackclosecollider.IsTouching(playercollider))
         {
-            ActivateFistAttackClose();
             return true;
         }
         if (lefthand.GetCurrentAnimatorStateInfo(0).IsName("LeftFistAttackClose") && righthand.GetCurrentAnimatorStateInfo(0).IsName("RightFistAttackClose"))

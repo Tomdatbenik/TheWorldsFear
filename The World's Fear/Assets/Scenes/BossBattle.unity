@@ -4108,20 +4108,6 @@ Animator:
     type: 3}
   m_PrefabInstance: {fileID: 381921091602234668}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1852902510
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1852902505}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 616e9d5f161dcc74bbe315330a099978, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  playerDash: {fileID: 1852902508}
-  audioSource: {fileID: 0}
 --- !u!114 &1852902511 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 381921093316718915, guid: 240b6bbaf150de84a9a9246320f25cc8,

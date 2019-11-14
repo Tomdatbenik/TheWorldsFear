@@ -14,7 +14,6 @@ public class RiskSpotAttack : MonoBehaviour
     {
         if (detectioncollider.IsTouching(playercollider))
         {
-            ActivateRiskSpotAttack();
             return true;
 
         }

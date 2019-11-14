@@ -29,18 +29,38 @@ public class BossAttack : MonoBehaviour
     private void Update()
     {
         //the 2 if make sure that if the colliders overlap that fist attack will be prioritised
-        if(Casting == false)
+        if(!Casting)
         {
             Casting = fa.FistAttackDetection();
-            if (Casting == false)
+            if (!Casting)
             {
                 Casting = fac.FistAttackCloseDetection();
+
+                if(Casting)
+                {
+                    int choice = Random.Range(0, 10);
+                    if(choice < 8)
+                    {
+                        fac.ActivateFistAttackClose();
+                    }
+                    else
+                    {
+                        rsa.ActivateRiskSpotAttack();
+                    }
+                    
+                }
             }
-            if (Casting == false)
+            if (!Casting)
             {
+                //CHoice between fire line attack
                 Casting = rsa.RiskSpotDetection();
+
+                if(Casting)
+                {
+                    rsa.ActivateRiskSpotAttack();
+                }
             }
-            if(Casting == false)
+            if(!Casting)
             {
                 Casting = bfa.Shootfireball();
             }
