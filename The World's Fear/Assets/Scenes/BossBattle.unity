@@ -2646,6 +2646,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Strength: 30
+--- !u!61 &1415601712 stripped
+BoxCollider2D:
+  m_CorrespondingSourceObject: {fileID: 3314366149342276547, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+    type: 3}
+  m_PrefabInstance: {fileID: 8203751267268568810}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1451833297
 GameObject:
   m_ObjectHideFlags: 0
@@ -4098,12 +4104,6 @@ AudioListener:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1852902505}
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 616e9d5f161dcc74bbe315330a099978, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  playerDash: {fileID: 1852902508}
-  audioSource: {fileID: 1852902513}
 --- !u!1 &1998224072
 GameObject:
   m_ObjectHideFlags: 0
@@ -4257,6 +4257,12 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 576fbc1ec8f8b0740b1b69b704af9ccd, type: 3}
+--- !u!60 &2116818442 stripped
+PolygonCollider2D:
+  m_CorrespondingSourceObject: {fileID: 8599757338636718162, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+    type: 3}
+  m_PrefabInstance: {fileID: 8203751267268568810}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2127345824
 GameObject:
   m_ObjectHideFlags: 0
@@ -4506,6 +4512,16 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
+        type: 3}
+      propertyPath: snapX
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
+        type: 3}
+      propertyPath: snapY
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3032180812830550762, guid: 042015468a36c994d87f01a6e46bfcd0,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -4609,16 +4625,6 @@ PrefabInstance:
     - target: {fileID: 3032180812830550762, guid: 042015468a36c994d87f01a6e46bfcd0,
         type: 3}
       propertyPath: m_Pivot.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
-        type: 3}
-      propertyPath: snapX
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
-        type: 3}
-      propertyPath: snapY
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
@@ -4958,6 +4964,16 @@ PrefabInstance:
       propertyPath: playercollider
       value: 
       objectReference: {fileID: 847266587}
+    - target: {fileID: 8938373093213962645, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: detectioncollider
+      value: 
+      objectReference: {fileID: 1415601712}
+    - target: {fileID: 8938373093213962645, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: Riskspotcollider
+      value: 
+      objectReference: {fileID: 2116818442}
     - target: {fileID: 5875758005003858176, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
         type: 3}
       propertyPath: health
