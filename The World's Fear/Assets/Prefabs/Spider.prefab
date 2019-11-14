@@ -845,6 +845,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Strength: 15
+  isBuffed: 0
 --- !u!114 &5967449574726260207
 MonoBehaviour:
   m_ObjectHideFlags: 0

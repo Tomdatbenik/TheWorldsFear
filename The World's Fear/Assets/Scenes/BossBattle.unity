@@ -251,7 +251,7 @@ MonoBehaviour:
     type: 3}
   m_PrefabInstance: {fileID: 8203751267268568810}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1749684122}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7ec2b280f18e69b47a1ac3e7315262af, type: 3}
@@ -3010,6 +3010,12 @@ GameObject:
     type: 3}
   m_PrefabInstance: {fileID: 8203751267268568810}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &1708767342 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2467736705454719364, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+    type: 3}
+  m_PrefabInstance: {fileID: 8203751267268568810}
+  m_PrefabAsset: {fileID: 0}
 --- !u!95 &1708767343
 Animator:
   serializedVersion: 3
@@ -3049,6 +3055,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Strength: 35
   isBuffed: 0
+--- !u!1 &1749684122 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8203751265439827690, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+    type: 3}
+  m_PrefabInstance: {fileID: 8203751267268568810}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1749684123
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1749684122}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6726bb4f985c2842b72d2b189b176dd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  FireLine: {fileID: 152459542380777478, guid: c92908cc90053d649ae2d53ca06ede55, type: 3}
+  Boss: {fileID: 1708767342}
+  FirelineRigitBody: {fileID: 5299923696357742459, guid: c92908cc90053d649ae2d53ca06ede55,
+    type: 3}
 --- !u!1 &1852902505 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 381921093316718917, guid: 240b6bbaf150de84a9a9246320f25cc8,
@@ -3616,6 +3644,11 @@ PrefabInstance:
       propertyPath: joystick
       value: 
       objectReference: {fileID: 1687262453}
+    - target: {fileID: 381921093316718918, guid: 240b6bbaf150de84a9a9246320f25cc8,
+        type: 3}
+      propertyPath: DefencePoints
+      value: 10
+      objectReference: {fileID: 0}
     - target: {fileID: 1568259160027716034, guid: 240b6bbaf150de84a9a9246320f25cc8,
         type: 3}
       propertyPath: m_Volume
@@ -4164,5 +4197,10 @@ PrefabInstance:
       propertyPath: RiskSpotAudioSource
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 5875758005003858176, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: fla
+      value: 
+      objectReference: {fileID: 1749684123}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6467b8b413ada5342a487ef7e3fe4fdc, type: 3}
