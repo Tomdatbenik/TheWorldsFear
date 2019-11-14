@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/BossBattle.unity
     guid: 9403f2bc18f8d83458be9b3044018bd1
+  - enabled: 1
+    path: Assets/Scenes/Village.unity
+    guid: 31766f482da8da34e8b90bb517fdecc0
   m_configObjects: {}

@@ -8,6 +8,6 @@ public class StartGame : MonoBehaviour
 
     public void GameStart()
     {
-        SceneManager.LoadScene(sceneName: "BossBattle");
+        SceneManager.LoadScene(sceneName: "Village");
     }
 }
