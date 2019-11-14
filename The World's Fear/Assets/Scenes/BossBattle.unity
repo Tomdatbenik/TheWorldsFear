@@ -523,6 +523,18 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 1701687773}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &421946793 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
+    type: 3}
+  m_PrefabInstance: {fileID: 3032180811597694716}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45977bbae16431c46a013576a1aea384, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &462463814
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2613,6 +2625,11 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 1493728973}
     m_Modifications:
+    - target: {fileID: 662029825819142624, guid: c7684223c6df9664aa201c0fe4effdde,
+        type: 3}
+      propertyPath: m_Name
+      value: Healthbar
+      objectReference: {fileID: 0}
     - target: {fileID: 662029825819142631, guid: c7684223c6df9664aa201c0fe4effdde,
         type: 3}
       propertyPath: m_LocalPosition.x
@@ -2667,11 +2684,6 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 662029825819142624, guid: c7684223c6df9664aa201c0fe4effdde,
-        type: 3}
-      propertyPath: m_Name
-      value: Healthbar
       objectReference: {fileID: 0}
     - target: {fileID: 662029825064739538, guid: c7684223c6df9664aa201c0fe4effdde,
         type: 3}
@@ -2990,18 +3002,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Strength: 35
---- !u!114 &1814362699 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3032180813143588023, guid: 042015468a36c994d87f01a6e46bfcd0,
-    type: 3}
-  m_PrefabInstance: {fileID: 3032180811597694716}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a47f546fc70ec8428172694e78e4288, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1852902505 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 381921093316718917, guid: 240b6bbaf150de84a9a9246320f25cc8,
@@ -3352,7 +3352,7 @@ PrefabInstance:
         type: 3}
       propertyPath: joystick
       value: 
-      objectReference: {fileID: 1814362699}
+      objectReference: {fileID: 421946793}
     - target: {fileID: 381921092275085678, guid: 240b6bbaf150de84a9a9246320f25cc8,
         type: 3}
       propertyPath: joystick
@@ -3475,6 +3475,16 @@ PrefabInstance:
     - target: {fileID: 3032180812830550762, guid: 042015468a36c994d87f01a6e46bfcd0,
         type: 3}
       propertyPath: m_Pivot.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
+        type: 3}
+      propertyPath: snapX
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4093606783752651205, guid: 042015468a36c994d87f01a6e46bfcd0,
+        type: 3}
+      propertyPath: snapY
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
