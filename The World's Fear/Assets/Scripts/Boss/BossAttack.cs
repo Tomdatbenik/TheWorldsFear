@@ -13,7 +13,7 @@ public class BossAttack : MonoBehaviour
     public bool Casting = false;
     private int timer = 0;
 
-    private int TimeBetweenAttacks = 75;
+    private int TimeBetweenAttacks = 200;
 
     public Health health;
     private int MaxHp;
