@@ -11,7 +11,7 @@ public class PlayerDash : MonoBehaviour
 
     private int duration;
 
-    private bool dash = false;
+    public bool dash = false;
     public Speed speed;
 
     private void Start()
@@ -46,17 +46,11 @@ public class PlayerDash : MonoBehaviour
         }
     }
 
-    private void FixedUpdate()
-    {
-
-    }
-
     public void Dash()
     {
         //Mobile input
         if (!dash)
         {
-            Debug.Log("dash");
             dash = true;
         }
     }

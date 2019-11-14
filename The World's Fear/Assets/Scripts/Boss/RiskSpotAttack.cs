@@ -5,12 +5,20 @@ using UnityEngine;
 public class RiskSpotAttack : MonoBehaviour
 {
     public BoxCollider2D playercollider;
+    public PolygonCollider2D Riskspotcollider;
     public Animator animator;
-    public BoxCollider2D boxCollider;
+    public BoxCollider2D detectioncollider;
+    public bool riskspot = false;
+
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        riskspot = true;
+    }
 
     public bool RiskSpotDetection()
     {
-        if (boxCollider.IsTouching(playercollider))
+        if (detectioncollider.IsTouching(playercollider))
         {
             ActivateRiskSpotAttack();
             return true;
@@ -40,4 +48,6 @@ public class RiskSpotAttack : MonoBehaviour
             DeactivateRiskSpotAttack();
         }
     }
+
+   
 }
