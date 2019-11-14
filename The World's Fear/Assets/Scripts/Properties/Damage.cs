@@ -9,11 +9,12 @@ public class Damage : MonoBehaviour
     private int InitStrength;
     Animator animator;
 
+    public bool isBuffed = false;
 
     public void Start()
     {
         animator = gameObject.GetComponent<Animator>();
-        if (gameObject.tag == "Player")
+        if (gameObject.tag == "Player" || gameObject.tag == "Sword")
         {
             Strength = Random.Range(Strength - 2, Strength + 2);
             InitStrength = Strength;
@@ -27,7 +28,11 @@ public class Damage : MonoBehaviour
 
     public void IncreaseStrength(int sp)
     {
-        this.Strength += sp;
+        if(!isBuffed)
+        {
+            isBuffed = true;
+            this.Strength += sp;
+        }
     }
 
     public void DecreaseDefence(int sp)

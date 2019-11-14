@@ -4,16 +4,13 @@ using UnityEngine;
 
 public class RiskSpotSound : MonoBehaviour
 {
-    public AudioSource audioSource;
-    public RiskSpotAttack riskSpotAttack;
+    public AudioSource RiskSpotAudioSource;
 
-    private void Update()
+    private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (riskSpotAttack.riskspot)
+        if(collision.gameObject.tag == "Player")
         {
-            audioSource.Play();
-            Debug.Log("yeet");
-            riskSpotAttack.riskspot = false;
-        }
+            RiskSpotAudioSource.Play();
+        }       
     }
 }

@@ -10,12 +10,6 @@ public class RiskSpotAttack : MonoBehaviour
     public BoxCollider2D detectioncollider;
     public bool riskspot = false;
 
-
-    private void OnTriggerEnter2D(Collider2D collision)
-    {
-        riskspot = true;
-    }
-
     public bool RiskSpotDetection()
     {
         if (detectioncollider.IsTouching(playercollider))
