@@ -140,11 +140,11 @@ public class Health : MonoBehaviour
                 GameObject sword = collision.gameObject;
 
                 Damage damage = sword.GetComponent(typeof(Damage)) as Damage;
-                damage.RestoreBackToInit();
 
                 damage.isBuffed = false;
 
                 this.ApplyDamage(damage);
+                damage.RestoreBackToInit();
             }
         }
     }
