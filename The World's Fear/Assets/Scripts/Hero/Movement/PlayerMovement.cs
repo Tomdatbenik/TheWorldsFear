@@ -31,10 +31,10 @@ public class PlayerMovement : MonoBehaviour
            
             if(!knockback)
             {
-                //movement.x = joystick.Direction.x;
-                //movement.y = joystick.Direction.y;
-                movement.x = Input.GetAxis("Horizontal");
-                movement.y = Input.GetAxis("Vertical");
+                movement.x = joystick.Direction.x;
+                movement.y = joystick.Direction.y;
+                //movement.x = Input.GetAxis("Horizontal");
+                //movement.y = Input.GetAxis("Vertical");
             }
         }
   

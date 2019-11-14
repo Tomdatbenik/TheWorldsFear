@@ -26,7 +26,7 @@ public class Attack : MonoBehaviour
         direction.y = animator.GetFloat("Vertical");
 
         //detect if the player is attacking or not
-        if (Input.GetKeyDown(KeyCode.Mouse0))
+        if (Input.GetKeyDown(KeyCode.A))
         {
             attack = true;
             timer = 0;

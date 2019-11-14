@@ -7,6 +7,7 @@ public class Sword : MonoBehaviour
     public GameObject wielder;
     public Animator animator;
     public Rigidbody2D rb;
+    public Joystick joystick;
 
     private Vector2 LastRotation;
     // Start is called before the first frame update
