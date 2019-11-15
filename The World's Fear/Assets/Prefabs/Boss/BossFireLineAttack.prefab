@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 152459542380777477}
   - component: {fileID: 152459542380777476}
   - component: {fileID: 5299923696357742459}
+  - component: {fileID: 6304593445143264211}
   m_Layer: 0
   m_Name: BossFireLineAttack
   m_TagString: Untagged
@@ -78,6 +79,18 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!114 &6304593445143264211
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 152459542380777478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 830928d572f44774cbbb4eb9e8ddf552, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &152459540993957678
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -163,7 +176,7 @@ PrefabInstance:
     - target: {fileID: 6815007130030949117, guid: 730454292b8185741806b8124c3fde8d,
         type: 3}
       propertyPath: Strength
-      value: 20
+      value: 25
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 730454292b8185741806b8124c3fde8d, type: 3}
@@ -258,7 +271,7 @@ PrefabInstance:
     - target: {fileID: 6815007130030949117, guid: 730454292b8185741806b8124c3fde8d,
         type: 3}
       propertyPath: Strength
-      value: 20
+      value: 25
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 730454292b8185741806b8124c3fde8d, type: 3}
@@ -353,7 +366,7 @@ PrefabInstance:
     - target: {fileID: 6815007130030949117, guid: 730454292b8185741806b8124c3fde8d,
         type: 3}
       propertyPath: Strength
-      value: 20
+      value: 25
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 730454292b8185741806b8124c3fde8d, type: 3}
@@ -443,7 +456,7 @@ PrefabInstance:
     - target: {fileID: 6815007130030949117, guid: 730454292b8185741806b8124c3fde8d,
         type: 3}
       propertyPath: Strength
-      value: 20
+      value: 25
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 730454292b8185741806b8124c3fde8d, type: 3}
@@ -538,7 +551,7 @@ PrefabInstance:
     - target: {fileID: 6815007130030949117, guid: 730454292b8185741806b8124c3fde8d,
         type: 3}
       propertyPath: Strength
-      value: 20
+      value: 25
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 730454292b8185741806b8124c3fde8d, type: 3}
@@ -633,7 +646,7 @@ PrefabInstance:
     - target: {fileID: 6815007130030949117, guid: 730454292b8185741806b8124c3fde8d,
         type: 3}
       propertyPath: Strength
-      value: 20
+      value: 25
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 730454292b8185741806b8124c3fde8d, type: 3}

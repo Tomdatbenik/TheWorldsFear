@@ -32,8 +32,8 @@ public class BossFireAttack : MonoBehaviour
         for (int i = 0; i < 3; i++)
         {
             GameObject fireball = Fireball;
+            fireball = Instantiate(fireball);
             fireball.transform.position = fireballs[i];
-            Instantiate(fireball);
         }
     }
 }

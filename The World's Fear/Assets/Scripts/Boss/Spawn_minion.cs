@@ -9,7 +9,6 @@ public class Spawn_minion : MonoBehaviour
 
     public void SpawnSpider()
     {
-
         GameObject spider = Spider;
 
         Instantiate(spider);

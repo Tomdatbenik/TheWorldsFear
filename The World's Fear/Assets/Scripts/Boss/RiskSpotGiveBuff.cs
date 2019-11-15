@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class RiskSpotGiveBuff : MonoBehaviour
 {
+    //Is player sword.
     public GameObject sword;
     private void OnTriggerEnter2D(Collider2D collision)
     {
