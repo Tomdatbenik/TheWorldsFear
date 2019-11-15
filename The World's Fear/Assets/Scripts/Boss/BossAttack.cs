@@ -10,11 +10,12 @@ public class BossAttack : MonoBehaviour
     public BossFireAttack bfa;
     public Spawn_minion spawn_Minion;
     public BossFireLineAttack fla;
+    public Animator animator;
 
     public bool Casting = false;
     private int timer = 0;
 
-    private int TimeBetweenAttacks = 200;
+    public int TimeBetweenAttacks;
 
     public Health health;
     private int MaxHp;
@@ -140,7 +141,7 @@ public class BossAttack : MonoBehaviour
             this.gameObject.SetActive(false);
         }
 
-        if(!Ragemode)
+        if(!Ragemode && !Casting)
         {
             if (health.gethealthpoints() < MaxHp / 4 * 3)
             {
@@ -152,7 +153,7 @@ public class BossAttack : MonoBehaviour
             }
         }
 
-        if (!SuperRagemode)
+        if (!SuperRagemode && !Casting)
         {
             if (health.gethealthpoints() < MaxHp / 2)
             {

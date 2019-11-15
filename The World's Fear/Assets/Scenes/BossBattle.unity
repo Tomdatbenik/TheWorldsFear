@@ -3554,7 +3554,7 @@ PrefabInstance:
     - target: {fileID: 381921093316718918, guid: 240b6bbaf150de84a9a9246320f25cc8,
         type: 3}
       propertyPath: DefencePoints
-      value: 10
+      value: 300
       objectReference: {fileID: 0}
     - target: {fileID: 381921093316718912, guid: 240b6bbaf150de84a9a9246320f25cc8,
         type: 3}
@@ -3601,6 +3601,11 @@ PrefabInstance:
       propertyPath: joystick
       value: 
       objectReference: {fileID: 1687262453}
+    - target: {fileID: 381921093316718913, guid: 240b6bbaf150de84a9a9246320f25cc8,
+        type: 3}
+      propertyPath: Strength
+      value: 15
+      objectReference: {fileID: 0}
     - target: {fileID: 1568259160027716034, guid: 240b6bbaf150de84a9a9246320f25cc8,
         type: 3}
       propertyPath: m_Volume
@@ -3914,11 +3919,6 @@ PrefabInstance:
       propertyPath: m_LocalPosition.x
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 2467736705454719364, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
-        type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
     - target: {fileID: 8599757338636718162, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
         type: 3}
       propertyPath: m_Points.m_Paths.Array.data[0].Array.size
@@ -3968,6 +3968,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Size.y
       value: 4.878393
+      objectReference: {fileID: 0}
+    - target: {fileID: 2467736705454719364, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8203751265439827691, guid: 6467b8b413ada5342a487ef7e3fe4fdc,
         type: 3}
