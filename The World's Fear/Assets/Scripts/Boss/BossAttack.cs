@@ -84,7 +84,7 @@ public class BossAttack : MonoBehaviour
                 if (BossStage == 0)
                 {
                     int choice = Random.Range(0, 100);
-                    if (choice > 90)
+                    if (choice > 99)
                     {
                         spawn_Minion.SpawnSpider();
                     }
@@ -96,7 +96,7 @@ public class BossAttack : MonoBehaviour
                 if (BossStage == 1)
                 {
                     int choice = Random.Range(0, 100);
-                    if (choice > 80)
+                    if (choice > 95)
                     {
                         spawn_Minion.SpawnSpider();
                     }
@@ -108,7 +108,7 @@ public class BossAttack : MonoBehaviour
                 if (BossStage == 2)
                 {
                     int choice = Random.Range(0, 100);
-                    if (choice > 70)
+                    if (choice > 90)
                     {
                         spawn_Minion.SpawnSpider();
                     }
@@ -130,7 +130,7 @@ public class BossAttack : MonoBehaviour
         if (Casting)
         {
             timer++;
-            if(timer == TimeBetweenAttacks)
+            if(timer > TimeBetweenAttacks)
             {
                 Casting = false;
                 timer = 0;
@@ -147,10 +147,10 @@ public class BossAttack : MonoBehaviour
         {
             if (health.gethealthpoints() < MaxHp / 4 * 3)
             {
+                Casting = true;
                 TimeBetweenAttacks = TimeBetweenAttacks / 2;
                 Ragemode = true;
                 BossStage = 1;
-                timer = 0;
                 spawn_Minion.SpawnSpider();
             }
         }
@@ -159,10 +159,10 @@ public class BossAttack : MonoBehaviour
         {
             if (health.gethealthpoints() < MaxHp / 2)
             {
+                Casting = true;
                 TimeBetweenAttacks = TimeBetweenAttacks / 4 * 3;
                 SuperRagemode = true;
                 BossStage = 2;
-                timer = 0;
                 spawn_Minion.SpawnSpider();
             }
         }
