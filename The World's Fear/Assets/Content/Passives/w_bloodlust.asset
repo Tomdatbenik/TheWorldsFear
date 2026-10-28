@@ -20,11 +20,11 @@ MonoBehaviour:
   maxRank: 3
   modifiersPerRank: []
   procs:
-  - rid: 3429192701680812247
+  - rid: 3429192701680812414
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812247
+    - rid: 3429192701680812414
       type: {class: HealOnKillProc, ns: TWF, asm: Assembly-CSharp}
       data:
         percentMaxHPPerRank: 0.025

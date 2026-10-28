@@ -28,11 +28,11 @@ MonoBehaviour:
   maxRank: 5
   castLock: 0.12
   effects:
-  - rid: 3429192701680812255
+  - rid: 3429192701680812422
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812255
+    - rid: 3429192701680812422
       type: {class: ShieldEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         percentMaxHP: 0.35

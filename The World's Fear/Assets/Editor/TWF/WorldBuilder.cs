@@ -46,12 +46,9 @@ namespace TWF.EditorTools
             rng = new System.Random(Seed);
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            // Camera and game objects.
             var camGo = new GameObject("Main Camera");
             camGo.tag = "MainCamera";
             var cam = camGo.AddComponent<Camera>();
-            cam.orthographic = true;
-            cam.orthographicSize = 7f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.08f, 0.06f, 0.05f);
             camGo.transform.position = new Vector3(0, 0, -10);
@@ -60,59 +57,60 @@ namespace TWF.EditorTools
             game.AddComponent<WorldManager>();
             game.AddComponent<GameBootstrap>();
 
-            // Hub: copy the original village.
+            // The original village is the hub at the center of the infinite world.
             RectInt hub = CopyVillage();
             // Loaded after the village copy: closing that scene unloads unreferenced assets.
             PrepareDecorSprites();
             PrepareGeneratedTiles();
+            BuildWorldTilesAsset();
             var db = AssetDatabase.LoadAssetAtPath<GameDatabase>("Assets/Resources/TWF/GameDatabase.asset");
+
             var hubZone = new Zone { def = db.FindZone("village"), rect = hub };
-
-            var forest = new Zone { def = db.FindZone("forest"), rect = new RectInt(hub.xMax - ZoneSize, hub.yMax, ZoneSize, ZoneSize) };
-            var marsh = new Zone { def = db.FindZone("marsh"), rect = new RectInt(forest.rect.xMax, forest.rect.yMin, ZoneSize, ZoneSize) };
-            var ruins = new Zone { def = db.FindZone("ruins"), rect = new RectInt(marsh.rect.xMin, marsh.rect.yMin - ZoneSize, ZoneSize, ZoneSize) };
-            var ember = new Zone { def = db.FindZone("ember"), rect = new RectInt(ruins.rect.xMin, ruins.rect.yMin - ZoneSize, ZoneSize, ZoneSize) };
-            var zones = new List<Zone> { forest, marsh, ruins, ember };
-
-            // Gates between neighbours (midpoints of shared edges).
-            var hubToForest = new Vector2Int(Mathf.Clamp(0, forest.rect.xMin + 10, forest.rect.xMax - 10), hub.yMax);
-            var forestToMarsh = new Vector2Int(forest.rect.xMax, forest.rect.yMin + ZoneSize / 2 + rng.Next(-20, 20));
-            var marshToRuins = new Vector2Int(marsh.rect.xMin + ZoneSize / 2 + rng.Next(-25, 25), marsh.rect.yMin);
-            var ruinsToEmber = new Vector2Int(ruins.rect.xMin + ZoneSize / 2 + rng.Next(-25, 25), ruins.rect.yMin);
-
-            hubZone.gates.Add(hubToForest);
-            forest.gates.Add(hubToForest); forest.gates.Add(forestToMarsh); forest.entry = hubToForest;
-            marsh.gates.Add(forestToMarsh); marsh.gates.Add(marshToRuins); marsh.entry = forestToMarsh;
-            ruins.gates.Add(marshToRuins); ruins.gates.Add(ruinsToEmber); ruins.entry = marshToRuins;
-            ember.gates.Add(ruinsToEmber); ember.entry = ruinsToEmber;
-
-            var world = new GameObject("World").AddComponent<Grid>();
-            BuildHubBorder(hubZone, world.transform);
-            AddZoneArea(world.transform, hubZone);
-            AddWaypoint(world.transform, "village", "Ashvale Village", 0, new Vector2(2f, 3f));
+            var hubRoot = new GameObject("Hub").AddComponent<Grid>();
+            BuildHubBorder(hubZone, hubRoot.transform);
+            AddWaypoint(hubRoot.transform, "village", "Ashvale Village", 0, new Vector2(2f, 3f));
             var merchant = new GameObject("Merchant").AddComponent<Merchant>();
-            merchant.transform.SetParent(world.transform, false);
+            merchant.transform.SetParent(hubRoot.transform, false);
             merchant.transform.position = new Vector2(-3.5f, 0.5f);
 
-            int order = 1;
-            foreach (var z in zones)
-            {
-                BuildZone(z, world.transform);
-                AddZoneArea(world.transform, z);
-                AddWaypoint(world.transform, z.def.id, z.def.displayName, order++, Center(z.waypoint));
-                PlaceCamps(z);
-            }
-
-            // Boss gate at the far end of the Ember Fields.
-            var far = FarthestOpenCell(ember, ember.entry);
-            var gate = new GameObject("BossGate").AddComponent<BossGate>();
-            gate.transform.SetParent(world.transform, false);
-            gate.transform.position = Center(far);
-            gate.recommendedLevel = 24;
+            var world = new GameObject("Infinite World").AddComponent<ChunkWorld>();
+            world.hubRect = hub;
 
             EditorSceneManager.SaveScene(scene, "Assets/Scenes/World.unity");
             AddToBuildSettings("Assets/Scenes/World.unity");
-            Debug.Log($"World built. Hub {hub}, zones: {forest.rect} {marsh.rect} {ruins.rect} {ember.rect}");
+            Debug.Log($"World built. Hub {hub}");
+        }
+
+        static void BuildWorldTilesAsset()
+        {
+            const string path = "Assets/Resources/TWF/WorldTiles.asset";
+            var wt = AssetDatabase.LoadAssetAtPath<WorldTiles>(path);
+            if (wt == null)
+            {
+                wt = ScriptableObject.CreateInstance<WorldTiles>();
+                AssetDatabase.CreateAsset(wt, path);
+            }
+            TileBase[] F(int[] ids) => System.Array.ConvertAll(ids, ForestTile);
+            wt.grassPlain = F(grassPlain);
+            wt.grassDetail = F(grassDetail);
+            wt.dirt = F(dirt);
+            wt.ruinsFloor = new[] { genTiles["ruins_floor0"], genTiles["ruins_floor1"], genTiles["ruins_floor2"], genTiles["ruins_floor3"] };
+            wt.ruinsPath = genTiles["ruins_path"];
+            wt.ash = new[] { genTiles["ash0"], genTiles["ash1"], genTiles["ash2"] };
+            wt.emberPath = genTiles["ember_path"];
+            wt.emberCrack = new[] { genTiles["ember_crack0"], genTiles["ember_crack1"] };
+            wt.ruinsRubble = genTiles["ruins_rubble"];
+            wt.blocker = genTiles["blocker"];
+            wt.treeOrange = decor["tree-orange"];
+            wt.treePink = decor["tree-pink"];
+            wt.treeDried = decor["tree-dried"];
+            wt.trunk = decor["trunk"];
+            wt.rock = decor["rock"];
+            wt.rockMonument = decor["rock-monument"];
+            wt.bush = decor["bush"];
+            wt.bushTall = decor["bush-tall"];
+            EditorUtility.SetDirty(wt);
+            AssetDatabase.SaveAssets();
         }
 
         static Vector2 Center(Vector2Int cell) => new Vector2(cell.x + 0.5f, cell.y + 0.5f);
@@ -126,15 +124,17 @@ namespace TWF.EditorTools
             foreach (var root in village.GetRootGameObjects())
             {
                 // Keep the village's own wall colliders and the big rock.
-                if (root.name == "Walls" || root.name == "BigRock")
+                if (root.name == "BigRock")
                 {
                     var walls = Object.Instantiate(root);
                     walls.name = "Village " + root.name;
                     SceneManager.MoveGameObjectToScene(walls, EditorSceneManager.GetActiveScene());
                     var wp = walls.transform.position;
                     walls.transform.position = new Vector3(wp.x, wp.y, 0f);
+                    var litW = AssetDatabase.LoadAssetAtPath<RenderAssets>("Assets/Resources/TWF/RenderAssets.asset");
                     foreach (var sr in walls.GetComponentsInChildren<SpriteRenderer>())
                     {
+                        if (litW != null) sr.sharedMaterial = litW.litDetail;
                         sr.sortingLayerName = "Default";
                         sr.sortingOrder = SortOrder.Units;
                     }
@@ -154,9 +154,15 @@ namespace TWF.EditorTools
                     bounds = new RectInt(Mathf.FloorToInt(b.xMin + offset.x), Mathf.FloorToInt(b.yMin + offset.y), b.size.x, b.size.y);
                 }
                 // The village used sorting layers that draw over everything; put it under the characters.
+                var lit = AssetDatabase.LoadAssetAtPath<RenderAssets>("Assets/Resources/TWF/RenderAssets.asset");
                 foreach (var r in copy.GetComponentsInChildren<TilemapRenderer>())
                 {
                     string layer = r.sortingLayerName;
+                    if (lit != null) r.sharedMaterial = layer == "Background" ? lit.litGround : lit.litDetail;
+                    r.receiveShadows = true;
+                    // Stack the layers a hair apart so opaque tiles don't z-fight (up is -Z).
+                    var lp = r.transform.position;
+                    r.transform.position = new Vector3(lp.x, lp.y, layer == "Background" ? 0f : layer == "Vegitation" ? -0.01f : -0.02f);
                     r.sortingLayerName = "Default";
                     r.sortingOrder = layer == "Background" ? -95 : layer == "Vegitation" ? -93 : -92;
                 }
@@ -177,10 +183,10 @@ namespace TWF.EditorTools
             hub.root = root;
             // A ground layer under the village so there are no holes.
             var ground = MakeTilemap(root, "Ground", -120, false);
+            ground.transform.localPosition = new Vector3(0, 0, 0.02f); // just under the village tiles
             for (int x = hub.rect.xMin; x < hub.rect.xMax; x++)
             for (int y = hub.rect.yMin; y < hub.rect.yMax; y++)
                 ground.SetTile(new Vector3Int(x, y, 0), ForestTile(Pick(grassPlain)));
-            BorderWall(hub, root, Biome.Forest, true);
         }
 
         // ---------- Zones ----------
@@ -534,6 +540,10 @@ namespace TWF.EditorTools
             var tr = go.AddComponent<TilemapRenderer>();
             tr.sortingOrder = order;
             tr.mode = TilemapRenderer.Mode.Chunk;
+            var ra = AssetDatabase.LoadAssetAtPath<RenderAssets>("Assets/Resources/TWF/RenderAssets.asset");
+            if (ra != null) tr.sharedMaterial = (name == "Ground" || name == "Paths") ? ra.litGround : ra.litDetail;
+            tr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            tr.receiveShadows = true;
             if (collider)
             {
                 go.layer = LayerMask.NameToLayer("Walls");
@@ -641,6 +651,10 @@ namespace TWF.EditorTools
             sr.sprite = sprite;
             sr.color = DecorTint(biome, sprite);
             sr.sortingOrder = SortOrder.Units;
+            var renderAssets = AssetDatabase.LoadAssetAtPath<RenderAssets>("Assets/Resources/TWF/RenderAssets.asset");
+            if (renderAssets != null) sr.sharedMaterial = sprite.name.StartsWith("bush") || sprite.name.StartsWith("tree") ? renderAssets.litWind : renderAssets.litSprite;
+            sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            sr.receiveShadows = true;
             if (collider || sprite.name.StartsWith("tree") || sprite.name.StartsWith("rock"))
             {
                 var c = go.AddComponent<CircleCollider2D>();
@@ -666,6 +680,7 @@ namespace TWF.EditorTools
                 imp.spriteImportMode = SpriteImportMode.Single;
                 imp.spritePixelsPerUnit = 16;
                 imp.filterMode = FilterMode.Point;
+                imp.mipmapEnabled = false;
                 imp.textureCompression = TextureImporterCompression.Uncompressed;
                 var settings = new TextureImporterSettings();
                 imp.ReadTextureSettings(settings);
@@ -694,6 +709,10 @@ namespace TWF.EditorTools
             for (int i = 0; i < 3; i++) MakeTile($"ash{i}", NoiseTile(trng, new Color(0.24f, 0.18f, 0.17f), 0.05f, new Color(0.45f, 0.2f, 0.1f), 0.02f), false);
             MakeTile("ember_path", NoiseTile(trng, new Color(0.33f, 0.26f, 0.22f), 0.05f, null, 0f), false);
             for (int i = 0; i < 2; i++) MakeTile($"ember_crack{i}", CrackTile(trng), false);
+            // Invisible collider tile for blocked cells (cliffs, water, walls) in the streamed world.
+            var clear = new Color[256];
+            clear[0] = new Color(0, 0, 0, 0.01f);
+            MakeTile("blocker", clear, true);
             AssetDatabase.SaveAssets();
         }
 
@@ -710,6 +729,7 @@ namespace TWF.EditorTools
             imp.textureType = TextureImporterType.Sprite;
             imp.spritePixelsPerUnit = 16;
             imp.filterMode = FilterMode.Point;
+            imp.mipmapEnabled = false;
             imp.textureCompression = TextureImporterCompression.Uncompressed;
             imp.SaveAndReimport();
 

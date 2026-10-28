@@ -28,11 +28,11 @@ MonoBehaviour:
   maxRank: 5
   castLock: 0.2
   effects:
-  - rid: 3429192701680812258
+  - rid: 3429192701680812425
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812258
+    - rid: 3429192701680812425
       type: {class: DashEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         distance: 5.5

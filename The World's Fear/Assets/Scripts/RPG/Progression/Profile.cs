@@ -33,12 +33,16 @@ namespace TWF
         public int shopStockLevel;
         public int deaths;
         public int kills;
+        public List<long> explored = new List<long>();
+        public float farthest;          // furthest distance from the village this run
+        public string bestItem = "";
+        public int bossesKilled;
     }
 
     // The player's persistent progress: level, XP, gold, skills, items.
     public static class Profile
     {
-        public const int MaxLevel = 30;
+        public const int MaxLevel = 100;
         public const int InventorySize = 24;
         public const int MaxPotions = 5;
 
@@ -79,8 +83,10 @@ namespace TWF
 
         public static void NewGame(string classId)
         {
+            RunOver = false;
             data = new SaveData { classId = classId };
             ranks = null;
+            exploredSet = null;
             var cls = GameDatabase.Instance != null ? GameDatabase.Instance.FindClass(classId) : null;
             if (cls != null && cls.skillTree != null && !string.IsNullOrEmpty(cls.starterNode))
             {
@@ -98,6 +104,7 @@ namespace TWF
                 if (!File.Exists(SavePath)) return false;
                 data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
                 if (data == null) return false;
+                exploredSet = null;
                 if (data.equippedSkills == null || data.equippedSkills.Length != 4) data.equippedSkills = new string[4];
                 ranks = null;
                 // Repair saves that are missing the class's free starter skill.
@@ -116,9 +123,11 @@ namespace TWF
             }
         }
 
+        public static bool RunOver { get; private set; }
+
         public static void Save()
         {
-            if (data == null) return;
+            if (data == null || RunOver) return;
             var current = Ranks; // build the lookup before clearing the list it may be built from
             data.nodeRanks = new List<NodeRank>();
             foreach (var kv in current) data.nodeRanks.Add(new NodeRank { id = kv.Key, rank = kv.Value });
@@ -134,9 +143,13 @@ namespace TWF
 
         public static void DeleteSave()
         {
+            RunOver = HeroController.Instance != null && HeroController.Instance.Combatant.IsDead;
             if (File.Exists(SavePath)) File.Delete(SavePath);
+            // After a death the data stays in memory (for the summary) but can never be saved again.
+            if (RunOver) return;
             data = null;
             ranks = null;
+            exploredSet = null;
         }
 
         // ---------- Experience ----------
@@ -325,6 +338,25 @@ namespace TWF
             Data.potions++;
             Changed?.Invoke();
             return true;
+        }
+
+        // ---------- Exploration ----------
+
+        static HashSet<long> exploredSet;
+
+        public static long ChunkKey(Vector2Int c) => ((long)c.x << 32) | (uint)c.y;
+
+        public static bool IsExplored(Vector2Int c)
+        {
+            if (exploredSet == null) exploredSet = new HashSet<long>(Data.explored);
+            return exploredSet.Contains(ChunkKey(c));
+        }
+
+        public static void MarkExplored(Vector2Int c)
+        {
+            if (IsExplored(c)) return;
+            exploredSet.Add(ChunkKey(c));
+            Data.explored.Add(ChunkKey(c));
         }
 
         public static void UnlockWaypoint(string id)

@@ -36,15 +36,6 @@ namespace TWF.EditorTools
             {
                 new HandmadeMonster
                 {
-                    name = "Forest Spider", biome = Biome.Forest, archetype = MonsterArchetype.Chaser, tint = C("#7a6a5a"), scale = 0.75f,
-                    frames = new[]
-                    {
-                        AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Enemies/SpiderWalkRight1.png"),
-                        AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Enemies/SpiderWalkRight2.png"),
-                    },
-                },
-                new HandmadeMonster
-                {
                     name = "Fire Slime", biome = Biome.Ember, archetype = MonsterArchetype.Exploder, tint = C("#ff7a3d"), scale = 0.8f,
                     frames = LoadSprites("Assets/Sprites/Slime/FireSlime/fireslime.png"),
                 },

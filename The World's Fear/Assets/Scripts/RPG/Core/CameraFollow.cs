@@ -42,6 +42,11 @@ namespace TWF
                 cam.nearClipPlane = 0.3f;
                 cam.farClipPlane = 200f;
                 cam.transparencySortMode = TransparencySortMode.Perspective;
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                var data = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(cam);
+                data.renderPostProcessing = true;
+                data.renderShadows = true;
+                data.antialiasing = UnityEngine.Rendering.Universal.AntialiasingMode.FastApproximateAntialiasing;
             }
         }
 
@@ -61,12 +66,15 @@ namespace TWF
             focus = target.position;
             hasFocus = true;
             velocity = Vector3.zero;
+            yaw = targetYaw;
+            gestureActive = false;
             Apply(0f);
         }
 
         void Update()
         {
             float dt = Time.unscaledDeltaTime;
+            if (MobaInput.Blocked) gestureActive = false;
             if (!MobaInput.Blocked)
             {
                 float keys = (Input.GetKey(KeyCode.C) ? 1f : 0f) - (Input.GetKey(KeyCode.Z) ? 1f : 0f);
@@ -77,28 +85,53 @@ namespace TWF
             yaw = Mathf.LerpAngle(yaw, targetYaw, 1f - Mathf.Exp(-12f * dt));
         }
 
-        // Two fingers that are not on buttons: twist to rotate, pinch to zoom.
+        // Two fingers that both started on the world (not on buttons): twist to rotate, pinch to zoom.
+        // Tracking resets whenever the gesture breaks, so stale finger positions can't make the camera jump.
+        bool gestureActive;
+        int fingerA = -1, fingerB = -1;
+
         void HandleTouchGestures()
         {
             if (Input.touchCount != 2)
             {
-                lastPinch = 0f;
+                gestureActive = false;
                 return;
             }
             var a = Input.GetTouch(0);
             var b = Input.GetTouch(1);
             var es = UnityEngine.EventSystems.EventSystem.current;
-            if (es != null && (es.IsPointerOverGameObject(a.fingerId) || es.IsPointerOverGameObject(b.fingerId))) return;
+            bool overUI = es != null && (es.IsPointerOverGameObject(a.fingerId) || es.IsPointerOverGameObject(b.fingerId));
+            if (overUI || a.phase == TouchPhase.Ended || b.phase == TouchPhase.Ended || a.phase == TouchPhase.Canceled || b.phase == TouchPhase.Canceled)
+            {
+                gestureActive = false;
+                return;
+            }
+
             Vector2 d = b.position - a.position;
             float angle = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
-            float pinch = d.magnitude;
-            if (lastPinch > 0f)
+            float pinch = Mathf.Max(1f, d.magnitude);
+            if (!gestureActive || a.fingerId != fingerA || b.fingerId != fingerB)
             {
-                targetYaw -= Mathf.DeltaAngle(lastTwistAngle, angle);
-                distance = Mathf.Clamp(distance * lastPinch / Mathf.Max(1f, pinch), minDistance, maxDistance);
+                // Start fresh: remember where the fingers are, don't move yet.
+                gestureActive = true;
+                fingerA = a.fingerId;
+                fingerB = b.fingerId;
+                lastTwistAngle = angle;
+                lastPinch = pinch;
+                return;
             }
+            float twist = Mathf.Clamp(Mathf.DeltaAngle(lastTwistAngle, angle), -20f, 20f);
+            targetYaw -= twist;
+            distance = Mathf.Clamp(distance * Mathf.Clamp(lastPinch / pinch, 0.9f, 1.1f), minDistance, maxDistance);
             lastTwistAngle = angle;
             lastPinch = pinch;
+        }
+
+        // Snap the view to a 45 degree step (used by the reset button and after teleports).
+        public static void ResetRotation()
+        {
+            if (instance == null) return;
+            instance.targetYaw = Mathf.Round(instance.targetYaw / 45f) * 45f;
         }
 
         void LateUpdate()

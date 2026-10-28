@@ -20,11 +20,11 @@ MonoBehaviour:
   maxRank: 3
   modifiersPerRank: []
   procs:
-  - rid: 3429192701680812260
+  - rid: 3429192701680812432
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812260
+    - rid: 3429192701680812432
       type: {class: ExplodeOnKillProc, ns: TWF, asm: Assembly-CSharp}
       data:
         chancePerRank: 0.15

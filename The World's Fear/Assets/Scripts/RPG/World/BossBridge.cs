@@ -20,6 +20,8 @@ namespace TWF
 
         void Awake()
         {
+            // The boss scales with how far out its gate was.
+            level = Mathf.Max(5, WorldManager.PendingBossLevel);
             combatant = GetComponent<Combatant>();
             legacy = GetComponent<global::Health>();
             combatant.team = Team.Enemy;
@@ -48,6 +50,7 @@ namespace TWF
             // The old fist and fire attacks deal Strength x scale; scale them to the boss level.
             if (HeroController.Instance != null) HeroController.Instance.Combatant.legacyDamageScale = 2f + level * 0.35f;
             GameUI.Instance?.ShowBossBar(combatant);
+            ZoneLighting.Instance?.SetBoss();
             GameUI.Instance?.ShowZoneBanner(displayName, $"Level {level} boss", new Color(1f, 0.4f, 0.3f));
         }
 
@@ -76,7 +79,7 @@ namespace TWF
                 Profile.AddItem(ItemGenerator.Generate(level + 2, rarity, ItemGenerator.RandomSlot(rng), rng));
             }
             Profile.Data.bossDefeated = true;
-            Profile.Data.lastWaypoint = "village";
+            Profile.Data.bossesKilled++;
             Profile.Save();
 
             GameUI.Instance?.Toast("The World's Fear is defeated!\nLegendary loot added to your bag", Palette.Gold, 4f);

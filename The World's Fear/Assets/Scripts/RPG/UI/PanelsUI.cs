@@ -468,11 +468,15 @@ namespace TWF
 
     // ================= Map / waypoints =================
 
+    // Explored chunks painted by biome, with waypoints and the hero. Tap a waypoint to travel.
     public class MapPanel : GamePanel
     {
+        const int MapChunks = 64; // chunks shown across the map
         RectTransform mapArea, list;
+        RawImage mapImage;
+        Texture2D mapTex;
         RectTransform heroDot;
-        Rect worldBounds;
+        Vector2Int centerChunk;
 
         public static MapPanel Create(Transform root)
         {
@@ -483,11 +487,17 @@ namespace TWF
 
         void Build(RectTransform content)
         {
-            var mapBg = UIFactory.Panel("Map", content, new Color(0.1f, 0.12f, 0.1f, 1f));
+            var mapBg = UIFactory.Panel("Map", content, new Color(0.05f, 0.05f, 0.06f, 1f));
             mapBg.rectTransform.anchorMin = new Vector2(0, 0);
             mapBg.rectTransform.anchorMax = new Vector2(0.62f, 1);
             mapBg.rectTransform.offsetMin = mapBg.rectTransform.offsetMax = Vector2.zero;
             mapArea = UIFactory.Rect("Area", mapBg.transform).Stretch(20);
+            mapImage = UIFactory.Rect("Image", mapArea).Stretch().gameObject.AddComponent<RawImage>();
+            var fitter = mapImage.gameObject.AddComponent<AspectRatioFitter>();
+            fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = 1f;
+            mapTex = new Texture2D(MapChunks, MapChunks, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            mapImage.texture = mapTex;
 
             var right = UIFactory.Panel("Waypoints", content, new Color(0.12f, 0.1f, 0.12f, 0.95f));
             right.rectTransform.anchorMin = new Vector2(0.64f, 0);
@@ -495,58 +505,78 @@ namespace TWF
             right.rectTransform.offsetMin = right.rectTransform.offsetMax = Vector2.zero;
             var title = UIFactory.Text("Title", right.transform, "Waypoints", 34, Palette.Gold);
             title.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -12), new Vector2(500, 50));
-            list = UIFactory.Rect("List", right.transform);
-            list.Stretch(20);
-            list.offsetMax = new Vector2(-20, -70);
+            var scroll = UIFactory.Rect("Scroll", right.transform);
+            scroll.Stretch(20);
+            scroll.offsetMax = new Vector2(-20, -70);
+            var sr = scroll.gameObject.AddComponent<ScrollRect>();
+            scroll.gameObject.AddComponent<RectMask2D>();
+            list = UIFactory.Rect("List", scroll);
+            list.anchorMin = new Vector2(0, 1);
+            list.anchorMax = new Vector2(1, 1);
+            list.pivot = new Vector2(0.5f, 1);
+            list.sizeDelta = Vector2.zero;
             var v = list.gameObject.AddComponent<VerticalLayoutGroup>();
             v.spacing = 12;
             v.childForceExpandHeight = false;
             v.childControlHeight = false;
             v.childForceExpandWidth = true;
+            list.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            sr.content = list;
+            sr.horizontal = false;
+        }
+
+        static Color BiomeColor(Biome b)
+        {
+            switch (b)
+            {
+                case Biome.Village: return new Color(0.85f, 0.75f, 0.5f);
+                case Biome.Forest: return new Color(0.55f, 0.45f, 0.2f);
+                case Biome.Marsh: return new Color(0.3f, 0.42f, 0.35f);
+                case Biome.Ruins: return new Color(0.5f, 0.52f, 0.58f);
+                case Biome.Ember: return new Color(0.55f, 0.18f, 0.1f);
+            }
+            return Color.gray;
         }
 
         public override void Refresh()
         {
-            foreach (Transform c in mapArea) Destroy(c.gameObject);
+            foreach (Transform c in mapArea) if (c != mapImage.transform) Destroy(c.gameObject);
             foreach (Transform c in list) Destroy(c.gameObject);
             var wm = WorldManager.Instance;
-            if (wm == null) return;
+            var hero = HeroController.Instance;
+            if (wm == null || hero == null) return;
 
-            var areas = FindObjectsByType<ZoneArea>(FindObjectsSortMode.None);
-            worldBounds = new Rect();
-            bool first = true;
-            foreach (var a in areas)
+            // Paint explored chunks around the hero.
+            centerChunk = WorldGen.ChunkOf(hero.transform.position);
+            int half = MapChunks / 2;
+            var px = new Color[MapChunks * MapChunks];
+            int S = WorldGen.ChunkSize;
+            for (int y = 0; y < MapChunks; y++)
+            for (int x = 0; x < MapChunks; x++)
             {
-                if (first) { worldBounds = a.bounds; first = false; }
-                else worldBounds = Rect.MinMaxRect(Mathf.Min(worldBounds.xMin, a.bounds.xMin), Mathf.Min(worldBounds.yMin, a.bounds.yMin),
-                    Mathf.Max(worldBounds.xMax, a.bounds.xMax), Mathf.Max(worldBounds.yMax, a.bounds.yMax));
+                var c = new Vector2Int(centerChunk.x - half + x, centerChunk.y - half + y);
+                if (!Profile.IsExplored(c)) { px[y * MapChunks + x] = new Color(0.06f, 0.06f, 0.07f); continue; }
+                var p = new Vector2((c.x + 0.5f) * S, (c.y + 0.5f) * S);
+                var col = BiomeColor(WorldGen.BiomeAt(p));
+                // Darken with difficulty so you can read how dangerous an area is.
+                col *= Mathf.Lerp(1.1f, 0.6f, Mathf.Clamp01(WorldGen.LevelAt(p) / 60f));
+                col.a = 1f;
+                px[y * MapChunks + x] = col;
+            }
+            mapTex.SetPixels(px);
+            mapTex.Apply();
+
+            foreach (var id in Profile.Data.waypoints)
+            {
+                var pos = wm.WaypointPosition(id);
+                var dot = UIFactory.Circle("wp", mapImage.transform, 22, new Color(0.5f, 0.8f, 1f));
+                PlaceWorldPoint(dot.rectTransform, pos);
+                string captured = id;
+                var b = UIFactory.Button(id, list, wm.WaypointName(id), () => wm.Teleport(captured), new Color(0.15f, 0.25f, 0.35f, 1f), 26);
+                ((RectTransform)b.transform).sizeDelta = new Vector2(0, 86);
             }
 
-            foreach (var a in areas)
-            {
-                var z = a.zone;
-                var img = UIFactory.Image(z.id, mapArea, GameAssets.RoundedRect, new Color(z.nameColor.r * 0.4f, z.nameColor.g * 0.4f, z.nameColor.b * 0.4f, 0.9f));
-                PlaceWorldRect(img.rectTransform, a.bounds);
-                var outline = img.gameObject.AddComponent<Outline>();
-                outline.effectColor = z.nameColor;
-                var t = UIFactory.Text("Name", img.transform, $"{z.displayName}\n<size=75%><color=#ccc>{(z.safeZone ? "Safe" : $"Lv {z.minLevel}-{z.maxLevel}")}</color></size>", 24, z.nameColor);
-                t.rectTransform.Stretch(6);
-            }
-
-            foreach (var wp in wm.Waypoints)
-            {
-                bool unlocked = Profile.Data.waypoints.Contains(wp.id);
-                var dot = UIFactory.Circle("wp", mapArea, 26, unlocked ? new Color(0.5f, 0.8f, 1f) : new Color(0.4f, 0.4f, 0.4f));
-                PlaceWorldPoint(dot.rectTransform, wp.transform.position);
-
-                var captured = wp;
-                var b = UIFactory.Button(wp.id, list, unlocked ? wp.displayName : "??? (undiscovered)", () => wm.Teleport(captured),
-                    unlocked ? new Color(0.15f, 0.25f, 0.35f, 1f) : new Color(0.15f, 0.15f, 0.15f, 1f), 28);
-                ((RectTransform)b.transform).sizeDelta = new Vector2(0, 80);
-                b.interactable = unlocked;
-            }
-
-            heroDot = UIFactory.Circle("Hero", mapArea, 30, Palette.Gold).rectTransform;
+            heroDot = UIFactory.Circle("Hero", mapImage.transform, 26, Palette.Gold).rectTransform;
             UpdateHero();
         }
 
@@ -561,20 +591,14 @@ namespace TWF
             if (hero != null) PlaceWorldPoint(heroDot, hero.transform.position);
         }
 
-        Vector2 Norm(Vector2 p) => new Vector2(Mathf.InverseLerp(worldBounds.xMin, worldBounds.xMax, p.x), Mathf.InverseLerp(worldBounds.yMin, worldBounds.yMax, p.y));
-
-        void PlaceWorldRect(RectTransform rt, Rect r)
+        void PlaceWorldPoint(RectTransform rt, Vector2 world)
         {
-            rt.anchorMin = Norm(r.min);
-            rt.anchorMax = Norm(r.max);
-            rt.offsetMin = new Vector2(3, 3);
-            rt.offsetMax = new Vector2(-3, -3);
-        }
-
-        void PlaceWorldPoint(RectTransform rt, Vector2 p)
-        {
-            rt.anchorMin = rt.anchorMax = Norm(p);
+            int half = MapChunks / 2;
+            float S = WorldGen.ChunkSize;
+            var n = new Vector2((world.x / S - (centerChunk.x - half)) / MapChunks, (world.y / S - (centerChunk.y - half)) / MapChunks);
+            rt.anchorMin = rt.anchorMax = new Vector2(Mathf.Clamp01(n.x), Mathf.Clamp01(n.y));
             rt.anchoredPosition = Vector2.zero;
+            rt.gameObject.SetActive(n.x >= 0 && n.x <= 1 && n.y >= 0 && n.y <= 1);
         }
     }
 

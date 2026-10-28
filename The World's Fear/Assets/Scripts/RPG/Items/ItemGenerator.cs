@@ -42,7 +42,7 @@ namespace TWF
             return ItemSlot.Chest;
         }
 
-        public static Rarity RollRarity(System.Random rng, MonsterRank source)
+        public static Rarity RollRarity(System.Random rng, MonsterRank source, float magicFind = 0f)
         {
             float legendary = 0.01f, rare = 0.09f, magic = 0.32f;
             switch (source)
@@ -51,6 +51,10 @@ namespace TWF
                 case MonsterRank.Rare: legendary = 0.07f; rare = 0.38f; magic = 0.45f; break;
                 case MonsterRank.Boss: legendary = 0.6f; rare = 0.4f; magic = 0f; break;
             }
+            // Magic find (from distance) improves the odds of better items.
+            legendary *= 1f + magicFind * 2f;
+            rare *= 1f + magicFind;
+            magic *= 1f + magicFind * 0.5f;
             double r = rng.NextDouble();
             if (r < legendary) return Rarity.Legendary;
             if (r < legendary + rare) return Rarity.Rare;
@@ -61,7 +65,7 @@ namespace TWF
         public static ItemInstance Generate(int itemLevel, Rarity rarity, ItemSlot slot, System.Random rng, string classId = null)
         {
             classId = classId ?? Profile.Data.classId;
-            itemLevel = Mathf.Clamp(itemLevel, 1, 30);
+            itemLevel = Mathf.Max(1, itemLevel);
             int tier = Mathf.Clamp((itemLevel - 1) / 8, 0, 3);
             var item = new ItemInstance
             {
@@ -75,6 +79,8 @@ namespace TWF
             item.baseName = slot == ItemSlot.Weapon
                 ? (weaponNames.TryGetValue(classId, out var w) ? w : weaponNames["warrior"])[tier]
                 : baseNames[slot][tier];
+            // Beyond the base tiers, gear gets grander titles.
+            if (itemLevel > 32) item.baseName = (itemLevel > 80 ? "Mythic " : itemLevel > 55 ? "Exalted " : "Ancient ") + item.baseName;
 
             float jitter = 0.9f + (float)rng.NextDouble() * 0.2f;
             switch (slot)

@@ -16,6 +16,7 @@ namespace TWF
             var visual = Billboard.Create(transform, "Visual");
             var sr = visual.gameObject.AddComponent<SpriteRenderer>();
             sr.sortingOrder = SortOrder.Units;
+            RenderAssets.MakeLit(sr);
             var anim = visual.gameObject.AddComponent<CharacterAnimator>();
             anim.outfit = Outfit.Merchant;
             anim.Facing = Vector2.down;

@@ -53,7 +53,7 @@ namespace TWF
             float rankScale = rank == MonsterRank.Elite ? 1.15f : rank == MonsterRank.Rare ? 1.3f : 1f;
             float scale = species.scale * rankScale;
 
-            var shadow = GameAssets.CreateWorldSprite("Shadow", GameAssets.SoftCircle, go.transform, new Color(0, 0, 0, 0.35f), SortOrder.Units - 1,
+            var shadow = GameAssets.CreateWorldSprite("Shadow", GameAssets.SoftCircle, go.transform, new Color(0, 0, 0, 0.2f), SortOrder.Units - 1,
                 species.look.pixelSize / 16f * 0.9f * scale);
             shadow.transform.localScale = new Vector3(shadow.transform.localScale.x, shadow.transform.localScale.y * 0.45f, 1f);
 
@@ -62,6 +62,7 @@ namespace TWF
             var sr = visualGo.AddComponent<SpriteRenderer>();
             sr.sprite = species.look.frames[0];
             sr.sortingOrder = SortOrder.Units;
+            RenderAssets.MakeLit(sr);
             visualGo.transform.localScale = Vector3.one * scale;
             visualGo.AddComponent<Billboard>();
 

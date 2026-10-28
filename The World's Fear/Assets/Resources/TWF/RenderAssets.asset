@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 685c5bcd9466c4004b5bb1021604a2c1, type: 3}
+  m_Name: RenderAssets
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.RenderAssets
+  high: {fileID: 11400000, guid: 3208c7bf439bf44c0982d2e2895999ea, type: 2}
+  low: {fileID: 11400000, guid: 3f6f7efa9a8e243b38c09efb7ed63613, type: 2}
+  litSprite: {fileID: 2100000, guid: 7b39e6392545f4c1d9021532b90972d9, type: 2}
+  litGround: {fileID: 2100000, guid: bc71ce82952fa4afd9416e8f362cf5c0, type: 2}
+  litDetail: {fileID: 2100000, guid: c1f007d5fa4664b7a9abaa93e872e81e, type: 2}
+  litEmissive: {fileID: 2100000, guid: 030722ead88fb45e58e9704fcfa9854e, type: 2}
+  litWind: {fileID: 2100000, guid: b0bd27ba6a37e49dfb6af6d8954a653d, type: 2}
+  unlitSprite: {fileID: 2100000, guid: baa6b9be26b3e46ebb22cd9a27f862a5, type: 2}
+  water: {fileID: 2100000, guid: 3b6bd7216e30649a4ac67252616dd354, type: 2}
+  lava: {fileID: 2100000, guid: c2b8cece483d3436e9b22f683136b7d6, type: 2}
+  volumes:
+  - {fileID: 11400000, guid: 8902c6b17d0d94e06abfd4e19fe52062, type: 2}
+  - {fileID: 11400000, guid: f002cb2ba77b648baaf0b2d78fd06e6f, type: 2}
+  - {fileID: 11400000, guid: 40b7c0115b82143529e8267e728d5b4d, type: 2}
+  - {fileID: 11400000, guid: b3a718463f19342f699b2c445a5cb824, type: 2}
+  - {fileID: 11400000, guid: d93aefaec153c476e9f57b879860fb16, type: 2}
+  - {fileID: 11400000, guid: 38b8b985cfbfb4dc09256252c025bbcf, type: 2}

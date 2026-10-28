@@ -22,9 +22,20 @@ namespace TWF
 
         public float Roll(int itemLevel, System.Random rng)
         {
-            float t = Mathf.InverseLerp(1, 30, itemLevel);
-            float min = Mathf.Lerp(rangeAtLevel1.x, rangeAtLevel30.x, t);
-            float max = Mathf.Lerp(rangeAtLevel1.y, rangeAtLevel30.y, t);
+            // Keeps growing past item level 30 for the infinite world (fractions are capped by the stat clamps).
+            float t = (itemLevel - 1) / 29f;
+            float min = Mathf.LerpUnclamped(rangeAtLevel1.x, rangeAtLevel30.x, t);
+            float max = Mathf.LerpUnclamped(rangeAtLevel1.y, rangeAtLevel30.y, t);
+            if (StatInfo.IsFraction(stat) || kind == ModKind.Percent)
+            {
+                // Percentages grow slower past 30 so they don't explode.
+                if (t > 1f)
+                {
+                    float extra = Mathf.Log(t) * 0.5f + 1f;
+                    min = rangeAtLevel30.x * extra;
+                    max = rangeAtLevel30.y * extra;
+                }
+            }
             float v = Mathf.Lerp(min, max, (float)rng.NextDouble());
             if (!StatInfo.IsFraction(stat) && kind == ModKind.Flat && stat != StatType.AttackSpeed && stat != StatType.MoveSpeed && stat != StatType.HPRegen)
                 v = Mathf.Round(v);

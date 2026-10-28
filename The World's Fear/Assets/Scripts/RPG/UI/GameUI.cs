@@ -283,6 +283,12 @@ namespace TWF
 
         public void HideDeath() => deathOverlay.SetActive(false);
 
+        public void ShowDeathButton(string label, System.Action action)
+        {
+            var b = UIFactory.Button("DeathButton", deathOverlay.transform, label, () => action(), new Color(0.35f, 0.1f, 0.08f, 1f), 40);
+            ((RectTransform)b.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 120), new Vector2(420, 100));
+        }
+
         public void SetControlsVisible(bool visible) => controls.gameObject.SetActive(visible);
 
         public void ShowBossBar(Combatant c)

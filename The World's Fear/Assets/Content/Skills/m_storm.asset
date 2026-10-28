@@ -28,11 +28,11 @@ MonoBehaviour:
   maxRank: 5
   castLock: 0.12
   effects:
-  - rid: 3429192701680812263
+  - rid: 3429192701680812427
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812263
+    - rid: 3429192701680812427
       type: {class: GroundAreaEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         atCaster: 0

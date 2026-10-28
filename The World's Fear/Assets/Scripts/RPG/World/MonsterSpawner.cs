@@ -19,25 +19,30 @@ namespace TWF
             return list;
         }
 
-        public static void SpawnPack(ZoneDefinition zone, Vector2 center, float depth, List<MonsterBrain> into, System.Random rng)
+        public static void SpawnPack(ZoneDefinition zone, Vector2 center, float depth, List<MonsterBrain> into, System.Random rng, int fixedLevel = 0)
         {
             var species = MonsterGenerator.SpeciesFor(zone);
             if (species.Count == 0) return;
-            int level = Mathf.Clamp(Mathf.RoundToInt(Mathf.Lerp(zone.minLevel, zone.maxLevel, depth)) + rng.Next(-1, 2), zone.minLevel, zone.maxLevel);
+            int level = fixedLevel > 0
+                ? Mathf.Max(1, fixedLevel + rng.Next(-1, 2))
+                : Mathf.Clamp(Mathf.RoundToInt(Mathf.Lerp(zone.minLevel, zone.maxLevel, depth)) + rng.Next(-1, 2), zone.minLevel, zone.maxLevel);
+            // Further from the village: more elites and rares.
+            float rareChance = fixedLevel > 0 ? WorldGen.RareChance(center) : zone.rareChance;
+            float eliteChance = fixedLevel > 0 ? WorldGen.EliteChance(center) : zone.eliteChance;
             var main = species[rng.Next(species.Count)];
             double roll = rng.NextDouble();
             var pack = new List<MonsterBrain>();
 
             Vector2 Around(float r) => center + new Vector2((float)(rng.NextDouble() * 2 - 1), (float)(rng.NextDouble() * 2 - 1)) * r;
 
-            if (roll < zone.rareChance)
+            if (roll < rareChance)
             {
                 int affixCount = level >= 12 ? 3 : level >= 6 ? 2 : 1;
                 pack.Add(MonsterBrain.Spawn(main, level, MonsterRank.Rare, center, RollAffixes(rng, affixCount), zone));
                 int minions = Mathf.RoundToInt(3 * main.packMultiplier) + 1;
                 for (int i = 0; i < minions; i++) pack.Add(MonsterBrain.Spawn(main, level, MonsterRank.Normal, Around(2f), null, zone));
             }
-            else if (roll < zone.rareChance + zone.eliteChance)
+            else if (roll < rareChance + eliteChance)
             {
                 int count = Mathf.Max(2, Mathf.RoundToInt(rng.Next(2, 4) * Mathf.Min(1.5f, main.packMultiplier)));
                 for (int i = 0; i < count; i++) pack.Add(MonsterBrain.Spawn(main, level, MonsterRank.Elite, Around(1.5f), null, zone));

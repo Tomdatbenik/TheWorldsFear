@@ -38,12 +38,14 @@ namespace TWF
             {
                 foreach (var b in cam.GetComponents<Behaviour>())
                     if (b.GetType().Name.Contains("Cinemachine")) b.enabled = false;
-                var follow = cam.GetComponent<CameraFollow>() ?? cam.gameObject.AddComponent<CameraFollow>();
+                var follow = cam.GetComponent<CameraFollow>();
+                if (follow == null) follow = cam.gameObject.AddComponent<CameraFollow>();
                 follow.target = heroGo.transform;
                 follow.SnapToTarget();
                 if (cam.GetComponent<AudioListener>()) Destroy(cam.GetComponent<AudioListener>());
             }
 
+            ZoneLighting.Create();
             var ui = new GameObject("UI").AddComponent<GameUI>();
             PanelsBuilder.Build(ui);
         }
@@ -66,26 +68,37 @@ namespace TWF
 
         void OnHeroDied() => StartCoroutine(DeathRoutine());
 
+        // One life: the run ends, the save is wiped, and you start a new hero from the title screen.
         IEnumerator DeathRoutine()
         {
-            Profile.Data.deaths++;
-            int lost = Profile.Data.gold / 10;
-            Profile.AddGold(-lost);
-            GameUI.Instance.ShowDeath($"You have fallen\n<size=40>Lost {lost} gold</size>");
-            yield return new WaitForSeconds(3f);
-            GameUI.Instance.HideDeath();
-            Hero.Revive(SpawnPosition());
-            var follow = Camera.main != null ? Camera.main.GetComponent<CameraFollow>() : null;
-            if (follow) follow.SnapToTarget();
-            Profile.Save();
+            var d = Profile.Data;
+            string summary =
+                $"<size=110%>YOU HAVE FALLEN</size>\n\n" +
+                $"<size=45%><color=#ddd>{Profile.Class.displayName} · Level {d.level}\n" +
+                $"Furthest journey: {Mathf.RoundToInt(d.farthest)}m from the village\n" +
+                $"Monsters slain: {d.kills}   ·   Bosses slain: {d.bossesKilled}\n" +
+                $"Gold: {d.gold}</color></size>";
+            Profile.DeleteSave();
+            yield return new WaitForSeconds(1.2f);
+            GameUI.Instance.ShowDeath(summary);
+            Time.timeScale = 0.3f;
+            yield return new WaitForSecondsRealtime(1.5f);
+            GameUI.Instance.ShowDeathButton("New hero", () =>
+            {
+                Time.timeScale = 1f;
+                UnityEngine.SceneManagement.SceneManager.LoadScene("Title");
+            });
         }
 
         void OnApplicationPause(bool paused)
         {
-            if (paused) Profile.Save();
+            if (paused && Hero != null && !Hero.Combatant.IsDead) Profile.Save();
         }
 
-        void OnApplicationQuit() => Profile.Save();
+        void OnApplicationQuit()
+        {
+            if (Hero != null && !Hero.Combatant.IsDead) Profile.Save();
+        }
 
         // ---------- Test arena ----------
 

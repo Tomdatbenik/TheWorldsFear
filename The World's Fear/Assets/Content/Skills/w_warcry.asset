@@ -28,12 +28,12 @@ MonoBehaviour:
   maxRank: 5
   castLock: 0.12
   effects:
-  - rid: 3429192701680812250
-  - rid: 3429192701680812251
+  - rid: 3429192701680812417
+  - rid: 3429192701680812418
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812250
+    - rid: 3429192701680812417
       type: {class: BuffEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         stat: 1
@@ -42,7 +42,7 @@ MonoBehaviour:
         duration: 6
         scaleWithRank: 1
         color: {r: 0.9490196, g: 0.75686276, b: 0.30588236, a: 1}
-    - rid: 3429192701680812251
+    - rid: 3429192701680812418
       type: {class: ShieldEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         percentMaxHP: 0.15

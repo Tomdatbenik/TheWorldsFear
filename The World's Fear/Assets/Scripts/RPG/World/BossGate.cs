@@ -38,7 +38,7 @@ namespace TWF
             {
                 prompted = true;
                 ConfirmDialog.Show($"Enter the boss arena?\n<size=70%>Recommended level {recommendedLevel}. You are level {Profile.Data.level}.</size>",
-                    "Enter", () => WorldManager.Instance.EnterBoss());
+                    "Enter", () => WorldManager.Instance.EnterBoss(recommendedLevel));
             }
             if (!inside) prompted = false;
         }

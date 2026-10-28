@@ -11,6 +11,7 @@ namespace TWF.EditorTools
         [MenuItem("TWF/Build Everything")]
         public static void BuildEverything()
         {
+            RenderBuilder.Build();
             ContentBuilder.BuildAll();
             WorldBuilder.Build();
             BuildTitle();
@@ -61,11 +62,11 @@ namespace TWF.EditorTools
                 }
             }
 
-            foreach (var vcam in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None))
+            foreach (var vcam in Object.FindObjectsByType<Transform>())
                 if (vcam != null && vcam.name == "Virtual Cam") vcam.gameObject.SetActive(false);
 
             // Old renderers used custom sorting layers; draw the arena under the RPG characters.
-            foreach (var r in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            foreach (var r in Object.FindObjectsByType<Renderer>())
             {
                 if (r.sortingLayerName == "Background" || r.sortingLayerName == "Vegitation" || r.sortingLayerName == "Decorating")
                 {
@@ -78,6 +79,16 @@ namespace TWF.EditorTools
                     r.sortingLayerName = "Default";
                     r.sortingOrder = SortOrder.Units + 2;
                 }
+            }
+
+            // HD-2D: the arena and boss are lit and receive shadows.
+            var ra = AssetDatabase.LoadAssetAtPath<RenderAssets>("Assets/Resources/TWF/RenderAssets.asset");
+            foreach (var r in Object.FindObjectsByType<Renderer>())
+            {
+                if (ra == null || !(r is SpriteRenderer || r is UnityEngine.Tilemaps.TilemapRenderer)) continue;
+                bool background = r.transform.parent != null && r.transform.parent.name == "Background";
+                r.sharedMaterial = background ? ra.litGround : ra.litDetail;
+                r.receiveShadows = true;
             }
 
             var armor = GameObject.Find("Boss Armor");

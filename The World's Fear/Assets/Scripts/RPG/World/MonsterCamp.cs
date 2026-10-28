@@ -13,6 +13,8 @@ namespace TWF
         public float despawnRange = 34f;
         public float respawnTime = 90f;
         public int seed;
+        [Tooltip("Infinite world: monster level set by distance (0 = use the zone's range).")]
+        public int fixedLevel;
 
         readonly List<MonsterBrain> alive = new List<MonsterBrain>();
         float respawnAt;
@@ -27,7 +29,7 @@ namespace TWF
 
             if (!spawned && d < activateRange && Time.time >= respawnAt)
             {
-                MonsterSpawner.SpawnPack(zone, transform.position, depth, alive, new System.Random(seed + (int)(Time.time * 10)));
+                MonsterSpawner.SpawnPack(zone, transform.position, depth, alive, new System.Random(seed + (int)(Time.time * 10)), fixedLevel);
                 spawned = true;
             }
             else if (spawned && alive.Count == 0)
@@ -46,6 +48,13 @@ namespace TWF
                     spawned = false;
                 }
             }
+        }
+
+        // Chunk unloaded: take the pack with it.
+        void OnDestroy()
+        {
+            foreach (var m in alive)
+                if (m != null) Destroy(m.gameObject);
         }
 
         void OnDrawGizmos()

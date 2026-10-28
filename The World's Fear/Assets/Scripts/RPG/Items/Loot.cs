@@ -34,7 +34,7 @@ namespace TWF
             }
             for (int i = 0; i < items; i++)
             {
-                var rarity = rank == MonsterRank.Boss && i == 0 ? Rarity.Legendary : ItemGenerator.RollRarity(rng, rank);
+                var rarity = rank == MonsterRank.Boss && i == 0 ? Rarity.Legendary : ItemGenerator.RollRarity(rng, rank, WorldGen.MagicFind(level));
                 var item = ItemGenerator.Generate(level + (rank == MonsterRank.Normal ? 0 : 1), rarity, ItemGenerator.RandomSlot(rng), rng);
                 Pickup.SpawnItem(at + Random.insideUnitCircle * 1.2f, item);
             }
@@ -98,6 +98,8 @@ namespace TWF
 
             var bb = Billboard.Create(go.transform);
             var icon = GameAssets.CreateWorldSprite("icon", ItemIcons.Get(item), bb, Color.white, SortOrder.Pickup + 1, 0.8f);
+            RenderAssets.MakeLit(icon, true, RenderAssets.Instance != null ? RenderAssets.Instance.litEmissive : null);
+            if (item.rarity >= Rarity.Rare) PointLights.Attach(go.transform, c, 3f, 1.5f, new Vector3(0, 0, -1f), true);
             p.visual = icon.transform;
             if (item.rarity >= Rarity.Magic)
             {

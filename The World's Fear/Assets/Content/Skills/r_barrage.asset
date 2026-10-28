@@ -28,18 +28,18 @@ MonoBehaviour:
   maxRank: 3
   castLock: 0.12
   effects:
-  - rid: 3429192701680812264
+  - rid: 3429192701680812429
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812264
+    - rid: 3429192701680812429
       type: {class: RepeatEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         times: 8
         interval: 0.12
         inner:
-        - rid: 3429192701680812265
-    - rid: 3429192701680812265
+        - rid: 3429192701680812430
+    - rid: 3429192701680812430
       type: {class: ProjectileEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         count: 3

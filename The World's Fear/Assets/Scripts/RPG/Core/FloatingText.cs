@@ -42,6 +42,8 @@ namespace TWF
                 ft.tmp.sortingOrder = SortOrder.Text;
                 ft.tmp.rectTransform.sizeDelta = new Vector2(6f, 1.5f);
                 go.AddComponent<Billboard>();
+                // Always readable, even behind trees.
+                ft.tmp.fontMaterial.SetFloat("unity_GUIZTestMode", (float)UnityEngine.Rendering.CompareFunction.Always);
             }
             ft.gameObject.SetActive(true);
             ft.transform.position = pos + View.Right * Random.Range(-0.25f, 0.25f);

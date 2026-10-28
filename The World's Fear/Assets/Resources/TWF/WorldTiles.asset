@@ -1,0 +1,61 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9406e0746ecdf48af93e90d27fb01948, type: 3}
+  m_Name: WorldTiles
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.WorldTiles
+  grassPlain:
+  - {fileID: 11400000, guid: 1e889a57d91cde84faded174b64b49d3, type: 2}
+  - {fileID: 11400000, guid: 7e7f8e14bf76bcc4f8832d5abc254d49, type: 2}
+  - {fileID: 11400000, guid: 4b412e5c80eae8e4d863f469ab43d2dc, type: 2}
+  - {fileID: 11400000, guid: 09a2fa55e7df4e94e9f0f43d6a6d74bc, type: 2}
+  - {fileID: 11400000, guid: 261e645562bdb0b4387cb0ead1228967, type: 2}
+  - {fileID: 11400000, guid: da712dc100db67244af307a3d91fe20c, type: 2}
+  - {fileID: 11400000, guid: c9c0c7164ecbeb64ca79b71b6dd710ff, type: 2}
+  - {fileID: 11400000, guid: e5fdd7f937fea6f4f8865a1f9e241943, type: 2}
+  grassDetail:
+  - {fileID: 11400000, guid: 293da4efe9af9404c86e6996d8f3acc8, type: 2}
+  - {fileID: 11400000, guid: cfdf8a2b952e8474392e574f87e3c983, type: 2}
+  - {fileID: 11400000, guid: 6c523cbea3b89454d950d0f225edda72, type: 2}
+  - {fileID: 11400000, guid: 8b3f2ac2ca9a6a8458a34fdaf1ce0b3a, type: 2}
+  - {fileID: 11400000, guid: adf34a96f10811f4db2f7a7606fdee59, type: 2}
+  - {fileID: 11400000, guid: 638db366b6a59de4890b7191b963e791, type: 2}
+  - {fileID: 11400000, guid: 080dae4eb08d7754cb402f5aae51b225, type: 2}
+  - {fileID: 11400000, guid: 1fc5d5e876282614c8c2552147c94fb3, type: 2}
+  dirt:
+  - {fileID: 11400000, guid: 53afb17afd243a64fb56cfb51e4c67ec, type: 2}
+  - {fileID: 11400000, guid: a28b927f6e623ae40a04f64055725b6f, type: 2}
+  - {fileID: 11400000, guid: daeb24bf127bd584e908a13b2599d84f, type: 2}
+  - {fileID: 11400000, guid: 90f12310b87095640a1e4cf38169cd64, type: 2}
+  ruinsFloor:
+  - {fileID: 11400000, guid: 3ffdc226beb6848c3beba3cbf79ad26b, type: 2}
+  - {fileID: 11400000, guid: fa2592a7d469041828c5dc0cd9c24d67, type: 2}
+  - {fileID: 11400000, guid: 095723afc09b44751acf391dc91b8ea2, type: 2}
+  - {fileID: 11400000, guid: e58cabfa79245498ba65e4a8a0385b11, type: 2}
+  ruinsPath: {fileID: 11400000, guid: d67c5f2b2067a4c618aa47d5a2ed5c2d, type: 2}
+  ash:
+  - {fileID: 11400000, guid: 82f110c3e53a54474aa72d48b51e000e, type: 2}
+  - {fileID: 11400000, guid: 6f37d2783fad74819bebaa5ec3fefd0e, type: 2}
+  - {fileID: 11400000, guid: 0050a9e58ca1748b39f3ffe752b7b794, type: 2}
+  emberPath: {fileID: 11400000, guid: 2061898d033b844e4afefe11d931aea8, type: 2}
+  emberCrack:
+  - {fileID: 11400000, guid: a634a1088cde947bd933056663d93825, type: 2}
+  - {fileID: 11400000, guid: 6958e6e65259a4dc596dcd9f1b9e5473, type: 2}
+  ruinsRubble: {fileID: 11400000, guid: 4f512e80d98404e3c8a7c90aaa93e00f, type: 2}
+  blocker: {fileID: 11400000, guid: bbb17bb2abef3451e9de0ab2ef32d924, type: 2}
+  treeOrange: {fileID: 21300000, guid: 523c771d319204147970192c45da7df2, type: 3}
+  treePink: {fileID: 21300000, guid: d78bcd8fa83a046198e4a4c6ee4208f5, type: 3}
+  treeDried: {fileID: 21300000, guid: 6cadabf7982db45168f81bd66141c534, type: 3}
+  trunk: {fileID: 21300000, guid: ab8b2e9c04e494f889e37bdcf4181689, type: 3}
+  rock: {fileID: 21300000, guid: 76d813ca1166640cbbb077840bdd9d90, type: 3}
+  rockMonument: {fileID: 21300000, guid: 66bfabba385494111a9ce1540668e96e, type: 3}
+  bush: {fileID: 21300000, guid: 0fd611d351acc413aab086b010ea2727, type: 3}
+  bushTall: {fileID: 21300000, guid: 62ff0f920c9cc49239f4a6a9e1414e1a, type: 3}

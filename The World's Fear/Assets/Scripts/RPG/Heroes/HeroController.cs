@@ -85,8 +85,18 @@ namespace TWF
         {
             Class = Profile.Class;
             Combatant.displayName = Class.displayName;
+            // HD-2D: lit, shadow-casting sprites; a faint contact shadow grounds the feet.
             var shadow = transform.Find("Shadow");
-            if (shadow) shadow.GetComponent<SpriteRenderer>().sprite = GameAssets.SoftCircle;
+            if (shadow)
+            {
+                var ssr = shadow.GetComponent<SpriteRenderer>();
+                ssr.sprite = GameAssets.SoftCircle;
+                ssr.color = new Color(0, 0, 0, 0.22f);
+                RenderAssets.MakeUnlit(ssr);
+                shadow.position = Ground.Decal(shadow.position);
+            }
+            RenderAssets.MakeLit(spriteRenderer);
+            if (weapon) RenderAssets.MakeLit(weapon.GetComponent<SpriteRenderer>());
             var outfit = OutfitFor(Class.id);
             if (animator) animator.SetOutfit(outfit);
             if (weapon)

@@ -20,11 +20,11 @@ MonoBehaviour:
   maxRank: 3
   modifiersPerRank: []
   procs:
-  - rid: 3429192701680812257
+  - rid: 3429192701680812424
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812257
+    - rid: 3429192701680812424
       type: {class: ShieldOnHitTakenProc, ns: TWF, asm: Assembly-CSharp}
       data:
         percentPerRank: 0.06

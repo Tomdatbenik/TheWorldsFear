@@ -63,6 +63,7 @@ namespace TWF
             }
             // Fly at chest height (the ground is z = 0 and up is -z).
             foreach (Transform child in go.transform) child.localPosition += Vector3.back * 0.7f;
+            if (owner != null && owner.team == Team.Player) PointLights.Attach(go.transform, spec.color, 3.5f, 2.2f, new Vector3(0, 0, -0.9f));
             if (spec.rotateSprite || spec.sprite != null)
                 go.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(p.dir.y, p.dir.x) * Mathf.Rad2Deg);
             return p;
@@ -150,7 +151,7 @@ namespace TWF
         public static AreaEffect Spawn(Combatant owner, Vector2 center, AreaSpec spec)
         {
             var go = new GameObject("Area");
-            go.transform.position = center;
+            go.transform.position = Ground.Decal(center);
             var a = go.AddComponent<AreaEffect>();
             a.spec = spec;
             a.spec.ticks = Mathf.Max(1, spec.ticks);
@@ -221,7 +222,7 @@ namespace TWF
         public static GameObject Show(Vector2 from, Vector2 dir, float length, float width, Color color, float duration)
         {
             var go = new GameObject("LineTelegraph");
-            go.transform.position = from;
+            go.transform.position = Ground.Decal(from);
             go.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
             var sr = GameAssets.CreateWorldSprite("rect", GameAssets.Pixel, go.transform, color, SortOrder.Telegraph);
             float unit = sr.sprite.bounds.size.x;
@@ -262,7 +263,7 @@ namespace TWF
         public static void Ring(Vector3 pos, Color color, float radius, float duration)
         {
             var sr = GameAssets.CreateWorldSprite("ring", GameAssets.Ring, null, color, SortOrder.Effects, radius * 2f);
-            sr.transform.position = pos;
+            sr.transform.position = new Vector3(pos.x, pos.y, Ground.DecalZ * 2f);
             var v = sr.gameObject.AddComponent<VFX>();
             v.sr = sr;
             v.color = color;
@@ -278,7 +279,7 @@ namespace TWF
             for (int i = 0; i <= segments; i++)
             {
                 float a = (baseAngle - arcDeg / 2f + arcDeg * i / segments) * Mathf.Deg2Rad;
-                var p = pos + new Vector3(Mathf.Cos(a), Mathf.Sin(a)) * radius * 0.85f;
+                var p = pos + new Vector3(Mathf.Cos(a), Mathf.Sin(a)) * radius * 0.85f + Vector3.back * 0.4f;
                 var sr = GameAssets.CreateWorldSprite("slash", GameAssets.SoftCircle, null, color, SortOrder.Effects, radius * 0.45f);
                 sr.transform.position = p;
                 var v = sr.gameObject.AddComponent<VFX>();

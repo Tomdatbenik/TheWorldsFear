@@ -23,11 +23,11 @@ MonoBehaviour:
     kind: 0
     value: 0.01
   procs:
-  - rid: 3429192701680812267
+  - rid: 3429192701680812435
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812267
+    - rid: 3429192701680812435
       type: {class: LowLifeProc, ns: TWF, asm: Assembly-CSharp}
       data:
         stat: 1
