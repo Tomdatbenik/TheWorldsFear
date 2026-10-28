@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fc8d4d75917144a799373c6dd3cb74b, type: 3}
+  m_Name: r_pierce
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.SkillDefinition
+  id: r_pierce
+  displayName: Piercing Arrow
+  description: A powerful arrow that passes through every enemy in a line.
+  glyph: PRC
+  color: {r: 0.9607843, g: 0.6901961, b: 0.25490198, a: 1}
+  icon: {fileID: 0}
+  isUltimate: 0
+  targeting: 0
+  range: 10
+  indicatorRadius: 2
+  baseCooldown: 5
+  cooldownPerRank: 0.05
+  powerPerRank: 0.15
+  maxRank: 5
+  castLock: 0.12
+  effects:
+  - rid: 3429192701680812271
+  references:
+    version: 2
+    RefIds:
+    - rid: 3429192701680812271
+      type: {class: ProjectileEffect, ns: TWF, asm: Assembly-CSharp}
+      data:
+        count: 1
+        spread: 0
+        speed: 22
+        range: 10
+        hitRadius: 0.45
+        damageMult: 2.1
+        pierce: -1
+        explodeRadius: 0
+        status:
+          type: 0
+          magnitude: 0
+          duration: 0
+          chance: 0
+        size: 1.1
+        color: {r: 0.9607843, g: 0.6901961, b: 0.25490198, a: 1}
+        knockback: 0
+        useArrowSprite: 1

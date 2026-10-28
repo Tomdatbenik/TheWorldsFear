@@ -34,3 +34,12 @@ sysinfo.txt
 # Builds
 *.apk
 *.unitypackage
+
+# Unity 6
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+.vscode/
+*.slnx
+upgrade.log
+Assets/Temp/
+Assets/Temp.meta

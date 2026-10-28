@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fc8d4d75917144a799373c6dd3cb74b, type: 3}
+  m_Name: r_multishot
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.SkillDefinition
+  id: r_multishot
+  displayName: Multishot
+  description: Loose a fan of arrows.
+  glyph: MLT
+  color: {r: 0.4862745, g: 0.8392157, b: 0.3529412, a: 1}
+  icon: {fileID: 0}
+  isUltimate: 0
+  targeting: 0
+  range: 7
+  indicatorRadius: 2
+  baseCooldown: 6
+  cooldownPerRank: 0.05
+  powerPerRank: 0.15
+  maxRank: 5
+  castLock: 0.12
+  effects:
+  - rid: 3429192701680812245
+  references:
+    version: 2
+    RefIds:
+    - rid: 3429192701680812245
+      type: {class: ProjectileEffect, ns: TWF, asm: Assembly-CSharp}
+      data:
+        count: 5
+        spread: 55
+        speed: 18
+        range: 7
+        hitRadius: 0.35
+        damageMult: 0.95
+        pierce: 0
+        explodeRadius: 0
+        status:
+          type: 0
+          magnitude: 0
+          duration: 0
+          chance: 0
+        size: 0.9
+        color: {r: 0.4862745, g: 0.8392157, b: 0.3529412, a: 1}
+        knockback: 0
+        useArrowSprite: 1

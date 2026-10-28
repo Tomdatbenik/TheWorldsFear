@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class RiskSpotAttack : MonoBehaviour
 {
-    public BoxCollider2D playercollider;
+    public Collider2D playercollider;
     public PolygonCollider2D Riskspotcollider;
     public Animator animator;
     public BoxCollider2D detectioncollider;

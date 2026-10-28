@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1be3be15d933440bfaa6e67018c39411, type: 3}
+  m_Name: village
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.ZoneDefinition
+  id: village
+  displayName: Village of Ashvale
+  flavor: The last safe hearth.
+  biome: 0
+  minLevel: 1
+  maxLevel: 1
+  seed: 1
+  speciesCount: 5
+  archetypes: 
+  eliteChance: 0
+  rareChance: 0
+  packSize: {x: 0, y: 0}
+  nameColor: {r: 0.9490196, g: 0.9019608, b: 0.7882353, a: 1}
+  safeZone: 1

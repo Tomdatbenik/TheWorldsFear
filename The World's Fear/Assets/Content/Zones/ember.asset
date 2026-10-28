@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1be3be15d933440bfaa6e67018c39411, type: 3}
+  m_Name: ember
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.ZoneDefinition
+  id: ember
+  displayName: Ember Fields
+  flavor: The ground itself is burning.
+  biome: 4
+  minLevel: 18
+  maxLevel: 25
+  seed: 4421
+  speciesCount: 5
+  archetypes: 010000000600000005000000040000000200000003000000i
+  eliteChance: 0.16
+  rareChance: 0.08
+  packSize: {x: 4, y: 7}
+  nameColor: {r: 1, g: 0.47843137, b: 0.23921569, a: 1}
+  safeZone: 0

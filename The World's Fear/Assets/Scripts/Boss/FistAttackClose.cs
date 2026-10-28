@@ -6,7 +6,7 @@ public class FistAttackClose : MonoBehaviour
 {
     public Animator lefthand;
     public Animator righthand;
-    public BoxCollider2D playercollider;
+    public Collider2D playercollider;
     public BoxCollider2D fistattackclosecollider;
 
     public bool FistAttackCloseDetection()

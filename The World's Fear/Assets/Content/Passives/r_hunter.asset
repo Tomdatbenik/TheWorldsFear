@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99e683ea6b2c0472796f91eb3745263f, type: 3}
+  m_Name: r_hunter
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.PassiveDefinition
+  id: r_hunter
+  displayName: Hunter's Focus
+  description: Skills come back sooner.
+  glyph: FCS
+  color: {r: 0.56078434, g: 0.84705883, b: 1, a: 1}
+  maxRank: 3
+  modifiersPerRank:
+  - stat: 7
+    kind: 0
+    value: 0.04
+  procs: []
+  references:
+    version: 2
+    RefIds: []

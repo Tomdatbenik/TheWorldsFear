@@ -1,0 +1,121 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ebc3be1100f948e8b810b9116f9b01a, type: 3}
+  m_Name: RangerTree
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.SkillTreeDefinition
+  pointsToUnlockTier: 000000000200000005000000090000000e000000i
+  nodes:
+  - id: r_pierce
+    active: {fileID: 11400000, guid: e79c30d8a23b34593979a613e0e9f78d, type: 2}
+    passive: {fileID: 0}
+    tier: 0
+    column: 0
+    requiredLevel: 1
+    requires: 
+  - id: r_eagle
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 21120e38d232244e9802bb24c67a5b49, type: 2}
+    tier: 0
+    column: 1
+    requiredLevel: 1
+    requires: 
+  - id: r_sharpshooter
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 469264cc5914d470f8513c169c2cc0c7, type: 2}
+    tier: 0
+    column: 2
+    requiredLevel: 1
+    requires: 
+  - id: r_multishot
+    active: {fileID: 11400000, guid: 96f0aee87eb5f44a788eefdd019172f7, type: 2}
+    passive: {fileID: 0}
+    tier: 1
+    column: 0
+    requiredLevel: 2
+    requires: 
+  - id: r_quickdraw
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: bdb805bc0e2c14f00bcc0ecc5920926b, type: 2}
+    tier: 1
+    column: 1
+    requiredLevel: 3
+    requires: 
+  - id: r_nimble
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: e2485261fbdb5488bbd808976574f1bc, type: 2}
+    tier: 1
+    column: 2
+    requiredLevel: 3
+    requires: 
+  - id: r_roll
+    active: {fileID: 11400000, guid: a80cc2b30155c4d9086dc19c106de698, type: 2}
+    passive: {fileID: 0}
+    tier: 2
+    column: 0
+    requiredLevel: 5
+    requires: 
+  - id: r_trap
+    active: {fileID: 11400000, guid: 1e89f3eb3745947ada1323ec541ca45c, type: 2}
+    passive: {fileID: 0}
+    tier: 2
+    column: 1
+    requiredLevel: 6
+    requires: 
+  - id: r_venomtips
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: af60fccf1689249bb923475022991cc7, type: 2}
+    tier: 2
+    column: 2
+    requiredLevel: 5
+    requires: 
+  - id: r_rain
+    active: {fileID: 11400000, guid: 8f8491b15ec5341168e62e85c814d6f5, type: 2}
+    passive: {fileID: 0}
+    tier: 3
+    column: 0
+    requiredLevel: 8
+    requires: 
+  - id: r_explosive
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 23539017036374e5aabf475fd0164228, type: 2}
+    tier: 3
+    column: 1
+    requiredLevel: 9
+    requires: 
+  - id: r_survivor
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 7ee0c9b4d1cb943da9c8a3176f650a5e, type: 2}
+    tier: 3
+    column: 2
+    requiredLevel: 10
+    requires: 
+  - id: r_barrage
+    active: {fileID: 11400000, guid: 4f6ac80a50a4b4c9b837d6b4cb77c9ab, type: 2}
+    passive: {fileID: 0}
+    tier: 4
+    column: 0
+    requiredLevel: 15
+    requires: 
+  - id: r_poison
+    active: {fileID: 11400000, guid: 81f59535ef3384d11a0e49c1bac1a36c, type: 2}
+    passive: {fileID: 0}
+    tier: 4
+    column: 1
+    requiredLevel: 12
+    requires: 
+  - id: r_hunter
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 09940662f24ad4838842e12efd1c63ca, type: 2}
+    tier: 4
+    column: 2
+    requiredLevel: 14
+    requires: 

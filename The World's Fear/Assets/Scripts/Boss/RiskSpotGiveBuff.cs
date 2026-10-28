@@ -1,18 +1,15 @@
-﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class RiskSpotGiveBuff : MonoBehaviour
 {
-    //Is player sword.
+    // Kept for the old scene reference; the buff now goes to the RPG hero.
     public GameObject sword;
+
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.gameObject.tag == "Player")
         {
-            Damage damage = sword.gameObject.GetComponent(typeof(Damage)) as Damage;
-            
-            damage.IncreaseStrength(damage.Strength * 2);
+            TWF.BossHelpers.RiskSpotBuff();
         }
     }
 }

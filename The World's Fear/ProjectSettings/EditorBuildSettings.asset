@@ -5,22 +5,19 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
-    path: 
-    guid: 00000000000000000000000000000000
   - enabled: 1
-    path: Assets/Scenes/StartSCreen.unity
-    guid: 9ebe818a0d4873c44bc86a9fea2aeef6
+    path: Assets/Scenes/Title.unity
+    guid: 39376b92d6bae4e2780f8977353b22ec
   - enabled: 1
-    path: Assets/Scenes/GameOver.unity
-    guid: 7f720669eba653e4c870363896d0599e
+    path: Assets/Scenes/World.unity
+    guid: 21ec6e3ce46114e4491ef05ed01e9eeb
   - enabled: 1
-    path: Assets/Scenes/BossBattle.unity
-    guid: 9403f2bc18f8d83458be9b3044018bd1
-  - enabled: 1
-    path: Assets/Scenes/Village.unity
-    guid: 31766f482da8da34e8b90bb517fdecc0
+    path: Assets/Scenes/BossArena.unity
+    guid: 1c0fe53e07baa48b1ac75309fb321b6f
   - enabled: 1
     path: Assets/Scenes/Victory.unity
     guid: 6b54db411b0da9249a162b6effff2e6a
+  - enabled: 1
+    path: Assets/Scenes/GameOver.unity
+    guid: 7f720669eba653e4c870363896d0599e
   m_configObjects: {}

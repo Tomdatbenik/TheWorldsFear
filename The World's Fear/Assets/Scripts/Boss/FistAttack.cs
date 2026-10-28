@@ -8,7 +8,7 @@ public class FistAttack : MonoBehaviour
     public Animator righthand;
     public BoxCollider2D lefthandcollider;
     public BoxCollider2D righthandcollider;
-    public BoxCollider2D playercollider;
+    public Collider2D playercollider;
 
     public bool FistAttackDetection()
     {

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "unity": {
+      "command": "/Users/lisdatbenik/.unity/bin/unity",
+      "args": ["mcp", "--project-path", "/Users/lisdatbenik/Documents/GitHub/TheWorldsFear/The World's Fear"]
+    }
+  }
+}

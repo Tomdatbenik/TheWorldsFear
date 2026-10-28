@@ -1,5 +1,3 @@
-﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Spawn_minion : MonoBehaviour
@@ -7,13 +5,9 @@ public class Spawn_minion : MonoBehaviour
     public GameObject Spider;
     public Transform target;
 
+    // The boss now summons generated monsters instead of the old spider.
     public void SpawnSpider()
     {
-        GameObject spider = Spider;
-
-        Instantiate(spider);
-
-        spider.transform.position = Vector2.zero;
-        spider.SetActive(true); 
+        TWF.BossHelpers.SpawnMinions((Vector2)transform.position + Vector2.down * 8f, 2);
     }
 }
