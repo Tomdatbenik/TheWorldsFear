@@ -152,9 +152,13 @@ namespace TWF
                 var ring = UIFactory.Image("Ring", bg.transform, node.IsActive ? GameAssets.Ring : GameAssets.Diamond, node.Color);
                 ring.rectTransform.Stretch(node.IsActive ? 0 : 10);
                 if (!node.IsActive) ring.color = new Color(node.Color.r, node.Color.g, node.Color.b, 0.35f);
-                var glyph = UIFactory.Text("Glyph", bg.transform, node.Glyph, 30, Color.white);
+                string iconId = node.active != null ? node.active.id : node.passive != null ? node.passive.id : node.id;
+                var nodeIcon = UIFactory.Image("Icon", bg.transform, IconFactory.Get(IconFactory.KeyFor(iconId, node.DisplayName), Color.Lerp(node.Color, Color.white, 0.15f)), Color.white);
+                nodeIcon.rectTransform.Stretch(node.IsActive ? 24 : 30);
+                nodeIcon.preserveAspect = true;
+                var glyph = UIFactory.Text("Glyph", bg.transform, "", 22, Color.white);
                 glyph.fontStyle = FontStyles.Bold;
-                glyph.rectTransform.Stretch(6);
+                glyph.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, 14), new Vector2(120, 30));
                 var lockImg = UIFactory.Image("Lock", bg.transform, node.IsActive ? GameAssets.Circle : GameAssets.Diamond, new Color(0, 0, 0, 0.6f));
                 lockImg.rectTransform.Stretch();
                 var rank = UIFactory.Text("Rank", bg.transform, "", 22, Palette.Gold);
@@ -199,7 +203,7 @@ namespace TWF
                 v.rank.color = r > 0 ? Palette.Gold : Palette.MutedText;
                 v.bg.transform.localScale = v.node == selected ? Vector3.one * 1.12f : Vector3.one;
                 int eq = Array.IndexOf(data.equippedSkills, v.node.id);
-                v.glyph.text = v.node.Glyph + (eq >= 0 ? $"\n<size=60%><color=#ffd040>{(eq == 3 ? "ULT" : "#" + (eq + 1))}</color></size>" : "");
+                v.glyph.text = eq >= 0 ? $"<color=#ffd040>{(eq == 3 ? "ULT" : "#" + (eq + 1))}</color>" : "";
             }
             UpdateDetail();
         }

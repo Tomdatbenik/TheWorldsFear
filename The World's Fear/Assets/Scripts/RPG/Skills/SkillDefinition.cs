@@ -77,6 +77,21 @@ namespace TWF
         public int rank;
         public float power;            // multiplies damage and effect values
         public Combatant autoTarget;
+
+        // Gear modifiers.
+        float Stat(StatType t) => caster != null ? caster.Stats.Get(t) : 0f;
+        public float Range => 1f + Stat(StatType.SkillRange);
+        public float Area => 1f + Stat(StatType.AreaSize);
+        public int ExtraProjectiles => Mathf.RoundToInt(Stat(StatType.ExtraProjectiles));
+        public float ProjectileSpeed => 1f + Stat(StatType.ProjectileSpeed);
+        public float Duration => 1f + Stat(StatType.EffectDuration);
+        public float Spread => 1f + Stat(StatType.ProjectileSpread);
+
+        public StatusSpec Scale(StatusSpec s)
+        {
+            if (s.IsSet) s.duration *= Duration;
+            return s;
+        }
     }
 
     [Serializable]
@@ -100,9 +115,10 @@ namespace TWF
 
         public override void Apply(SkillContext ctx)
         {
-            VFX.Slash(ctx.caster.transform.position, ctx.direction, radius, angle, color);
-            foreach (var t in Combat.HostilesInArc(ctx.caster.team, ctx.caster.transform.position, ctx.direction, radius, angle))
-                Combat.Hit(ctx.caster, t, damageMult * ctx.power, status, false, knockback);
+            float r = radius * ctx.Area;
+            VFX.Slash(ctx.caster.transform.position, ctx.direction, r, angle, color);
+            foreach (var t in Combat.HostilesInArc(ctx.caster.team, ctx.caster.transform.position, ctx.direction, r, angle))
+                Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(status), false, knockback);
         }
 
         public override string Describe(float power) => $"Hits in a {angle:0}° arc for {Pct(damageMult * power)} damage";
@@ -129,14 +145,17 @@ namespace TWF
         {
             var spec = new ProjectileSpec
             {
-                speed = speed, range = range, hitRadius = hitRadius, damageMult = damageMult * ctx.power,
-                pierce = pierce, explodeRadius = explodeRadius, status = status, color = color, size = size,
+                speed = speed * ctx.ProjectileSpeed, range = range * ctx.Range, hitRadius = hitRadius, damageMult = damageMult * ctx.power,
+                pierce = pierce, explodeRadius = explodeRadius * ctx.Area, status = ctx.Scale(status), color = color, size = size,
                 knockback = knockback, sprite = useArrowSprite ? HeroVisuals.ArrowSprite : null, rotateSprite = true,
             };
+            // Extra projectiles from gear fan out; spread gear widens or tightens the fan.
+            int total = count + ctx.ExtraProjectiles;
+            float fan = Mathf.Max(spread, total > 1 ? 12f * (total - 1) : 0f) * ctx.Spread;
             float baseAngle = Mathf.Atan2(ctx.direction.y, ctx.direction.x) * Mathf.Rad2Deg;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < total; i++)
             {
-                float a = count == 1 ? baseAngle : baseAngle - spread / 2f + spread * i / (count - 1);
+                float a = total == 1 ? baseAngle : baseAngle - fan / 2f + fan * i / (total - 1);
                 var d = new Vector2(Mathf.Cos(a * Mathf.Deg2Rad), Mathf.Sin(a * Mathf.Deg2Rad));
                 Projectile.Fire(ctx.caster, ctx.origin + d * 0.4f, d, spec);
             }
@@ -170,8 +189,8 @@ namespace TWF
             Vector2 center = atCaster ? (Vector2)ctx.caster.transform.position : ctx.point;
             AreaEffect.Spawn(ctx.caster, center, new AreaSpec
             {
-                radius = radius, delay = delay, ticks = ticks, interval = interval,
-                damageMult = damageMult * ctx.power, status = status, color = color,
+                radius = radius * ctx.Area, delay = delay, ticks = ticks, interval = interval,
+                damageMult = damageMult * ctx.power, status = ctx.Scale(status), color = color,
                 knockback = knockback, followOwner = followCaster,
             });
         }
@@ -206,10 +225,11 @@ namespace TWF
             var caster = ctx.caster;
             var body = ctx.body;
             Vector2 start = caster.transform.position;
-            float dist = distance;
+            float dist = distance * ctx.Range;
+            float hitR = hitRadius * ctx.Area;
 
             // Don't dash through walls.
-            var hit = Physics2D.CircleCast(start, 0.3f, ctx.direction, distance, LayerMask.GetMask("Walls", "Default"));
+            var hit = Physics2D.CircleCast(start, 0.3f, ctx.direction, dist, LayerMask.GetMask("Walls", "Default"));
             if (hit.collider != null && !hit.collider.isTrigger && hit.collider.attachedRigidbody != body)
                 dist = Mathf.Max(0f, hit.distance - 0.1f);
 
@@ -234,8 +254,8 @@ namespace TWF
                     if (body) body.MovePosition(p); else caster.transform.position = p;
                     if (damageMult > 0f && !damageAtEnd)
                     {
-                        foreach (var c in Combat.HostilesInRadius(caster.team, p, hitRadius))
-                            if (hitSet.Add(c)) Combat.Hit(caster, c, damageMult * ctx.power, status);
+                        foreach (var c in Combat.HostilesInRadius(caster.team, p, hitR))
+                            if (hitSet.Add(c)) Combat.Hit(caster, c, damageMult * ctx.power, ctx.Scale(status));
                     }
                     if (UnityEngine.Random.value < 0.6f) VFX.Burst(p, color, 1, 0.2f);
                     yield return new WaitForFixedUpdate();
@@ -244,9 +264,9 @@ namespace TWF
 
             if (damageMult > 0f && damageAtEnd)
             {
-                VFX.Ring(end, color, hitRadius, 0.3f);
-                foreach (var c in Combat.HostilesInRadius(caster.team, end, hitRadius))
-                    Combat.Hit(caster, c, damageMult * ctx.power, status, false, 1.5f);
+                VFX.Ring(end, color, hitR, 0.3f);
+                foreach (var c in Combat.HostilesInRadius(caster.team, end, hitR))
+                    Combat.Hit(caster, c, damageMult * ctx.power, ctx.Scale(status), false, 1.5f);
             }
             if (invulnerable) caster.Invulnerable = false;
         }
@@ -272,15 +292,15 @@ namespace TWF
         public override void Apply(SkillContext ctx)
         {
             float v = scaleWithRank ? value * ctx.power : value;
-            ctx.runner.StartCoroutine(Run(ctx.caster, v));
+            ctx.runner.StartCoroutine(Run(ctx.caster, v, duration * ctx.Duration));
             VFX.Ring(ctx.caster.transform.position, color, 1.5f, 0.4f);
         }
 
-        IEnumerator Run(Combatant c, float v)
+        IEnumerator Run(Combatant c, float v, float time)
         {
             var source = new object();
             c.Stats.AddModifier(new StatModifier(stat, kind, v, source));
-            yield return new WaitForSeconds(duration);
+            yield return new WaitForSeconds(time);
             if (c != null) c.Stats.RemoveModifiersFrom(source);
         }
 
@@ -306,7 +326,7 @@ namespace TWF
 
         public override void Apply(SkillContext ctx)
         {
-            ctx.caster.AddShield(ctx.caster.MaxHP * percentMaxHP * ctx.power, duration);
+            ctx.caster.AddShield(ctx.caster.MaxHP * percentMaxHP * ctx.power, duration * ctx.Duration);
             VFX.Ring(ctx.caster.transform.position, Palette.Shield, 1.2f, 0.4f);
         }
 

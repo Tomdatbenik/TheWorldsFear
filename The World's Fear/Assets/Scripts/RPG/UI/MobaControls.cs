@@ -151,6 +151,7 @@ namespace TWF
         public Image cooldownOverlay;
         public TextMeshProUGUI cooldownText;
         public TextMeshProUGUI glyph;
+        public Image icon;
         public Image ring;
         public Image background;
         public TextMeshProUGUI rankText;
@@ -171,7 +172,13 @@ namespace TWF
             if (skill != shownSkill)
             {
                 shownSkill = skill;
-                glyph.text = skill != null ? skill.glyph : "";
+                var sprite = skill != null ? IconFactory.Get(IconFactory.KeyFor(skill.id, skill.displayName), Color.Lerp(skill.color, Color.white, 0.15f)) : null;
+                if (icon != null)
+                {
+                    icon.sprite = sprite;
+                    icon.enabled = sprite != null;
+                }
+                glyph.text = skill != null && sprite == null ? skill.glyph : "";
                 ring.color = skill != null ? skill.color : new Color(1, 1, 1, 0.15f);
                 background.color = skill != null ? new Color(skill.color.r * 0.25f, skill.color.g * 0.25f, skill.color.b * 0.25f, 0.9f) : new Color(0, 0, 0, 0.35f);
             }
@@ -273,7 +280,8 @@ namespace TWF
             ind.transform.position = pos;
             Color c = cancelling ? new Color(1f, 0.3f, 0.3f) : skill.color;
 
-            float rangeSize = skill.range * 2f;
+            float skillRange = hero.SkillRange(skill);
+            float rangeSize = skillRange * 2f;
             ind.rangeRing.transform.localScale = Vector3.one * rangeSize / GameAssets.Ring.bounds.size.x;
             ind.rangeRing.color = new Color(c.r, c.g, c.b, 0.35f);
             ind.rangeRing.gameObject.SetActive(skill.targeting != Targeting.Self);
@@ -285,8 +293,8 @@ namespace TWF
             {
                 float unit = GameAssets.Pixel.bounds.size.x;
                 ind.line.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
-                ind.line.transform.localScale = new Vector3(skill.range / unit, 0.7f / unit, 1f);
-                ind.line.transform.localPosition = dir * skill.range / 2f;
+                ind.line.transform.localScale = new Vector3(skillRange / unit, 0.7f / unit, 1f);
+                ind.line.transform.localPosition = dir * skillRange / 2f;
                 ind.line.color = new Color(c.r, c.g, c.b, 0.35f);
             }
 
@@ -294,9 +302,10 @@ namespace TWF
             ind.circle.gameObject.SetActive(showCircle);
             if (showCircle)
             {
-                Vector2 at = skill.targeting == Targeting.Self ? Vector2.zero : dir * skill.range * Mathf.Clamp01(aim.magnitude);
+                Vector2 at = skill.targeting == Targeting.Self ? Vector2.zero : dir * skillRange * Mathf.Clamp01(aim.magnitude);
                 ind.circle.transform.localPosition = at;
-                ind.circle.transform.localScale = Vector3.one * skill.indicatorRadius * 2f / GameAssets.SoftCircle.bounds.size.x * 1.25f;
+                float area = 1f + hero.Combatant.Stats.Get(StatType.AreaSize);
+                ind.circle.transform.localScale = Vector3.one * skill.indicatorRadius * area * 2f / GameAssets.SoftCircle.bounds.size.x * 1.25f;
                 ind.circle.color = new Color(c.r, c.g, c.b, 0.45f);
             }
         }

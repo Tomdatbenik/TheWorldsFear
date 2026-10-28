@@ -114,6 +114,18 @@ namespace TWF
             return b;
         }
 
+        // A button that shows a pixel icon instead of text.
+        public static Button IconButton(string name, Transform parent, string iconKey, Color iconColor, Action onClick, Color? bg = null)
+        {
+            var b = Button(name, parent, "", onClick, bg);
+            var label = b.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+            if (label) UnityEngine.Object.Destroy(label.gameObject);
+            var icon = Image("Icon", b.transform, IconFactory.Get(iconKey, iconColor), Color.white);
+            icon.rectTransform.Stretch(10);
+            icon.preserveAspect = true;
+            return b;
+        }
+
         public static Image Circle(string name, Transform parent, float size, Color color, bool raycast = false)
         {
             var img = Image(name, parent, GameAssets.Circle, color, raycast);

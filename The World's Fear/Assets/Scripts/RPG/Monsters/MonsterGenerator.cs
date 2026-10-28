@@ -22,6 +22,7 @@ namespace TWF
         public float preferredDistance; // ranged monsters keep their distance
         public float projectileSpeed = 7f;
         public float packMultiplier = 1f;
+        public bool isSpider;
         public Color projectileColor = Color.white;
         public StatusSpec onHitStatus;
     }
@@ -70,12 +71,20 @@ namespace TWF
                 int guard = 0;
                 do
                 {
-                    name = MakeName(new System.Random(seed + guard * 17), zone.biome, arch);
+                    name = MakeName(new System.Random(seed + guard * 17), zone.biome, arch, sp.isSpider);
                     guard++;
                 } while (usedNames.Contains(name) && guard < 20);
                 usedNames.Add(name);
                 sp.name = name;
                 list.Add(sp);
+            }
+
+            // Every forest has its signature spiders.
+            if (zone.biome == Biome.Forest)
+            {
+                var spider = Create(zone.seed * 31 + 7, Biome.Forest, MonsterArchetype.Chaser, true);
+                spider.name = "Forest Spider";
+                list.Add(spider);
             }
 
             // Hand-drawn creatures from the original game join the generated ones.
@@ -85,20 +94,26 @@ namespace TWF
             return list;
         }
 
-        public static string MakeName(System.Random rng, Biome biome, MonsterArchetype arch)
+        static readonly string[] spiderSuffixes = { "weaver", "crawler", "spinner", "widow", "fang", "stalker" };
+
+        public static string MakeName(System.Random rng, Biome biome, MonsterArchetype arch, bool spider = false)
         {
             var pre = prefixes[biome];
-            var suf = suffixes[arch];
+            var suf = spider ? spiderSuffixes : suffixes[arch];
             return pre[rng.Next(pre.Length)] + suf[rng.Next(suf.Length)];
         }
 
-        public static MonsterSpecies Create(int seed, Biome biome, MonsterArchetype arch)
+        public static MonsterSpecies Create(int seed, Biome biome, MonsterArchetype arch, bool forceSpider = false)
         {
             var rng = new System.Random(seed ^ 0x5f3759);
             float R(float min, float max) => min + (float)rng.NextDouble() * (max - min);
-            var sp = new MonsterSpecies { archetype = arch, biome = biome, look = MonsterSpriteGenerator.Generate(seed, biome, arch) };
+            // Some chasers and swarmlings are spiders.
+            bool spider = forceSpider || ((arch == MonsterArchetype.Chaser || arch == MonsterArchetype.Swarmling) && ((seed >> 3) & 3) == 0);
+            var look = spider ? SpiderSpriteGenerator.Generate(seed, biome) : MonsterSpriteGenerator.Generate(seed, biome, arch);
+            var sp = new MonsterSpecies { archetype = arch, biome = biome, look = look, isSpider = spider };
             sp.projectileColor = sp.look.accent;
 
+            if (spider) sp.onHitStatus = StatusSpec.Poison(0.3f, 3f);
             switch (arch)
             {
                 case MonsterArchetype.Chaser:

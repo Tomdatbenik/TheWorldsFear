@@ -483,6 +483,13 @@ namespace TWF.EditorTools
                 A("wind", "of the Wind", false, StatType.MoveSpeed, ModKind.Percent, new Vector2(0.03f, 0.05f), new Vector2(0.08f, 0.12f), SlotMask.Boots, 12),
                 A("focus", "of Focus", false, StatType.CooldownReduction, ModKind.Flat, new Vector2(0.02f, 0.04f), new Vector2(0.06f, 0.1f), SlotMask.Helm | SlotMask.Jewelry, 8),
                 A("mending", "of Mending", false, StatType.HPRegen, ModKind.Flat, new Vector2(0.5f, 1f), new Vector2(6f, 10f), SlotMask.Armor | SlotMask.Jewelry, 9),
+                // Skill modifiers.
+                A("farreach", "Far-Reaching", true, StatType.SkillRange, ModKind.Flat, new Vector2(0.06f, 0.1f), new Vector2(0.18f, 0.3f), SlotMask.Weapon | SlotMask.Amulet | SlotMask.Gloves, 7),
+                A("expanse", "of Expanse", false, StatType.AreaSize, ModKind.Flat, new Vector2(0.06f, 0.1f), new Vector2(0.18f, 0.3f), SlotMask.Chest | SlotMask.Helm | SlotMask.Amulet | SlotMask.Ring, 7),
+                A("hydra", "of the Hydra", false, StatType.ExtraProjectiles, ModKind.Flat, new Vector2(1f, 1f), new Vector2(1f, 2f), SlotMask.Weapon, 3),
+                A("swiftflight", "Swift-Flight", true, StatType.ProjectileSpeed, ModKind.Flat, new Vector2(0.08f, 0.14f), new Vector2(0.2f, 0.35f), SlotMask.Weapon | SlotMask.Gloves, 6),
+                A("lingering", "of Lingering", false, StatType.EffectDuration, ModKind.Flat, new Vector2(0.08f, 0.14f), new Vector2(0.25f, 0.4f), SlotMask.Helm | SlotMask.Boots | SlotMask.Ring, 6),
+                A("scattering", "Scattering", true, StatType.ProjectileSpread, ModKind.Flat, new Vector2(0.15f, 0.25f), new Vector2(0.4f, 0.7f), SlotMask.Weapon | SlotMask.Gloves, 5),
             };
         }
 

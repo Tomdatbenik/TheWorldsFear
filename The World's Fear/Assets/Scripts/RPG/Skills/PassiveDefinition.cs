@@ -92,6 +92,24 @@ namespace TWF
         }
     }
 
+    // A flat stat bonus (used by legendary item powers).
+    [Serializable]
+    public class StatBonusProc : PassiveProc
+    {
+        public StatType stat;
+        public ModKind kind = ModKind.Flat;
+        public float valuePerRank;
+
+        public override Action Attach(Combatant owner, int rank)
+        {
+            var source = new object();
+            owner.Stats.AddModifier(new StatModifier(stat, kind, valuePerRank * rank, source));
+            return () => owner.Stats.RemoveModifiersFrom(source);
+        }
+
+        public override string Describe(int rank) => StatInfo.Format(stat, kind, valuePerRank * rank);
+    }
+
     [Serializable]
     public class HealOnKillProc : PassiveProc
     {

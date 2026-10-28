@@ -20,6 +20,8 @@ namespace TWF
         RectTransform controls;
         Button interactButton;
         TextMeshProUGUI interactLabel;
+        Image interactIcon;
+        Image attackIcon;
         System.Action interactAction;
         Image potionCooldown;
         Combatant boss;
@@ -89,19 +91,19 @@ namespace TWF
             goldText.rectTransform.Place(new Vector2(0, 1), new Vector2(148, -104), new Vector2(260, 34));
 
             // Menu buttons, top right.
-            var menu = UIFactory.Rect("Menu", root).Place(new Vector2(1, 1), new Vector2(-24, -24), new Vector2(420, 90));
+            var menu = UIFactory.Rect("Menu", root).Place(new Vector2(1, 1), new Vector2(-24, -24), new Vector2(330, 100));
             var layout = menu.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 12;
             layout.childAlignment = TextAnchor.UpperRight;
             layout.childForceExpandWidth = layout.childForceExpandHeight = true;
-            var skillsBtn = UIFactory.Button("SkillsBtn", menu, "Skills", () => Panels.Toggle(PanelKind.Skills));
+            var skillsBtn = UIFactory.IconButton("SkillsBtn", menu, "book", new Color(0.75f, 0.55f, 0.95f), () => Panels.Toggle(PanelKind.Skills));
             skillPointBadge = UIFactory.Text("Badge", skillsBtn.transform, "", 22, Color.white);
             skillPointBadge.rectTransform.Place(new Vector2(1, 1), new Vector2(10, 10), new Vector2(44, 44));
             var badgeBg = UIFactory.Circle("bg", skillPointBadge.transform, 44, new Color(0.85f, 0.2f, 0.2f));
             badgeBg.rectTransform.Stretch();
             badgeBg.transform.SetAsFirstSibling();
-            UIFactory.Button("BagBtn", menu, "Bag", () => Panels.Toggle(PanelKind.Inventory));
-            UIFactory.Button("MapBtn", menu, "Map", () => Panels.Toggle(PanelKind.Map));
+            UIFactory.IconButton("BagBtn", menu, "bag", new Color(0.8f, 0.55f, 0.3f), () => Panels.Toggle(PanelKind.Inventory));
+            UIFactory.IconButton("MapBtn", menu, "map", new Color(0.85f, 0.75f, 0.5f), () => Panels.Toggle(PanelKind.Map));
 
             var bannerRt = UIFactory.Rect("ZoneBanner", root).Place(new Vector2(0.5f, 1), new Vector2(0, -150), new Vector2(1000, 140));
             bannerGroup = bannerRt.gameObject.AddComponent<CanvasGroup>();
@@ -155,9 +157,9 @@ namespace TWF
             attack.rectTransform.Place(new Vector2(1, 0), new Vector2(-20, 20), new Vector2(210, 210));
             var atkRing = UIFactory.Image("Ring", attack.transform, GameAssets.Ring, new Color(1f, 0.75f, 0.5f, 0.9f));
             atkRing.rectTransform.Stretch();
-            var atkLabel = UIFactory.Text("Glyph", attack.transform, "ATK", 52, Color.white);
-            atkLabel.fontStyle = FontStyles.Bold;
-            atkLabel.rectTransform.Stretch();
+            attackIcon = UIFactory.Image("Icon", attack.transform, null, Color.white);
+            attackIcon.rectTransform.Stretch(45);
+            attackIcon.preserveAspect = true;
             attack.gameObject.AddComponent<AttackButton>();
 
             var cancel = UIFactory.Circle("Cancel", controls, 130, new Color(0.6f, 0.1f, 0.1f, 0.75f), true);
@@ -181,9 +183,9 @@ namespace TWF
                 rb.rectTransform.Place(new Vector2(1, 1), new Vector2(i == 0 ? -140 : -24, -130), new Vector2(96, 96));
                 var ring = UIFactory.Image("Ring", rb.transform, GameAssets.Ring, new Color(1, 1, 1, 0.5f));
                 ring.rectTransform.Stretch();
-                var t = UIFactory.Text("Label", rb.transform, i == 0 ? "<" : ">", 50, Color.white);
-                t.fontStyle = FontStyles.Bold;
-                t.rectTransform.Stretch();
+                var ri = UIFactory.Image("Icon", rb.transform, IconFactory.Get(i == 0 ? "rotl" : "rotr", new Color(0.85f, 0.85f, 0.9f)), Color.white);
+                ri.rectTransform.Stretch(16);
+                ri.preserveAspect = true;
                 rb.gameObject.AddComponent<RotateButton>().direction = dir;
             }
 
@@ -209,6 +211,11 @@ namespace TWF
             interactButton = UIFactory.Button("Interact", controls, "", () => interactAction?.Invoke(), new Color(0.35f, 0.25f, 0.08f, 0.95f), 40);
             ((RectTransform)interactButton.transform).Place(new Vector2(1, 0), new Vector2(-600, 220), new Vector2(240, 100));
             interactLabel = interactButton.GetComponentInChildren<TextMeshProUGUI>();
+            interactLabel.rectTransform.offsetMin = new Vector2(90, 6);
+            interactLabel.alignment = TextAlignmentOptions.Left;
+            interactIcon = UIFactory.Image("Icon", interactButton.transform, null, Color.white);
+            interactIcon.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(72, 72));
+            interactIcon.preserveAspect = true;
             interactButton.gameObject.SetActive(false);
 
             if (!Application.isMobilePlatform)
@@ -233,6 +240,10 @@ namespace TWF
             glyph.fontSizeMin = 14;
             glyph.fontSizeMax = size * 0.3f;
             glyph.rectTransform.Stretch(8);
+            var skillIcon = UIFactory.Image("Icon", bg.transform, null, Color.white);
+            skillIcon.rectTransform.Stretch(size * 0.2f);
+            skillIcon.preserveAspect = true;
+            skillIcon.enabled = false;
             var overlay = UIFactory.Image("Cooldown", bg.transform, GameAssets.Circle, new Color(0, 0, 0, 0.65f));
             overlay.type = Image.Type.Filled;
             overlay.fillMethod = Image.FillMethod.Radial360;
@@ -256,6 +267,7 @@ namespace TWF
             btn.cooldownOverlay = overlay;
             btn.cooldownText = cdText;
             btn.glyph = glyph;
+            btn.icon = skillIcon;
             btn.ring = ring;
             btn.background = bg;
             btn.rankText = rank;
@@ -307,10 +319,13 @@ namespace TWF
             bossBar.SetActive(true);
         }
 
-        public void ShowInteract(string label, System.Action action)
+        public void ShowInteract(string label, System.Action action, string iconKey = null)
         {
             interactAction = action;
             interactLabel.text = label;
+            if (iconKey == null) iconKey = label == "Shop" ? "coin" : label == "Travel" ? "portal" : label == "Forge" ? "anvil" : null;
+            interactIcon.sprite = IconFactory.Get(iconKey, new Color(1f, 0.85f, 0.4f));
+            interactIcon.enabled = interactIcon.sprite != null;
             interactButton.gameObject.SetActive(true);
         }
 
@@ -339,6 +354,8 @@ namespace TWF
                 bossBar.SetActive(boss != null && !boss.IsDead);
                 if (boss != null) bossFill.fillAmount = boss.HPFraction;
             }
+            if (hero != null && attackIcon.sprite == null)
+                attackIcon.sprite = IconFactory.Get(IconFactory.WeaponKey(hero.Class.id), new Color(0.92f, 0.9f, 0.88f));
             levelText.text = data.level.ToString();
             potionCount.text = data.potions.ToString();
             xpFill.fillAmount = Profile.XPFraction;

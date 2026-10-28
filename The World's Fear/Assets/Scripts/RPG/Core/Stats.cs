@@ -16,6 +16,13 @@ namespace TWF
         CooldownReduction,
         LifeSteal,
         HPRegen,
+        // Skill modifiers (from gear): appended so saved data keeps its numbers.
+        SkillRange,
+        AreaSize,
+        ExtraProjectiles,
+        ProjectileSpeed,
+        EffectDuration,
+        ProjectileSpread,
     }
 
     public enum ModKind { Flat, Percent }
@@ -140,6 +147,12 @@ namespace TWF
                 case StatType.CooldownReduction: return "Cooldown Reduction";
                 case StatType.LifeSteal: return "Life Steal";
                 case StatType.HPRegen: return "Life Regen";
+                case StatType.SkillRange: return "Skill Range";
+                case StatType.AreaSize: return "Area Size";
+                case StatType.ExtraProjectiles: return "Projectiles";
+                case StatType.ProjectileSpeed: return "Projectile Speed";
+                case StatType.EffectDuration: return "Effect Duration";
+                case StatType.ProjectileSpread: return "Projectile Spread";
             }
             return stat.ToString();
         }
@@ -148,7 +161,9 @@ namespace TWF
         public static bool IsFraction(StatType stat)
         {
             return stat == StatType.CritChance || stat == StatType.CritDamage ||
-                   stat == StatType.CooldownReduction || stat == StatType.LifeSteal;
+                   stat == StatType.CooldownReduction || stat == StatType.LifeSteal ||
+                   stat == StatType.SkillRange || stat == StatType.AreaSize || stat == StatType.ProjectileSpeed ||
+                   stat == StatType.EffectDuration || stat == StatType.ProjectileSpread;
         }
 
         public static float Clamp(StatType stat, float v)
@@ -160,6 +175,12 @@ namespace TWF
                 case StatType.LifeSteal: return Mathf.Clamp(v, 0f, 0.5f);
                 case StatType.AttackSpeed: return Mathf.Max(0.2f, v);
                 case StatType.MoveSpeed: return Mathf.Max(0.5f, v);
+                case StatType.SkillRange: return Mathf.Clamp(v, 0f, 1.5f);
+                case StatType.AreaSize: return Mathf.Clamp(v, 0f, 1.5f);
+                case StatType.ExtraProjectiles: return Mathf.Clamp(Mathf.Round(v), 0f, 6f);
+                case StatType.ProjectileSpeed: return Mathf.Clamp(v, 0f, 1.5f);
+                case StatType.EffectDuration: return Mathf.Clamp(v, 0f, 2f);
+                case StatType.ProjectileSpread: return Mathf.Clamp(v, -0.6f, 2f);
                 default: return Mathf.Max(0f, v);
             }
         }

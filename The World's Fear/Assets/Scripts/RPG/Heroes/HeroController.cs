@@ -307,7 +307,17 @@ namespace TWF
                     size = Class.useArrowSprite ? 0.9f : 0.4f, pierce = 0,
                     sprite = Class.useArrowSprite ? HeroVisuals.ArrowSprite : null, rotateSprite = true, homing = true,
                 };
+                spec.speed *= 1f + Combatant.Stats.Get(StatType.ProjectileSpeed);
                 Projectile.Fire(Combatant, (Vector2)transform.position + dir * 0.4f, dir, spec, target);
+                int extra = Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraProjectiles));
+                for (int k = 1; k <= extra; k++)
+                {
+                    float a = (k % 2 == 0 ? 1 : -1) * ((k + 1) / 2) * 14f * (1f + Combatant.Stats.Get(StatType.ProjectileSpread));
+                    var d2 = (Vector2)(Quaternion.Euler(0, 0, a) * dir);
+                    var s2 = spec;
+                    s2.homing = false;
+                    Projectile.Fire(Combatant, (Vector2)transform.position + d2 * 0.4f, d2, s2);
+                }
             }
         }
 
@@ -346,11 +356,14 @@ namespace TWF
             for (int i = 0; i < SlotCount; i++)
             {
                 if (!MobaInput.KeyboardSkillPressed(i)) continue;
-                Vector2? aim = MobaInput.MouseAim(transform.position, slotSkills[i] != null ? slotSkills[i].range : 5f);
+                Vector2? aim = MobaInput.MouseAim(transform.position, slotSkills[i] != null ? SkillRange(slotSkills[i]) : 5f);
                 if (aim.HasValue) TryCast(i, aim.Value, true);
                 else TryCast(i, Vector2.zero, false);
             }
         }
+
+        // Gear can extend how far skills reach.
+        public float SkillRange(SkillDefinition skill) => skill == null ? 0f : skill.range * (1f + Combatant.Stats.Get(StatType.SkillRange));
 
         public bool CanCast(int slot) =>
             slotSkills[slot] != null && cooldowns[slot] <= 0f && !Combatant.IsDead && !Combatant.IsStunned;
@@ -361,6 +374,7 @@ namespace TWF
             if (!CanCast(slot)) return false;
             var skill = slotSkills[slot];
             Vector2 pos = transform.position;
+            float range = SkillRange(skill);
             Vector2 dir;
             Vector2 point;
 
@@ -372,21 +386,21 @@ namespace TWF
             else if (aimed && aim.sqrMagnitude > 0.0001f)
             {
                 dir = aim.normalized;
-                point = pos + dir * skill.range * Mathf.Clamp01(aim.magnitude);
+                point = pos + dir * range * Mathf.Clamp01(aim.magnitude);
             }
             else
             {
-                var target = Combat.NearestHostile(Team.Player, pos, skill.range + 1.5f);
+                var target = Combat.NearestHostile(Team.Player, pos, range + 1.5f);
                 if (target != null)
                 {
                     Vector2 to = (Vector2)target.transform.position - pos;
                     dir = to.normalized;
-                    point = pos + Vector2.ClampMagnitude(to, skill.range);
+                    point = pos + Vector2.ClampMagnitude(to, range);
                 }
                 else
                 {
                     dir = Facing;
-                    point = pos + Facing * skill.range * (skill.targeting == Targeting.Dash ? 1f : 0.6f);
+                    point = pos + Facing * range * (skill.targeting == Targeting.Dash ? 1f : 0.6f);
                 }
             }
 
