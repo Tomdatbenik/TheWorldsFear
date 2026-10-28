@@ -238,53 +238,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 8753922950706525419, guid: 1a28c1199351d7a418943eba095981b1, type: 3}
   m_PrefabInstance: {fileID: 971242001}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &859648145
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 859648147}
-  - component: {fileID: 859648146}
-  m_Layer: 0
-  m_Name: Game
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &859648146
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 859648145}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9aca7144441274c60a00d1ef01187709, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TWF.GameBootstrap
-  defaultSpawn: {fileID: 1948592650}
-  arenaZoneId: 
-  arenaMonsterCount: 8
---- !u!4 &859648147
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 859648145}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &866340346
 GameObject:
   m_ObjectHideFlags: 3
@@ -2721,7 +2674,7 @@ MonoBehaviour:
   FireLine: {fileID: 152459542380777478, guid: c92908cc90053d649ae2d53ca06ede55, type: 3}
   Boss: {fileID: 1708767342}
   FirelineRigitBody: {fileID: 5299923696357742459, guid: c92908cc90053d649ae2d53ca06ede55, type: 3}
---- !u!1 &1948592649
+--- !u!1 &1947390730
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -2729,7 +2682,54 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1948592650}
+  - component: {fileID: 1947390732}
+  - component: {fileID: 1947390731}
+  m_Layer: 0
+  m_Name: Game
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1947390731
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1947390730}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9aca7144441274c60a00d1ef01187709, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.GameBootstrap
+  defaultSpawn: {fileID: 1967490000}
+  arenaZoneId: 
+  arenaMonsterCount: 8
+--- !u!4 &1947390732
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1947390730}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1967489999
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1967490000}
   m_Layer: 0
   m_Name: HeroSpawn
   m_TagString: Untagged
@@ -2737,13 +2737,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1948592650
+--- !u!4 &1967490000
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1948592649}
+  m_GameObject: {fileID: 1967489999}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -3316,6 +3316,6 @@ SceneRoots:
   - {fileID: 462463814}
   - {fileID: 1039130920}
   - {fileID: 212231468}
-  - {fileID: 1948592650}
-  - {fileID: 859648147}
+  - {fileID: 1967490000}
+  - {fileID: 1947390732}
   - {fileID: 2127345827}

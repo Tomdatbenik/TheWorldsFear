@@ -28,12 +28,12 @@ MonoBehaviour:
   maxRank: 3
   castLock: 0.12
   effects:
-  - rid: 3429192701680812409
-  - rid: 3429192701680812410
+  - rid: 3429192701680812485
+  - rid: 3429192701680812486
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812409
+    - rid: 3429192701680812485
       type: {class: BuffEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         stat: 3
@@ -42,14 +42,14 @@ MonoBehaviour:
         duration: 2.6
         scaleWithRank: 0
         color: {r: 0.9098039, g: 0.34117648, b: 0.23529412, a: 1}
-    - rid: 3429192701680812410
+    - rid: 3429192701680812486
       type: {class: RepeatEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         times: 10
         interval: 0.25
         inner:
-        - rid: 3429192701680812411
-    - rid: 3429192701680812411
+        - rid: 3429192701680812487
+    - rid: 3429192701680812487
       type: {class: MeleeArcEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         radius: 2.6

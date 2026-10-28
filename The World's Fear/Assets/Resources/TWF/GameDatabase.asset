@@ -36,6 +36,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 38fc56ec98dce414a9af08c0e1f19a59, type: 2}
   - {fileID: 11400000, guid: bcd80b5e76d8b47f3ba60165351c13ee, type: 2}
   - {fileID: 11400000, guid: 9ce588fe84f32432dae0cba45daf80c2, type: 2}
+  - {fileID: 11400000, guid: 11240b833cdda42a1bd1711978744930, type: 2}
+  - {fileID: 11400000, guid: 7dc395dd9bf3540d18cd0752654b444e, type: 2}
+  - {fileID: 11400000, guid: 2a14e58d3f77e4a0eb2bd660791dd597, type: 2}
+  - {fileID: 11400000, guid: dec50c11c112442daa875333b5bd40bf, type: 2}
+  - {fileID: 11400000, guid: dc4df830009f24b138a5c22a04bebb14, type: 2}
+  - {fileID: 11400000, guid: edbc6da42f97e49e2a24f324dad7aead, type: 2}
   handmadeMonsters:
   - name: Fire Slime
     biome: 4

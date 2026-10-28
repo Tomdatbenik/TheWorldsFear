@@ -28,11 +28,11 @@ MonoBehaviour:
   maxRank: 5
   castLock: 0.12
   effects:
-  - rid: 3429192701680812419
+  - rid: 3429192701680812495
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812419
+    - rid: 3429192701680812495
       type: {class: ProjectileEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         count: 3

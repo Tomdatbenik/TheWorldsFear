@@ -28,12 +28,12 @@ MonoBehaviour:
   maxRank: 5
   castLock: 0.2
   effects:
-  - rid: 3429192701680812439
-  - rid: 3429192701680812440
+  - rid: 3429192701680812515
+  - rid: 3429192701680812516
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812439
+    - rid: 3429192701680812515
       type: {class: DashEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         distance: 4
@@ -49,7 +49,7 @@ MonoBehaviour:
           duration: 0
           chance: 0
         color: {r: 1, g: 1, b: 1, a: 1}
-    - rid: 3429192701680812440
+    - rid: 3429192701680812516
       type: {class: BuffEffect, ns: TWF, asm: Assembly-CSharp}
       data:
         stat: 4
