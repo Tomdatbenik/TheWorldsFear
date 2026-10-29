@@ -16,7 +16,7 @@ namespace TWF
         All = Weapon | Armor | Jewelry,
     }
 
-    public enum Rarity { Common, Magic, Rare, Legendary }
+    public enum Rarity { Common, Magic, Rare, Legendary, Mythic }
 
     public static class RarityInfo
     {
@@ -27,6 +27,7 @@ namespace TWF
                 case Rarity.Magic: return new Color(0.4f, 0.55f, 1f);
                 case Rarity.Rare: return new Color(1f, 0.9f, 0.3f);
                 case Rarity.Legendary: return new Color(1f, 0.55f, 0.1f);
+                case Rarity.Mythic: return new Color(1f, 0.3f, 0.5f);
                 default: return new Color(0.9f, 0.9f, 0.9f);
             }
         }
@@ -38,6 +39,7 @@ namespace TWF
                 case Rarity.Magic: return rng.Next(1, 3);
                 case Rarity.Rare: return rng.Next(3, 5);
                 case Rarity.Legendary: return 4;
+                case Rarity.Mythic: return 5;
                 default: return 0;
             }
         }

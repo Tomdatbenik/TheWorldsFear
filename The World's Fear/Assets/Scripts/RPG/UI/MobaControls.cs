@@ -12,7 +12,7 @@ namespace TWF
         public static bool AttackButtonHeld;
         public static bool Blocked; // menus open
 
-        static readonly KeyCode[] skillKeys = { KeyCode.Q, KeyCode.E, KeyCode.F, KeyCode.R };
+        static readonly KeyCode[] skillKeys = { KeyCode.Q, KeyCode.E, KeyCode.F, KeyCode.R, KeyCode.G };
 
         public static Vector2 Move
         {

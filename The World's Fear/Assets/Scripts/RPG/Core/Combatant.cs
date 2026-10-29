@@ -56,6 +56,14 @@ namespace TWF
         }
 
         readonly List<ActiveStatus> statuses = new List<ActiveStatus>();
+
+        // Timed buffs and debuffs from skills, by name ("empower", "weaken", ...). Recasting refreshes them.
+        class TimedEffect { public object source; public float until; }
+        readonly Dictionary<string, TimedEffect> timed = new Dictionary<string, TimedEffect>();
+        float exposedUntil, exposedMult = 1f;
+
+        public bool IsExposed => Time.time < exposedUntil;
+        public bool HasTimed(string key) => timed.TryGetValue(key, out var t) && Time.time < t.until;
         float stunTimer;
         float shieldTimer;
         float legacyTimer;
@@ -126,6 +134,50 @@ namespace TWF
             }
 
             UpdateStatuses(dt);
+            if (timed.Count > 0) ExpireTimed();
+        }
+
+        // ---------- Buffs and debuffs ----------
+
+        public void AddTimedModifiers(string key, float duration, params (StatType stat, ModKind kind, float value)[] mods)
+        {
+            if (IsDead) return;
+            if (timed.TryGetValue(key, out var old)) Stats.RemoveModifiersFrom(old.source);
+            var t = new TimedEffect { source = new object(), until = Time.time + duration };
+            foreach (var m in mods) Stats.AddModifier(new StatModifier(m.stat, m.kind, m.value, t.source));
+            timed[key] = t;
+        }
+
+        // Exposed: takes more damage from everything.
+        public void Expose(float extra, float duration)
+        {
+            if (IsDead) return;
+            if (rank == MonsterRank.Boss) duration *= 0.6f;
+            if (!IsExposed) FloatingText.Spawn(transform.position + View.Up * (HeadHeight + 0.4f), "Exposed", new Color(1f, 0.55f, 0.3f), 0.8f);
+            exposedMult = IsExposed ? Mathf.Max(exposedMult, 1f + extra) : 1f + extra;
+            exposedUntil = Mathf.Max(exposedUntil, Time.time + duration);
+        }
+
+        // Weakened: deals less damage.
+        public void Weaken(float amount, float duration)
+        {
+            if (IsDead) return;
+            if (rank == MonsterRank.Boss) duration *= 0.6f;
+            if (!HasTimed("weaken")) FloatingText.Spawn(transform.position + View.Up * (HeadHeight + 0.4f), "Weakened", new Color(0.7f, 0.5f, 0.95f), 0.8f);
+            AddTimedModifiers("weaken", duration, (StatType.Damage, ModKind.Percent, -amount));
+        }
+
+        void ExpireTimed()
+        {
+            List<string> done = null;
+            foreach (var kv in timed)
+                if (Time.time >= kv.Value.until) (done ??= new List<string>()).Add(kv.Key);
+            if (done == null) return;
+            foreach (var k in done)
+            {
+                Stats.RemoveModifiersFrom(timed[k].source);
+                timed.Remove(k);
+            }
         }
 
         void UpdateStatuses(float dt)
@@ -191,6 +243,8 @@ namespace TWF
             float amount = info.trueDamage ? info.amount : Combat.Mitigate(info.amount, Stats.Get(StatType.Armor));
             amount = Mathf.Max(info.amount > 0f ? 1f : 0f, amount);
             if (info.silent) amount = info.amount;
+            if (IsExposed) amount *= exposedMult;
+            if (info.source != null && info.source.team != team) amount *= Combat.LevelGapFactor(info.source, this);
 
             if (ShieldHP > 0f)
             {

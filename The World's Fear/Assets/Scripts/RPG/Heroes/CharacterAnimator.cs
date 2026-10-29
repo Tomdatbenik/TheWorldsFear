@@ -29,6 +29,12 @@ namespace TWF
             sprites = CharacterSpriteGenerator.Get(o);
         }
 
+        // A custom sprite set (the hero wearing their gear).
+        public void SetSprites(CharacterSprites set)
+        {
+            if (set != null) sprites = set;
+        }
+
         void LateUpdate()
         {
             if (sprites == null || sr == null) return;

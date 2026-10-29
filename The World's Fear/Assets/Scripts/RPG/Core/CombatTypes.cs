@@ -74,6 +74,16 @@ namespace TWF
         }
 
         // Armor reduces damage by armor / (armor + 100).
+        // Fighting above your level is punishing: monsters that outlevel you take less damage from you
+        // and hit harder. Monsters far below you hit softer.
+        public static float LevelGapFactor(Combatant attacker, Combatant target)
+        {
+            int gap = target.level - attacker.level;
+            if (attacker.team == Team.Player)
+                return gap > 0 ? Mathf.Max(0.3f, 1f - 0.04f * gap) : 1f;
+            return gap < 0 ? Mathf.Min(2.5f, 1f + 0.06f * -gap) : Mathf.Max(0.5f, 1f - 0.03f * gap);
+        }
+
         public static float Mitigate(float amount, float armor)
         {
             return amount * 100f / (100f + Mathf.Max(0f, armor));

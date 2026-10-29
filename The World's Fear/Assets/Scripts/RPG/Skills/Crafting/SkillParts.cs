@@ -6,9 +6,10 @@ namespace TWF
 {
     // Skills are crafted: Element -> Delivery -> Modifiers.
     public enum PartKind { Element, Delivery, Modifier }
-    public enum ElementPart { Fire, Frost, Lightning, Poison, Arcane, Physical }
-    public enum DeliveryPart { Forward, Single, Pierce, Explosion, Nova, Wave, Blink, Dash }
-    public enum ModPart { Speed, Split, Chain, Echo, Wide, Lingering, Swift, Homing, Heavy }
+    // New parts are appended so saved recipes keep their meaning.
+    public enum ElementPart { Fire, Frost, Lightning, Poison, Arcane, Physical, Holy, Shadow }
+    public enum DeliveryPart { Forward, Single, Pierce, Explosion, Nova, Wave, Blink, Dash, Self, Aura, Hex }
+    public enum ModPart { Speed, Split, Chain, Echo, Wide, Lingering, Swift, Homing, Heavy, Empower, Haste, Barrier, Mend, Weaken, Expose }
 
     // A collected part ("glyph"). Tiers I-III make it stronger but need more attributes.
     [Serializable]
@@ -55,7 +56,7 @@ namespace TWF
     {
         public static string Roman(int t) => t >= 3 ? "III" : t == 2 ? "II" : "I";
 
-        public static int Count(PartKind k) => k == PartKind.Element ? 6 : k == PartKind.Delivery ? 8 : 9;
+        public static int Count(PartKind k) => k == PartKind.Element ? 8 : k == PartKind.Delivery ? 11 : 15;
 
         public static string PartName(PartKind k, int id)
         {
@@ -79,6 +80,8 @@ namespace TWF
                         case ElementPart.Lightning: return "Arcs to a nearby enemy and may stun.";
                         case ElementPart.Poison: return "Heavy damage over time.";
                         case ElementPart.Arcane: return "Pure extra damage.";
+                        case ElementPart.Holy: return "Heals you every time it hits. Cast on yourself for a big heal.";
+                        case ElementPart.Shadow: return "Weakens enemies: they deal less damage.";
                         default: return "Knocks enemies back.";
                     }
                 case PartKind.Delivery:
@@ -91,6 +94,9 @@ namespace TWF
                         case DeliveryPart.Nova: return "A burst all around you.";
                         case DeliveryPart.Wave: return "A wide cone in front of you.";
                         case DeliveryPart.Blink: return "Teleport, releasing the element where you land.";
+                        case DeliveryPart.Self: return "Cast on yourself: a blessing that depends on the element.";
+                        case DeliveryPart.Aura: return "A field around you that pulses for several seconds.";
+                        case DeliveryPart.Hex: return "Curses an enemy: it takes much more damage for a while.";
                         default: return "Charge forward, hitting everything in the way.";
                     }
                 default:
@@ -104,6 +110,12 @@ namespace TWF
                         case ModPart.Lingering: return "Leaves a damaging zone behind.";
                         case ModPart.Swift: return "Much shorter cooldown, a bit less damage.";
                         case ModPart.Homing: return "Projectiles seek enemies.";
+                        case ModPart.Empower: return "Buff: after casting you deal +25% damage for 5 s.";
+                        case ModPart.Haste: return "Buff: after casting you move and attack faster for 4 s.";
+                        case ModPart.Barrier: return "Buff: casting shields you for 15% of your life.";
+                        case ModPart.Mend: return "Buff: casting heals you for 8% of your life.";
+                        case ModPart.Weaken: return "Debuff: enemies hit deal 30% less damage for 4 s.";
+                        case ModPart.Expose: return "Debuff: enemies hit take 25% more damage for 4 s.";
                         default: return "Much more damage, longer cooldown.";
                     }
             }
@@ -123,6 +135,8 @@ namespace TWF
                         case ElementPart.Arcane: return new[] { R(Attribute.Magic, 4) };
                         case ElementPart.Lightning: return new[] { R(Attribute.Magic, 3), R(Attribute.Dexterity, 2) };
                         case ElementPart.Poison: return new[] { R(Attribute.Dexterity, 3) };
+                        case ElementPart.Holy: return new[] { R(Attribute.Vitality, 3), R(Attribute.Magic, 2) };
+                        case ElementPart.Shadow: return new[] { R(Attribute.Magic, 3), R(Attribute.Dexterity, 2) };
                         default: return new[] { R(Attribute.Magic, 2) };
                     }
                 case PartKind.Delivery:
@@ -135,6 +149,9 @@ namespace TWF
                         case DeliveryPart.Nova: return new[] { R(Attribute.Magic, 4), R(Attribute.Vitality, 2) };
                         case DeliveryPart.Wave: return new[] { R(Attribute.Strength, 4) };
                         case DeliveryPart.Blink: return new[] { R(Attribute.Magic, 10) };
+                        case DeliveryPart.Self: return new[] { R(Attribute.Vitality, 2) };
+                        case DeliveryPart.Aura: return new[] { R(Attribute.Magic, 5), R(Attribute.Vitality, 3) };
+                        case DeliveryPart.Hex: return new[] { R(Attribute.Magic, 6) };
                         default: return new[] { R(Attribute.Swiftness, 8) };
                     }
                 default:
@@ -148,6 +165,12 @@ namespace TWF
                         case ModPart.Lingering: return new[] { R(Attribute.Vitality, 4), R(Attribute.Magic, 4) };
                         case ModPart.Swift: return new[] { R(Attribute.Swiftness, 6), R(Attribute.Dexterity, 4) };
                         case ModPart.Homing: return new[] { R(Attribute.Dexterity, 5) };
+                        case ModPart.Empower: return new[] { R(Attribute.Strength, 5) };
+                        case ModPart.Haste: return new[] { R(Attribute.Swiftness, 4) };
+                        case ModPart.Barrier: return new[] { R(Attribute.Vitality, 5) };
+                        case ModPart.Mend: return new[] { R(Attribute.Vitality, 4), R(Attribute.Magic, 2) };
+                        case ModPart.Weaken: return new[] { R(Attribute.Magic, 4), R(Attribute.Strength, 2) };
+                        case ModPart.Expose: return new[] { R(Attribute.Dexterity, 6) };
                         default: return new[] { R(Attribute.Strength, 8) };
                     }
             }
@@ -187,6 +210,8 @@ namespace TWF
                 case ElementPart.Lightning: return new Color(1f, 0.9f, 0.35f);
                 case ElementPart.Poison: return new Color(0.55f, 0.95f, 0.3f);
                 case ElementPart.Arcane: return new Color(0.75f, 0.5f, 1f);
+                case ElementPart.Holy: return new Color(1f, 0.92f, 0.55f);
+                case ElementPart.Shadow: return new Color(0.55f, 0.35f, 0.75f);
                 default: return new Color(0.88f, 0.86f, 0.82f);
             }
         }
@@ -203,6 +228,8 @@ namespace TWF
                         case ElementPart.Lightning: return "bolt";
                         case ElementPart.Poison: return "poison";
                         case ElementPart.Arcane: return "arcane";
+                        case ElementPart.Holy: return "sun";
+                        case ElementPart.Shadow: return "moon";
                         default: return "sword";
                     }
                 case PartKind.Delivery:
@@ -215,6 +242,9 @@ namespace TWF
                         case DeliveryPart.Nova: return "nova";
                         case DeliveryPart.Wave: return "slash";
                         case DeliveryPart.Blink: return "portal";
+                        case DeliveryPart.Self: return "self";
+                        case DeliveryPart.Aura: return "aura";
+                        case DeliveryPart.Hex: return "hex";
                         default: return "leap";
                     }
                 default:
@@ -228,6 +258,12 @@ namespace TWF
                         case ModPart.Lingering: return "trap";
                         case ModPart.Swift: return "dash";
                         case ModPart.Homing: return "eye";
+                        case ModPart.Empower: return "fist";
+                        case ModPart.Haste: return "wing";
+                        case ModPart.Barrier: return "shield";
+                        case ModPart.Mend: return "heal";
+                        case ModPart.Weaken: return "down";
+                        case ModPart.Expose: return "crack";
                         default: return "skull";
                     }
             }
@@ -240,6 +276,7 @@ namespace TWF
         {
             { ElementPart.Fire, "Searing" }, { ElementPart.Frost, "Frozen" }, { ElementPart.Lightning, "Crackling" },
             { ElementPart.Poison, "Venomous" }, { ElementPart.Arcane, "Arcane" }, { ElementPart.Physical, "Brutal" },
+            { ElementPart.Holy, "Holy" }, { ElementPart.Shadow, "Shadow" },
         };
 
         static readonly Dictionary<DeliveryPart, string> nouns = new Dictionary<DeliveryPart, string>
@@ -247,6 +284,7 @@ namespace TWF
             { DeliveryPart.Forward, "Bolt" }, { DeliveryPart.Single, "Strike" }, { DeliveryPart.Pierce, "Lance" },
             { DeliveryPart.Explosion, "Blast" }, { DeliveryPart.Nova, "Nova" }, { DeliveryPart.Wave, "Wave" },
             { DeliveryPart.Blink, "Blink" }, { DeliveryPart.Dash, "Rush" },
+            { DeliveryPart.Self, "Blessing" }, { DeliveryPart.Aura, "Aura" }, { DeliveryPart.Hex, "Hex" },
         };
 
         static readonly Dictionary<ModPart, string> modNouns = new Dictionary<ModPart, string>
@@ -254,6 +292,8 @@ namespace TWF
             { ModPart.Speed, "Haste" }, { ModPart.Split, "Many" }, { ModPart.Chain, "Chains" }, { ModPart.Echo, "Echoes" },
             { ModPart.Wide, "Expanse" }, { ModPart.Lingering, "Lingering" }, { ModPart.Swift, "Swiftness" },
             { ModPart.Homing, "Seeking" }, { ModPart.Heavy, "Ruin" },
+            { ModPart.Empower, "Might" }, { ModPart.Haste, "Wind" }, { ModPart.Barrier, "Warding" }, { ModPart.Mend, "Mending" },
+            { ModPart.Weaken, "Frailty" }, { ModPart.Expose, "Ruin's Mark" },
         };
 
         public static string NameFor(ElementPart e, DeliveryPart d, List<ModPart> mods)

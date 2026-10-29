@@ -124,7 +124,7 @@ namespace TWF
             {
                 p.beam = GameAssets.CreateWorldSprite("beam", GameAssets.Pixel, bb, new Color(c.r, c.g, c.b, 0.35f), SortOrder.Pickup - 1);
                 float unit = GameAssets.Pixel.bounds.size.x;
-                float h = item.rarity == Rarity.Legendary ? 6f : item.rarity == Rarity.Rare ? 4f : 2.5f;
+                float h = item.rarity >= Rarity.Mythic ? 9f : item.rarity == Rarity.Legendary ? 6f : item.rarity == Rarity.Rare ? 4f : 2.5f;
                 p.beam.transform.localScale = new Vector3(0.25f / unit, h / unit, 1f);
                 p.beam.transform.localPosition = new Vector3(0, h / 2f, 0);
             }
@@ -142,9 +142,9 @@ namespace TWF
             label.sortingOrder = SortOrder.Text - 2;
             label.rectTransform.sizeDelta = new Vector2(8, 1);
 
-            if (item.rarity == Rarity.Legendary)
+            if (item.rarity >= Rarity.Legendary)
             {
-                GameUI.Instance?.Toast("A legendary item dropped!", RarityInfo.Color(Rarity.Legendary));
+                GameUI.Instance?.Toast(item.rarity == Rarity.Mythic ? "A MYTHIC item dropped!" : "A legendary item dropped!", RarityInfo.Color(item.rarity));
                 VFX.Ring(at, c, 3f, 0.8f);
             }
         }

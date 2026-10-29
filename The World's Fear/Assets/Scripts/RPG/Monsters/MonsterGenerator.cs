@@ -156,7 +156,8 @@ namespace TWF
         // Base stats for a monster of a given level, before species and rank multipliers.
         public static float BaseHP(int level) => 40f + 18f * level * (1f + level * 0.04f);
         public static float BaseDamage(int level) => 4f + 1.7f * level;
-        public static float BaseArmor(int level) => 2f + level * 1.5f;
+        // Armor grows faster than linearly, so deep areas shrug off under-geared heroes.
+        public static float BaseArmor(int level) => 4f + level * 3f + level * level * 0.05f;
 
         public static string AffixName(MonsterAffix a)
         {

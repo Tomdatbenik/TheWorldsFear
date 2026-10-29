@@ -15,6 +15,8 @@ namespace TWF
             Panels.Register(PanelKind.Map, MapPanel.Create(ui.Root));
             Panels.Register(PanelKind.Shop, ShopPanel.Create(ui.Root));
             Panels.Register(PanelKind.Craft, CraftPanel.Create(ui.Root));
+            Panels.Register(PanelKind.Weaponmaster, WeaponmasterPanel.Create(ui.Root));
+            Panels.Register(PanelKind.Cartographer, CartographerPanel.Create(ui.Root));
         }
 
         // Dimmed full-screen backdrop with a framed window, title and close button.
@@ -620,6 +622,22 @@ namespace TWF
                 ((RectTransform)b.transform).sizeDelta = new Vector2(0, 86);
             }
 
+            // Boss lairs bought from the cartographer (pinned to the edge when off the map).
+            foreach (var lair in BossAtlas.Revealed())
+            {
+                if (Profile.Data.defeatedGates.Contains(WorldManager.GateKey(lair))) continue;
+                var kind = WorldManager.KindForGate(lair);
+                var mark = UIFactory.Image("Lair", mapImage.transform, IconFactory.Get("skull", kind == BossKind.WorldsFear ? new Color(1f, 0.3f, 0.25f) : new Color(1f, 0.75f, 0.4f)), Color.white);
+                mark.rectTransform.sizeDelta = new Vector2(40, 40);
+                PlaceWorldPoint(mark.rectTransform, lair, true);
+                var tag = UIFactory.Text("Name", mark.transform, BossTitan.BossName(kind), 18, Color.white);
+                tag.outlineWidth = 0.25f;
+                tag.outlineColor = Color.black;
+                tag.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, -24), new Vector2(260, 26));
+                var entry = UIFactory.Text("LairEntry", list, $"<color=#fc8>{BossTitan.LairName(kind)}</color>\n<size=80%>{BossAtlas.Directions(hero.transform.position, lair)}</size>", 24, Palette.Text, TextAlignmentOptions.Left);
+                entry.rectTransform.sizeDelta = new Vector2(0, 70);
+            }
+
             heroDot = UIFactory.Circle("Hero", mapImage.transform, 26, Palette.Gold).rectTransform;
             UpdateHero();
         }
@@ -635,14 +653,14 @@ namespace TWF
             if (hero != null) PlaceWorldPoint(heroDot, hero.transform.position);
         }
 
-        void PlaceWorldPoint(RectTransform rt, Vector2 world)
+        void PlaceWorldPoint(RectTransform rt, Vector2 world, bool pinToEdge = false)
         {
             int half = MapChunks / 2;
             float S = WorldGen.ChunkSize;
             var n = new Vector2((world.x / S - (centerChunk.x - half)) / MapChunks, (world.y / S - (centerChunk.y - half)) / MapChunks);
             rt.anchorMin = rt.anchorMax = new Vector2(Mathf.Clamp01(n.x), Mathf.Clamp01(n.y));
             rt.anchoredPosition = Vector2.zero;
-            rt.gameObject.SetActive(n.x >= 0 && n.x <= 1 && n.y >= 0 && n.y <= 1);
+            rt.gameObject.SetActive(pinToEdge || (n.x >= 0 && n.x <= 1 && n.y >= 0 && n.y <= 1));
         }
     }
 

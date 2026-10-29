@@ -11,7 +11,8 @@ namespace TWF
     {
         public static HeroController Instance { get; private set; }
 
-        public const int SlotCount = 4;
+        public const int SlotCount = 5;          // 4 crafted skills + the weapon skill
+        public const int WeaponSlot = 4;
         public const int UltimateSlot = 3;
 
         [Tooltip("How far the hero walks on its own to reach a target while attack is held.")]
@@ -128,10 +129,31 @@ namespace TWF
 
         // ---------- Stats and loadout ----------
 
+        // The hero's sprite shows the helm, chest armor, gloves and boots being worn.
+        void DressInGear()
+        {
+            if (!animator) return;
+            var g = new CharacterSpriteGenerator.Gear { helm = -1, chest = -1, gloves = -1, boots = -1 };
+            foreach (var item in Profile.Data.equipment)
+            {
+                if (item == null) continue;
+                int r = (int)item.rarity;
+                switch (item.slot)
+                {
+                    case ItemSlot.Helm: g.helm = r; break;
+                    case ItemSlot.Chest: g.chest = r; break;
+                    case ItemSlot.Gloves: g.gloves = r; break;
+                    case ItemSlot.Boots: g.boots = r; break;
+                }
+            }
+            animator.SetSprites(CharacterSpriteGenerator.GetGeared(g));
+        }
+
         public void RebuildStats()
         {
             float hpFraction = Combatant.MaxHP > 0 ? Combatant.HPFraction : 1f;
             var stats = Combatant.Stats;
+            Combatant.level = Profile.Data.level;   // the level gap with monsters affects damage both ways
             stats.SetBases(Class.baseStats);
             stats.RemoveModifiersFrom(levelSource);
             int lv = Profile.Data.level - 1;
@@ -153,6 +175,7 @@ namespace TWF
             if (weapon) weapon.GetComponent<SpriteRenderer>().sprite = Weapons.Sprite(weaponProfile.type);
 
             if (Combatant.MaxHP > 0 && !Combatant.IsDead) Combatant.SetHP(Combatant.MaxHP * hpFraction);
+            DressInGear();
             ItemPowers.Refresh(this);
         }
 
@@ -175,7 +198,7 @@ namespace TWF
             Crafting.ClearCache();
             for (int i = 0; i < SlotCount; i++)
             {
-                var skill = Crafting.Get(Profile.Data.equippedSkills[i]);
+                var skill = i == WeaponSlot ? WeaponSkills.Current() : Crafting.Get(Profile.Data.equippedSkills[i]);
                 if (slotSkills[i] != skill) cooldowns[i] = 0f;
                 slotSkills[i] = skill;
                 slotRanks[i] = skill != null ? 1 : 0;
@@ -238,6 +261,14 @@ namespace TWF
             float dt = Time.deltaTime;
             for (int i = 0; i < SlotCount; i++)
                 if (cooldowns[i] > 0f) cooldowns[i] = Mathf.Max(0f, cooldowns[i] - dt);
+            // The weapon skill follows whatever weapon is in your hands.
+            var weaponSkill = WeaponSkills.Current();
+            if (slotSkills[WeaponSlot] != weaponSkill)
+            {
+                slotSkills[WeaponSlot] = weaponSkill;
+                slotRanks[WeaponSlot] = weaponSkill != null ? 1 : 0;
+                cooldowns[WeaponSlot] = 0f;
+            }
             if (attackTimer > 0f) attackTimer -= dt;
             if (potionTimer > 0f) potionTimer -= dt;
             if (castLock > 0f) castLock -= dt;
@@ -401,6 +432,7 @@ namespace TWF
         // A crafted skill whose attribute requirements are no longer met can't be used.
         public bool RequirementsMet(int slot)
         {
+            if (slot >= Profile.Data.equippedSkills.Length) return true;
             var c = Crafting.Find(Profile.Data.equippedSkills[slot]);
             return c == null || SkillParts.RequirementsMet(c);
         }

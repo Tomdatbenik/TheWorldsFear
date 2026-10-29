@@ -18,7 +18,8 @@ namespace TWF
 
         static readonly string[] rareFirst = { "Grim", "Doom", "Storm", "Blood", "Shadow", "Ash", "Soul", "Bone", "Dread", "Wolf", "Raven", "Night", "Ember", "Frost" };
         static readonly string[] rareSecond = { "Song", "Grasp", "Fang", "Ward", "Bite", "Veil", "Call", "Mark", "Shroud", "Edge", "Heart", "Spire", "Gaze", "Hold" };
-        static readonly string[] legendaryAdj = { "Ancient", "Fabled", "Mythic", "Forgotten", "Eternal", "Cursed" };
+        static readonly string[] legendaryAdj = { "Ancient", "Fabled", "Forgotten", "Eternal", "Cursed", "Storied" };
+        static readonly string[] mythicAdj = { "Godforged", "Worldbreaker's", "Starfallen", "Primordial", "Apocalyptic", "Divine" };
 
         public static ItemSlot RandomSlot(System.Random rng)
         {
@@ -127,6 +128,15 @@ namespace TWF
                     item.name = $"{legendaryAdj[rng.Next(legendaryAdj.Length)]} {item.baseName} {power.name}";
                     item.implicitValue = Mathf.Round(item.implicitValue * 1.25f);
                     break;
+                case Rarity.Mythic:
+                    // Mythic: a legendary power, five affixes rolled higher and a much stronger base.
+                    var mythPowers = ItemPowers.All.FindAll(p => (p.slots & RarityInfo.Mask(slot)) != 0);
+                    var mythPower = mythPowers.Count > 0 ? mythPowers[rng.Next(mythPowers.Count)] : ItemPowers.All[0];
+                    item.legendaryPower = mythPower.id;
+                    item.name = $"{mythicAdj[rng.Next(mythicAdj.Length)]} {item.baseName} {mythPower.name}";
+                    item.implicitValue = Mathf.Round(item.implicitValue * 1.5f);
+                    foreach (var a in item.affixes) a.value = a.kind == ModKind.Flat ? Mathf.Round(a.value * 1.3f) : a.value * 1.3f;
+                    break;
             }
             return item;
         }
@@ -153,7 +163,7 @@ namespace TWF
             sb.Append($"<color=#fff>{StatInfo.Format(item.implicitStat, ModKind.Flat, item.implicitValue)}</color>\n");
             foreach (var a in item.affixes) sb.Append($"<color=#8cf>{a.Describe()}</color>\n");
             if (!string.IsNullOrEmpty(item.legendaryPower))
-                sb.Append($"<color=#ff9a30>Legendary: {ItemPowers.Describe(item.legendaryPower)}</color>\n");
+                sb.Append($"<color=#ff9a30>{(item.rarity == Rarity.Mythic ? "Mythic power" : "Legendary")}: {ItemPowers.Describe(item.legendaryPower)}</color>\n");
             if (compareTo != null && compareTo != item)
             {
                 float diff = item.Score() - compareTo.Score();

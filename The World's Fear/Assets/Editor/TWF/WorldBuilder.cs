@@ -76,6 +76,23 @@ namespace TWF.EditorTools
             var forge = new GameObject("Arcane Forge").AddComponent<Merchant>();
             forge.transform.SetParent(hubRoot.transform, false);
             forge.transform.position = new Vector2(8.2f, 8.1f);
+            // The weaponmaster beside the smithy, the cartographer by the well.
+            var weaponmaster = new GameObject("Weaponmaster").AddComponent<Merchant>();
+            weaponmaster.transform.SetParent(hubRoot.transform, false);
+            weaponmaster.transform.position = new Vector2(12.6f, 8.0f);
+            weaponmaster.displayName = "Weaponmaster";
+            weaponmaster.subtitle = "Weapon skills";
+            weaponmaster.buttonLabel = "Train";
+            weaponmaster.panel = PanelKind.Weaponmaster;
+            weaponmaster.outfit = Outfit.Warrior;
+            var cartographer = new GameObject("Cartographer").AddComponent<Merchant>();
+            cartographer.transform.SetParent(hubRoot.transform, false);
+            cartographer.transform.position = new Vector2(-4.4f, 0.4f);
+            cartographer.displayName = "Cartographer";
+            cartographer.subtitle = "Boss lair maps";
+            cartographer.buttonLabel = "Maps";
+            cartographer.panel = PanelKind.Cartographer;
+            cartographer.outfit = Outfit.Mage;
             forge.displayName = "Arcane Forge";
             forge.subtitle = "Craft skills";
             forge.buttonLabel = "Forge";

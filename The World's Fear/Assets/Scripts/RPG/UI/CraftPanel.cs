@@ -80,7 +80,9 @@ namespace TWF
 
         RectTransform Section(RectTransform parent, string title, int index)
         {
-            float y0 = 1f - (index + 1) / 3f, y1 = 1f - index / 3f;
+            // Elements and deliveries fit on one row; modifiers get the most room.
+            float[] edges = { 1f, 0.72f, 0.44f, 0f };
+            float y0 = edges[index + 1], y1 = edges[index];
             var r = UIFactory.Rect(title, parent);
             r.anchorMin = new Vector2(0, y0);
             r.anchorMax = new Vector2(1, y1);
@@ -90,12 +92,12 @@ namespace TWF
             var row = UIFactory.Rect("Row", r);
             row.Stretch();
             row.offsetMax = new Vector2(0, -40);
-            var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.spacing = 10;
-            h.childForceExpandWidth = false;
-            h.childForceExpandHeight = false;
-            h.childControlWidth = false;
-            h.childControlHeight = false;
+            // Up to two rows of parts per section (15 modifiers need both).
+            var g = row.gameObject.AddComponent<GridLayoutGroup>();
+            g.cellSize = new Vector2(80, 80);
+            g.spacing = new Vector2(6, 6);
+            g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            g.constraintCount = 11;
             return row;
         }
 
@@ -131,11 +133,14 @@ namespace TWF
             outline.effectDistance = selected ? new Vector2(3, -3) : new Vector2(2, -2);
             Color iconColor = kind == PartKind.Element ? SkillParts.ElementColor((ElementPart)id) : SkillParts.KindColor(kind);
             var icon = UIFactory.Image("Icon", bg.transform, IconFactory.Get(SkillParts.Icon(kind, id), iconColor), owned != null ? Color.white : new Color(1, 1, 1, 0.2f));
-            icon.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -8), new Vector2(64, 64));
+            icon.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -4), new Vector2(46, 46));
             icon.preserveAspect = true;
-            var label = UIFactory.Text("Name", bg.transform, SkillParts.PartName(kind, id) + (owned != null ? " " + SkillParts.Roman(owned.tier) : ""), 15,
+            var label = UIFactory.Text("Name", bg.transform, SkillParts.PartName(kind, id) + (owned != null ? " " + SkillParts.Roman(owned.tier) : ""), 13,
                 owned != null ? Palette.Text : Palette.MutedText);
-            label.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, 4), new Vector2(96, 36));
+            label.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, 2), new Vector2(80, 28));
+            label.enableAutoSizing = true;
+            label.fontSizeMin = 9;
+            label.fontSizeMax = 13;
             bg.gameObject.AddComponent<Button>().onClick.AddListener(() =>
             {
                 focusText = $"<b>{SkillParts.PartName(kind, id)}</b>{(owned != null ? " " + SkillParts.Roman(owned.tier) : " <color=#888>(not found yet)</color>")}: " +

@@ -14,6 +14,8 @@ namespace TWF
             public float damage;
             public float knockback;
             public int chain;
+            public float heal;      // Holy: share of the caster's life healed per hit
+            public float weaken;    // Shadow: enemies hit deal less damage
         }
 
         static Element ElementData(ElementPart e, int tier)
@@ -27,6 +29,8 @@ namespace TWF
                 case ElementPart.Lightning: el.status = StatusSpec.Stun(0.6f, 0.12f * tier); el.chain = 1; break;
                 case ElementPart.Poison: el.status = StatusSpec.Poison(0.55f * t, 4f); el.damage *= 0.8f; break;
                 case ElementPart.Arcane: el.damage *= 1.3f; break;
+                case ElementPart.Holy: el.damage *= 0.85f; el.heal = 0.025f * t; break;
+                case ElementPart.Shadow: el.damage *= 0.95f; el.weaken = 0.2f + 0.05f * (tier - 1); break;
                 default: el.knockback = 1.5f; el.damage *= 1.1f; break;
             }
             return el;
@@ -64,7 +68,21 @@ namespace TWF
             s.castLock = Has(ModPart.Speed) ? 0.02f : 0.12f;
 
             var effects = new List<SkillEffect>();
-            var hit = new HitExtras { chain = chain, chainMult = 0.6f, lingering = lingering, status = el.status, color = el.color, knockback = knock };
+            var hit = new HitExtras { chain = chain, chainMult = 0.6f, lingering = lingering, status = el.status, color = el.color, knockback = knock,
+                heal = el.heal, weaken = el.weaken };
+            // Debuff modifiers ride along on every hit.
+            if (Has(ModPart.Weaken)) hit.weaken = Mathf.Max(hit.weaken, 0.3f + 0.05f * (Tier(ModPart.Weaken) - 1));
+            if (Has(ModPart.Expose)) hit.expose = 0.25f + 0.05f * (Tier(ModPart.Expose) - 1);
+            // Buff modifiers trigger when you cast.
+            var buff = new CraftedBuff
+            {
+                empower = Has(ModPart.Empower) ? 0.25f + 0.05f * (Tier(ModPart.Empower) - 1) : 0f,
+                haste = Has(ModPart.Haste) ? 0.25f + 0.05f * (Tier(ModPart.Haste) - 1) : 0f,
+                barrier = Has(ModPart.Barrier) ? 0.15f + 0.03f * (Tier(ModPart.Barrier) - 1) : 0f,
+                mend = Has(ModPart.Mend) ? 0.08f + 0.02f * (Tier(ModPart.Mend) - 1) : 0f,
+                color = el.color,
+            };
+            if (buff.Any) effects.Add(buff);
             switch (c.delivery)
             {
                 case DeliveryPart.Forward:
@@ -101,6 +119,20 @@ namespace TWF
                     effects.Add(new CraftedArea { atCaster = true, radius = 2f * area, delay = 0.05f, ticks = lingering ? 4 : 1, interval = 0.45f,
                         damageMult = (lingering ? 0.6f : 1.6f) * dmg, extraBlasts = split * 2, hit = hit });
                     break;
+                case DeliveryPart.Self:
+                    s.targeting = Targeting.Self; s.range = 0f; s.baseCooldown = 14f; s.indicatorRadius = 1.2f; s.castLock = 0.05f;
+                    effects.Add(new CraftedSelf { element = c.element, strength = (1f + 0.2f * (c.elementTier - 1)) * (1f + 0.15f * (c.deliveryTier - 1)), color = el.color });
+                    break;
+                case DeliveryPart.Aura:
+                    s.targeting = Targeting.Self; s.range = 0f; s.baseCooldown = 12f; s.indicatorRadius = 2.6f * area; s.castLock = 0.05f;
+                    effects.Add(new CraftedAura { radius = 2.6f * area, pulses = lingering ? 12 : 8, interval = Has(ModPart.Speed) ? 0.45f : 0.6f,
+                        damageMult = 0.45f * dmg, extraTargets = split, hit = hit });
+                    break;
+                case DeliveryPart.Hex:
+                    s.targeting = Targeting.Skillshot; s.range = 8f; s.baseCooldown = 7f;
+                    hit.expose = Mathf.Max(hit.expose, 0.35f + 0.05f * (c.deliveryTier - 1));
+                    effects.Add(new CraftedHex { range = 8f, targets = 1 + split, damageMult = 0.9f * dmg, duration = 6f, hit = hit });
+                    break;
                 default: // Dash
                     s.targeting = Targeting.Dash; s.range = 6f; s.baseCooldown = 6f; s.castLock = 0.28f;
                     effects.Add(new DashEffect { distance = 6f, duration = 0.28f / speedMult, damageMult = 1.4f * dmg, hitRadius = 1.3f * area,
@@ -136,10 +168,25 @@ namespace TWF
         public StatusSpec status;
         public Color color = Color.white;
         public float knockback;
+        public float heal;            // share of the caster's life healed per hit (Holy)
+        public float weaken;          // enemies hit deal this much less damage
+        public float expose;          // enemies hit take this much more damage
+        public float debuffDuration = 4f;
+
+        // Heals and debuffs, applied to every enemy hit.
+        public void Afflict(SkillContext ctx, Combatant target)
+        {
+            if (target == null || ctx.caster == null) return;
+            float dur = debuffDuration * ctx.Duration;
+            if (weaken > 0f) target.Weaken(weaken, dur);
+            if (expose > 0f) target.Expose(expose, dur);
+            if (heal > 0f) ctx.caster.Heal(ctx.caster.MaxHP * heal);
+        }
 
         public void OnHit(SkillContext ctx, Combatant target)
         {
             if (target == null) return;
+            Afflict(ctx, target);
             if (chain > 0) Chain(ctx, target, chain);
             if (lingering)
                 AreaEffect.Spawn(ctx.caster, target.transform.position, new AreaSpec
@@ -183,6 +230,7 @@ namespace TWF
         public float speed = 15f, range = 9f, size = 0.5f, hitRadius = 0.35f, damageMult = 1.5f;
         public int pierce;
         public bool homing;
+        public float explodeRadius;
         public HitExtras hit = new HitExtras();
 
         public override void Apply(SkillContext ctx)
@@ -200,7 +248,7 @@ namespace TWF
                 {
                     speed = speed * ctx.ProjectileSpeed, range = range * ctx.Range, hitRadius = hitRadius, damageMult = damageMult * ctx.power,
                     pierce = pierce, status = ctx.Scale(hit.status), color = hit.color, size = size, knockback = hit.knockback,
-                    homing = homing && target != null, rotateSprite = true,
+                    homing = homing && target != null, rotateSprite = true, explodeRadius = explodeRadius * ctx.Area,
                     onHit = t => hit.OnHit(c, t),
                 };
                 Projectile.Fire(ctx.caster, ctx.origin + d * 0.4f, d, spec, target);
@@ -273,7 +321,7 @@ namespace TWF
             {
                 radius = r, delay = delay, ticks = ticks, interval = interval, damageMult = mult * ctx.power,
                 status = ctx.Scale(hit.status), color = hit.color, knockback = hit.knockback, followOwner = followCaster,
-                onHit = t => { if (hit.chain > 0) hit.OnHit(c, t); },
+                onHit = t => { hit.Afflict(c, t); if (hit.chain > 0) hit.OnHit(c, t); },
             });
         }
 
@@ -299,6 +347,191 @@ namespace TWF
         }
 
         public override string Describe(float power) => $"A {angle:0}° wave for {Pct(damageMult * power)} damage";
+    }
+
+    // Buff modifiers: applied to the caster whenever the skill is cast.
+    [Serializable]
+    public class CraftedBuff : SkillEffect
+    {
+        public float empower, haste, barrier, mend;
+        public float duration = 5f;
+        public Color color = Color.white;
+
+        public bool Any => empower > 0f || haste > 0f || barrier > 0f || mend > 0f;
+
+        public override void Apply(SkillContext ctx)
+        {
+            var c = ctx.caster;
+            if (c == null) return;
+            float dur = duration * ctx.Duration;
+            Vector3 head = c.transform.position + View.Up * (c.HeadHeight + 0.5f);
+            if (empower > 0f)
+            {
+                c.AddTimedModifiers("empower", dur, (StatType.Damage, ModKind.Percent, empower));
+                FloatingText.Spawn(head, "Empowered", new Color(1f, 0.6f, 0.3f), 0.8f);
+            }
+            if (haste > 0f)
+            {
+                c.AddTimedModifiers("haste", dur * 0.8f, (StatType.MoveSpeed, ModKind.Percent, haste), (StatType.AttackSpeed, ModKind.Percent, haste));
+                FloatingText.Spawn(head + View.Up * 0.4f, "Haste", new Color(0.6f, 1f, 0.8f), 0.8f);
+            }
+            if (barrier > 0f) c.AddShield(c.MaxHP * barrier, dur);
+            if (mend > 0f) c.Heal(c.MaxHP * mend);
+            VFX.Ring(c.transform.position, color, 1.4f, 0.35f);
+        }
+
+        public override string Describe(float power)
+        {
+            var parts = new List<string>();
+            if (empower > 0f) parts.Add($"+{Pct(empower)} damage");
+            if (haste > 0f) parts.Add($"+{Pct(haste)} speed");
+            if (barrier > 0f) parts.Add($"a {Pct(barrier)} life shield");
+            if (mend > 0f) parts.Add($"heals {Pct(mend)} life");
+            return "On cast: " + string.Join(", ", parts);
+        }
+    }
+
+    // Self delivery: a blessing on the caster that depends on the element.
+    [Serializable]
+    public class CraftedSelf : SkillEffect
+    {
+        public ElementPart element;
+        public float strength = 1f;
+        public float duration = 6f;
+        public Color color = Color.white;
+
+        public override void Apply(SkillContext ctx)
+        {
+            var c = ctx.caster;
+            if (c == null) return;
+            float k = strength * ctx.power;
+            float dur = duration * ctx.Duration;
+            Vector3 head = c.transform.position + View.Up * (c.HeadHeight + 0.5f);
+            string text;
+            switch (element)
+            {
+                case ElementPart.Holy:
+                    c.Heal(c.MaxHP * 0.3f * k);
+                    text = null;
+                    break;
+                case ElementPart.Fire:
+                    c.AddTimedModifiers("bless", dur, (StatType.Damage, ModKind.Percent, 0.3f * k));
+                    text = "Burning fury";
+                    break;
+                case ElementPart.Frost:
+                    c.AddShield(c.MaxHP * 0.3f * k, dur);
+                    text = "Ice armor";
+                    break;
+                case ElementPart.Lightning:
+                    c.AddTimedModifiers("bless", dur, (StatType.MoveSpeed, ModKind.Percent, 0.3f * k), (StatType.AttackSpeed, ModKind.Percent, 0.3f * k));
+                    text = "Storm speed";
+                    break;
+                case ElementPart.Poison:
+                    c.AddTimedModifiers("bless", dur, (StatType.CritChance, ModKind.Flat, 0.15f * k), (StatType.CritDamage, ModKind.Flat, 0.3f * k));
+                    text = "Venom edge";
+                    break;
+                case ElementPart.Arcane:
+                    c.AddTimedModifiers("bless", dur, (StatType.CooldownReduction, ModKind.Flat, 0.25f * k), (StatType.SkillPower, ModKind.Flat, 0.15f * k));
+                    text = "Arcane focus";
+                    break;
+                case ElementPart.Shadow:
+                    c.AddTimedModifiers("bless", dur, (StatType.LifeSteal, ModKind.Flat, 0.12f * k));
+                    text = "Shadow thirst";
+                    break;
+                default:
+                    c.AddTimedModifiers("bless", dur, (StatType.Armor, ModKind.Percent, 0.5f * k));
+                    text = "Stoneskin";
+                    break;
+            }
+            if (text != null) FloatingText.Spawn(head, text, color, 0.9f);
+            VFX.Ring(c.transform.position, color, 1.8f, 0.4f);
+            VFX.Burst(c.transform.position + View.Up * 0.8f, color, 18, 0.9f);
+        }
+
+        public override string Describe(float power)
+        {
+            float k = strength * power;
+            switch (element)
+            {
+                case ElementPart.Holy: return $"Heals you for {Pct(0.3f * k)} of your life";
+                case ElementPart.Fire: return $"+{Pct(0.3f * k)} damage for {duration:0} s";
+                case ElementPart.Frost: return $"A shield of {Pct(0.3f * k)} of your life";
+                case ElementPart.Lightning: return $"+{Pct(0.3f * k)} move and attack speed for {duration:0} s";
+                case ElementPart.Poison: return $"+{Pct(0.15f * k)} crit chance for {duration:0} s";
+                case ElementPart.Arcane: return $"+{Pct(0.25f * k)} cooldown reduction for {duration:0} s";
+                case ElementPart.Shadow: return $"+{Pct(0.12f * k)} life steal for {duration:0} s";
+                default: return $"+{Pct(0.5f * k)} armor for {duration:0} s";
+            }
+        }
+    }
+
+    // Aura delivery: pulses around the caster for a while.
+    [Serializable]
+    public class CraftedAura : SkillEffect
+    {
+        public float radius = 2.6f, interval = 0.6f, damageMult = 0.45f;
+        public int pulses = 8, extraTargets;
+        public HitExtras hit = new HitExtras();
+
+        public override void Apply(SkillContext ctx)
+        {
+            if (ctx.runner != null) ctx.runner.StartCoroutine(Run(ctx));
+        }
+
+        System.Collections.IEnumerator Run(SkillContext ctx)
+        {
+            for (int i = 0; i < pulses && ctx.caster != null && !ctx.caster.IsDead; i++)
+            {
+                Vector2 at = ctx.caster.transform.position;
+                float r = radius * ctx.Area;
+                VFX.Ring(at, hit.color, r, 0.3f);
+                foreach (var t in Combat.HostilesInRadius(ctx.caster.team, at, r))
+                {
+                    Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, 0f);
+                    hit.Afflict(ctx, t);
+                }
+                yield return new WaitForSeconds(interval);
+            }
+        }
+
+        public override string Describe(float power) =>
+            $"Pulses {pulses} times around you for {Pct(damageMult * power)} damage each{(hit.heal > 0f ? ", healing you on every hit" : "")}";
+    }
+
+    // Hex delivery: curses enemies in front of you so they take more damage.
+    [Serializable]
+    public class CraftedHex : SkillEffect
+    {
+        public float range = 8f, damageMult = 0.9f, duration = 6f;
+        public int targets = 1;
+        public HitExtras hit = new HitExtras();
+
+        public override void Apply(SkillContext ctx)
+        {
+            hit.debuffDuration = duration;
+            float r = range * ctx.Range;
+            var list = Combat.HostilesInRadius(ctx.caster.team, ctx.origin, r);
+            list.Sort((a, b) => Score(ctx, a).CompareTo(Score(ctx, b)));
+            for (int i = 0; i < Mathf.Min(targets, list.Count); i++)
+            {
+                var t = list[i];
+                Vector3 p = t.transform.position;
+                var mark = new Color(0.6f, 0.3f, 0.9f);
+                VFX.Ring(p, mark, 1.2f, 0.5f);
+                VFX.Burst(p + View.Up * (t.HeadHeight + 0.2f), Color.Lerp(mark, hit.color, 0.5f), 16, 0.7f);
+                Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, 0f);
+                hit.OnHit(ctx, t);
+            }
+        }
+
+        static float Score(SkillContext ctx, Combatant c)
+        {
+            Vector2 to = (Vector2)c.transform.position - ctx.origin;
+            return to.magnitude * 0.3f + Vector2.Angle(ctx.direction, to) * 0.05f;
+        }
+
+        public override string Describe(float power) =>
+            $"Curses {(targets > 1 ? targets + " enemies" : "an enemy")}: +{Pct(hit.expose)} damage taken for {duration:0} s";
     }
 
     // Owned parts, crafted skills and their runtime definitions.

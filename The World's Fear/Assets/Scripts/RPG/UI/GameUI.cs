@@ -106,7 +106,7 @@ namespace TWF
             UIFactory.IconButton("BagBtn", menu, "bag", new Color(0.8f, 0.55f, 0.3f), () => Panels.Toggle(PanelKind.Inventory));
             UIFactory.IconButton("MapBtn", menu, "map", new Color(0.85f, 0.75f, 0.5f), () => Panels.Toggle(PanelKind.Map));
 
-            var bannerRt = UIFactory.Rect("ZoneBanner", root).Place(new Vector2(0.5f, 1), new Vector2(0, -150), new Vector2(1000, 140));
+            var bannerRt = UIFactory.Rect("ZoneBanner", root).Place(new Vector2(0.5f, 1), new Vector2(0, -170), new Vector2(1100, 190));
             bannerGroup = bannerRt.gameObject.AddComponent<CanvasGroup>();
             bannerGroup.alpha = 0f;
             bannerGroup.blocksRaycasts = false;
@@ -116,12 +116,15 @@ namespace TWF
             zoneBanner.outlineWidth = 0.2f;
             zoneBanner.outlineColor = Color.black;
 
-            var toastRt = UIFactory.Rect("Toast", root).Place(new Vector2(0.5f, 0.5f), new Vector2(0, 220), new Vector2(1200, 100));
+            var toastRt = UIFactory.Rect("Toast", root).Place(new Vector2(0.5f, 0.5f), new Vector2(0, 150), new Vector2(1200, 100));
             toastGroup = toastRt.gameObject.AddComponent<CanvasGroup>();
             toastGroup.alpha = 0f;
             toastGroup.blocksRaycasts = false;
             toastText = UIFactory.Text("Text", toastRt, "", 44, Palette.Gold);
             toastText.fontStyle = FontStyles.Bold;
+            toastText.enableAutoSizing = true;   // long messages shrink instead of spilling into the zone banner
+            toastText.fontSizeMin = 24;
+            toastText.fontSizeMax = 44;
             toastText.rectTransform.Stretch();
             toastText.outlineWidth = 0.2f;
             toastText.outlineColor = Color.black;
@@ -171,8 +174,9 @@ namespace TWF
 
             // Positions relative to the attack button, MOBA style arc.
             Vector2 atkCenter = new Vector2(-125, 125);
-            Vector2[] offsets = { new Vector2(-235, -10), new Vector2(-195, 150), new Vector2(-50, 245), new Vector2(-340, 280) };
-            float[] sizes = { 135, 135, 135, 155 };
+            // Slot 4 is the weapon skill, out on the left of the arc.
+            Vector2[] offsets = { new Vector2(-235, -10), new Vector2(-195, 150), new Vector2(-50, 245), new Vector2(-340, 280), new Vector2(-400, 70) };
+            float[] sizes = { 135, 135, 135, 155, 120 };
             for (int i = 0; i < HeroController.SlotCount; i++)
                 MakeSkillButton(cluster, i, atkCenter + offsets[i], sizes[i], cancel.rectTransform);
 

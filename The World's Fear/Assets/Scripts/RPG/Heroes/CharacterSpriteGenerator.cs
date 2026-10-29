@@ -27,7 +27,7 @@ namespace TWF
 
         struct Look
         {
-            public Color skin, hair, top, topDark, pants, boots, accent, hat, hatDark, cape;
+            public Color skin, hair, top, topDark, pants, boots, accent, hat, hatDark, cape, hands;   // hands: gloves (clear = bare)
             public bool helmet, hood, wizardHat, robe, cape_, quiver, beard, apron, plume;
         }
 
@@ -92,10 +92,76 @@ namespace TWF
             }
         }
 
+        static Color Hand(Look l) => l.hands.a > 0f ? l.hands : l.skin;
+
+        // ---------- The hero, dressed in their equipped gear ----------
+
+        // Rarity of each worn armor piece, or -1 when the slot is empty.
+        public struct Gear
+        {
+            public int helm, chest, gloves, boots;
+            public string Key => $"{helm}_{chest}_{gloves}_{boots}";
+        }
+
+        static readonly Dictionary<string, CharacterSprites> gearCache = new Dictionary<string, CharacterSprites>();
+
+        // Armor metal by rarity: iron, steel-blue, gold, burnished orange, crimson.
+        static Color Metal(int rarity)
+        {
+            switch (rarity)
+            {
+                case 1: return C("#7d93c4");
+                case 2: return C("#cfae58");
+                case 3: return C("#e08a3a");
+                case 4: return C("#c43a5e");
+                default: return C("#9aa0aa");
+            }
+        }
+
+        public static CharacterSprites GetGeared(Gear g)
+        {
+            string key = g.Key;
+            if (gearCache.TryGetValue(key, out var set) && set.idle[0] != null && set.idle[0][0] != null) return set;
+            var l = LookFor(Outfit.Adventurer);
+            l.cape_ = false;
+            if (g.helm >= 0)
+            {
+                var m = Metal(g.helm);
+                l.helmet = true;
+                l.hat = m;
+                l.hatDark = m * 0.6f;
+                l.plume = g.helm >= 2;
+                l.accent = Color.Lerp(m, Color.white, 0.3f);
+            }
+            if (g.chest >= 0)
+            {
+                var m = Metal(g.chest);
+                l.top = m;
+                l.topDark = m * 0.62f;
+                // Rare and better chest armor comes with a cloak in its color.
+                l.cape_ = g.chest >= 2;
+                l.cape = g.chest >= 4 ? C("#7a1a34") : g.chest == 3 ? C("#a8501c") : C("#8a3a2e");
+            }
+            if (g.gloves >= 0) l.hands = Metal(g.gloves) * 0.85f;
+            if (g.boots >= 0) l.boots = Metal(g.boots) * 0.7f;
+            l.hat.a = l.hatDark.a = l.top.a = l.topDark.a = l.boots.a = l.accent.a = 1f;
+            if (g.gloves >= 0) l.hands.a = 1f;
+            set = Build(l, "Hero" + key, Outfit.Adventurer);
+            gearCache[key] = set;
+            return set;
+        }
+
         public static CharacterSprites Get(Outfit outfit)
         {
             if (cache.TryGetValue(outfit, out var set) && set.idle[0] != null && set.idle[0][0] != null) return set;
-            var look = LookFor(outfit);
+            set = Build(LookFor(outfit), outfit.ToString(), outfit);
+            cache[outfit] = set;
+            return set;
+        }
+
+        static CharacterSprites Build(Look look, string name, Outfit outfit)
+        {
+            CharacterSprites set;
 
             // Atlas: rows = direction, columns = idle(2) walk(4) attack(2).
             var tex = GameAssets.NewTexture(W * 8, H * 4);
@@ -127,13 +193,12 @@ namespace TWF
             for (int f = 0; f < 8; f++)
             {
                 var s = Sprite.Create(tex, new Rect(f * W, d * H, W, H), new Vector2(0.5f, 0.12f), GameAssets.WorldPPU);
-                s.name = $"{outfit}_{(FacingDir)d}_{f}";
+                s.name = $"{name}_{(FacingDir)d}_{f}";
                 if (f < 2) set.idle[d][f] = s;
                 else if (f < 6) set.walk[d][f - 2] = s;
                 else set.attack[d][f - 6] = s;
             }
             set.weapon = WeaponSprite(outfit, look);
-            cache[outfit] = set;
             return set;
         }
 
@@ -233,15 +298,15 @@ namespace TWF
                 int ax = p.attack == 2 ? cx + 3 : p.attack == 1 ? cx - 3 : cx - 1 + swing;
                 int ay = p.attack == 1 ? armY + 3 : armY;
                 c.Rect(ax, ay, 2, 4, sleeve);
-                c.Rect(ax, ay - 1, 2, 1, l.skin);
+                c.Rect(ax, ay - 1, 2, 1, Hand(l));
             }
             else
             {
                 int raise = p.attack == 1 ? 3 : p.attack == 2 ? -1 : 0;
                 c.Rect(cx - 6, armY + swing, 2, 5, sleeve);
                 c.Rect(cx + 4, armY - swing + raise, 2, 5, sleeve);
-                c.Rect(cx - 6, armY - 1 + swing, 2, 1, l.skin);
-                c.Rect(cx + 4, armY - 1 - swing + raise, 2, 1, l.skin);
+                c.Rect(cx - 6, armY - 1 + swing, 2, 1, Hand(l));
+                c.Rect(cx + 4, armY - 1 - swing + raise, 2, 1, Hand(l));
             }
 
             // Head.

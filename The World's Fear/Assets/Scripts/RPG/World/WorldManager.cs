@@ -133,9 +133,10 @@ namespace TWF
             {
                 int lvl = WorldGen.LevelAt(pos);
                 string sub = zone.safeZone ? "Safe zone" : $"Monster level {lvl}  ·  {Mathf.RoundToInt(dist)}m from the village";
-                GameUI.Instance.ShowZoneBanner(zone.displayName, sub, zone.nameColor);
+                // The warning is part of the banner so it never overlaps the area name.
                 if (!zone.safeZone && Profile.Data.level + 4 < lvl)
-                    GameUI.Instance.Toast("Danger! The monsters here are far stronger than you.", new Color(1f, 0.4f, 0.3f), 3f);
+                    sub += "\n<color=#ff6650>Danger: these monsters far outlevel you</color>";
+                GameUI.Instance.ShowZoneBanner(zone.displayName, sub, zone.nameColor);
             }
             Profile.Save();
         }

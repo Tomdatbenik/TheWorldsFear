@@ -41,7 +41,10 @@ namespace TWF
         public float farthest;          // furthest distance from the village this run
         public string bestItem = "";
         public int bossesKilled;
-        public List<string> guardiansSlain = new List<string>();   // the four guardians unseal the World's Fear
+        public List<string> guardiansSlain = new List<string>();
+        public List<int> weaponSkillsOwned = new List<int>();          // WeaponSkillId values
+        public int[] weaponSkillAttached = new int[10];                 // per WeaponType: skill id + 1, 0 = none
+        public List<string> revealedGates = new List<string>();         // boss lairs bought from the cartographer   // the four guardians unseal the World's Fear
         public List<string> defeatedGates = new List<string>();
         public bool hasReturn;          // come back to this spot after a boss fight
         public float returnX, returnY;
@@ -120,6 +123,9 @@ namespace TWF
                 exploredSet = null;
                 if (data.equippedSkills == null || data.equippedSkills.Length != 4) data.equippedSkills = new string[4];
                 if (data.attributes == null || data.attributes.Length != Attributes.Count) data.attributes = new int[Attributes.Count];
+                if (data.weaponSkillAttached == null || data.weaponSkillAttached.Length != 10) data.weaponSkillAttached = new int[10];
+                data.weaponSkillsOwned ??= new List<int>();
+                data.revealedGates ??= new List<string>();
                 ranks = null;
                 return true;
             }
@@ -329,6 +335,9 @@ namespace TWF
                 var slot = i == 0 ? ItemSlot.Weapon : ItemGenerator.RandomSlot(rng);
                 Data.shopStock.Add(ItemGenerator.Generate(Data.level, rarity, slot, rng));
             }
+            // Now and then the merchant has a mythic item for sale (at a mythic price).
+            if (rng.NextDouble() < 0.06)
+                Data.shopStock[Data.shopStock.Count - 1] = ItemGenerator.Generate(Data.level, Rarity.Mythic, ItemGenerator.RandomSlot(rng), rng);
             Data.shopStockLevel = Data.level;
         }
 
