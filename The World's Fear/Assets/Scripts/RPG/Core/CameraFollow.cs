@@ -183,10 +183,16 @@ namespace TWF
     public static class Sound
     {
         static AudioSource source;
+        static readonly System.Collections.Generic.Dictionary<AudioClip, float> lastPlayed = new System.Collections.Generic.Dictionary<AudioClip, float>();
+        const float MinGap = 0.08f;   // the same sound can't restart faster than this
 
         public static void Play(AudioClip clip, Vector3 at, float volume = 1f)
         {
             if (clip == null) return;
+            // Many hits in the same moment (area attacks, packs) play the sound once, not dozens of times.
+            float now = Time.unscaledTime;
+            if (lastPlayed.TryGetValue(clip, out float last) && now - last < MinGap) return;
+            lastPlayed[clip] = now;
             if (source == null)
             {
                 var go = new GameObject("SFX");

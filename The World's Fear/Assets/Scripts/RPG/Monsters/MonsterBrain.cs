@@ -174,7 +174,8 @@ namespace TWF
         void OnDamaged(DamageInfo info, float dealt)
         {
             if (info.source != null && info.source.team == Team.Player) Aggro();
-            Sound.Play(Sfx.Hit, transform.position, 0.15f);
+            // Damage over time (burn, poison) ticks quietly; direct hits make a sound.
+            if (!info.trueDamage && !info.silent) Sound.Play(Sfx.Hit, transform.position, 0.15f);
         }
 
         void OnDied(Combatant killer)
