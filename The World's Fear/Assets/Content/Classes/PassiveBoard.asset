@@ -1,0 +1,163 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ebc3be1100f948e8b810b9116f9b01a, type: 3}
+  m_Name: PassiveBoard
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.SkillTreeDefinition
+  pointsToUnlockTier: 0000000003000000070000000c00000012000000i
+  nodes:
+  - id: p_thickskin
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 7387aac964c2c43a187c0c3eb8d4d146, type: 2}
+    tier: 0
+    column: 0
+    requiredLevel: 1
+    requires: 
+  - id: p_mastery
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: d1973c4750c4c40c3bfca1859d03fbfe, type: 2}
+    tier: 0
+    column: 1
+    requiredLevel: 1
+    requires: 
+  - id: p_swift
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: ced76cc6214834f44b2f86075f0d2a79, type: 2}
+    tier: 0
+    column: 2
+    requiredLevel: 1
+    requires: 
+  - id: p_nimble
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 5f2d6271dee33479184568d8ff350210, type: 2}
+    tier: 0
+    column: 3
+    requiredLevel: 1
+    requires: 
+  - id: p_mind
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: dd90d14200c5f414890371552f2d69bc, type: 2}
+    tier: 1
+    column: 0
+    requiredLevel: 3
+    requires: 
+  - id: p_power
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 583a08bc62a784d71ac1e836f0b27509, type: 2}
+    tier: 1
+    column: 1
+    requiredLevel: 3
+    requires: 
+  - id: p_bloodlust
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: bd55dcc23bc604b30aec307a04a4c902, type: 2}
+    tier: 1
+    column: 2
+    requiredLevel: 3
+    requires: 
+  - id: p_eagle
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: c0ce63209af3e4bcbbc9f6ac941ddb66, type: 2}
+    tier: 1
+    column: 3
+    requiredLevel: 3
+    requires: 
+  - id: p_reach
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 3f34aa97c0cb946a1aba61cedbdd2e69, type: 2}
+    tier: 2
+    column: 0
+    requiredLevel: 6
+    requires: 
+  - id: p_expanse
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 4b043fa13eab44641ac82b72be53676b, type: 2}
+    tier: 2
+    column: 1
+    requiredLevel: 6
+    requires: 
+  - id: p_hardened
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 02ae0352035604e99848760f2a401993, type: 2}
+    tier: 2
+    column: 2
+    requiredLevel: 6
+    requires: 
+  - id: p_ignite
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 1ef6e8ffedc1c46bbaced626a6ea49a0, type: 2}
+    tier: 2
+    column: 3
+    requiredLevel: 6
+    requires: 
+  - id: p_venom
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: e2192b08c399541b69887c8f562045f7, type: 2}
+    tier: 3
+    column: 0
+    requiredLevel: 10
+    requires: 
+  - id: p_frostbite
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: caaf8d61cdf3d4b73b793e5f7c9085dd, type: 2}
+    tier: 3
+    column: 1
+    requiredLevel: 10
+    requires: 
+  - id: p_execute
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: beb856b49b3e04340ae7abf6be1cbbd0, type: 2}
+    tier: 3
+    column: 2
+    requiredLevel: 10
+    requires: 
+  - id: p_berserk
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 07738658fc1f0449fb63144108048713, type: 2}
+    tier: 3
+    column: 3
+    requiredLevel: 10
+    requires: 
+  - id: p_explosive
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: acc8053bb1af44ed384b8f77ee6f62b9, type: 2}
+    tier: 4
+    column: 0
+    requiredLevel: 15
+    requires: 
+  - id: p_static
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 1c4c7de56494c4c34b47203059f30a06, type: 2}
+    tier: 4
+    column: 1
+    requiredLevel: 15
+    requires: 
+  - id: p_survivor
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: be74ed289db034889a388be37c224f08, type: 2}
+    tier: 4
+    column: 2
+    requiredLevel: 15
+    requires: 
+  - id: p_lingering
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 694dd06c573c048f490789af74fee119, type: 2}
+    tier: 4
+    column: 3
+    requiredLevel: 15
+    requires: 
+  - id: p_hydra
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: e51524342c1ac4f3cb13240fac80c3f3, type: 2}
+    tier: 4
+    column: 4
+    requiredLevel: 20
+    requires: 

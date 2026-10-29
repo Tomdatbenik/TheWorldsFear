@@ -7,6 +7,10 @@ namespace TWF
     public class Merchant : MonoBehaviour
     {
         public string displayName = "Merchant";
+        public string subtitle = "Shop";
+        public string buttonLabel = "Shop";
+        public PanelKind panel = PanelKind.Shop;
+        public Outfit outfit = Outfit.Merchant;
         public float talkRange = 2.2f;
 
         bool inRange;
@@ -18,7 +22,7 @@ namespace TWF
             sr.sortingOrder = SortOrder.Units;
             RenderAssets.MakeLit(sr);
             var anim = visual.gameObject.AddComponent<CharacterAnimator>();
-            anim.outfit = Outfit.Merchant;
+            anim.outfit = outfit;
             anim.Facing = Vector2.down;
 
             var shadow = GameAssets.CreateWorldSprite("Shadow", GameAssets.SoftCircle, transform, new Color(0, 0, 0, 0.35f), SortOrder.Units - 1, 1f);
@@ -33,7 +37,7 @@ namespace TWF
             label.transform.SetParent(Billboard.Create(transform), false);
             label.transform.localPosition = new Vector3(0, 2.2f, 0);
             label.font = GameAssets.Font;
-            label.text = $"{displayName}\n<size=70%><color=#ffd040>Shop</color></size>";
+            label.text = $"{displayName}\n<size=70%><color=#ffd040>{subtitle}</color></size>";
             label.fontSize = 2.6f;
             label.alignment = TextAlignmentOptions.Center;
             label.color = new Color(1f, 0.9f, 0.7f);
@@ -48,7 +52,11 @@ namespace TWF
             var hero = HeroController.Instance;
             if (hero == null || GameUI.Instance == null) return;
             bool near = Vector2.Distance(hero.transform.position, transform.position) < talkRange;
-            if (near && !inRange) GameUI.Instance.ShowInteract("Shop", () => Panels.Toggle(PanelKind.Shop));
+            if (near && !inRange) GameUI.Instance.ShowInteract(buttonLabel, () =>
+            {
+                CraftPanel.AtForge = panel == PanelKind.Craft;
+                Panels.Toggle(panel);
+            });
             else if (!near && inRange) GameUI.Instance.HideInteract();
             inRange = near;
         }

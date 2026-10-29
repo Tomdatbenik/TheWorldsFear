@@ -23,6 +23,7 @@ namespace TWF
         ProjectileSpeed,
         EffectDuration,
         ProjectileSpread,
+        SkillPower,
     }
 
     public enum ModKind { Flat, Percent }
@@ -153,6 +154,7 @@ namespace TWF
                 case StatType.ProjectileSpeed: return "Projectile Speed";
                 case StatType.EffectDuration: return "Effect Duration";
                 case StatType.ProjectileSpread: return "Projectile Spread";
+                case StatType.SkillPower: return "Skill Power";
             }
             return stat.ToString();
         }
@@ -163,7 +165,7 @@ namespace TWF
             return stat == StatType.CritChance || stat == StatType.CritDamage ||
                    stat == StatType.CooldownReduction || stat == StatType.LifeSteal ||
                    stat == StatType.SkillRange || stat == StatType.AreaSize || stat == StatType.ProjectileSpeed ||
-                   stat == StatType.EffectDuration || stat == StatType.ProjectileSpread;
+                   stat == StatType.EffectDuration || stat == StatType.ProjectileSpread || stat == StatType.SkillPower;
         }
 
         public static float Clamp(StatType stat, float v)
@@ -181,6 +183,7 @@ namespace TWF
                 case StatType.ProjectileSpeed: return Mathf.Clamp(v, 0f, 1.5f);
                 case StatType.EffectDuration: return Mathf.Clamp(v, 0f, 2f);
                 case StatType.ProjectileSpread: return Mathf.Clamp(v, -0.6f, 2f);
+                case StatType.SkillPower: return Mathf.Clamp(v, 0f, 5f);
                 default: return Mathf.Max(0f, v);
             }
         }

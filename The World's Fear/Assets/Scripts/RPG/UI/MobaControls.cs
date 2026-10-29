@@ -105,22 +105,23 @@ namespace TWF
         }
     }
 
-    // Hold to orbit the camera; a quick tap turns it 45 degrees.
+    // Turns the camera by 45 degrees per press.
     public class RotateButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
     {
         public float direction = 1f;
         float downTime;
 
+        // Each press turns the camera exactly one 45 degree step.
         public void OnPointerDown(PointerEventData e)
         {
             downTime = Time.unscaledTime;
-            CameraFollow.RotateInput = direction;
+            CameraFollow.RotateBy(45f * direction);
+            transform.localScale = Vector3.one * 0.92f;
         }
 
         public void OnPointerUp(PointerEventData e)
         {
-            CameraFollow.RotateInput = 0f;
-            if (Time.unscaledTime - downTime < 0.2f) CameraFollow.RotateBy(45f * direction);
+            transform.localScale = Vector3.one;
         }
 
         void OnDisable() => CameraFollow.RotateInput = 0f;
@@ -172,7 +173,8 @@ namespace TWF
             if (skill != shownSkill)
             {
                 shownSkill = skill;
-                var sprite = skill != null ? IconFactory.Get(IconFactory.KeyFor(skill.id, skill.displayName), Color.Lerp(skill.color, Color.white, 0.15f)) : null;
+                string key = skill == null ? null : !string.IsNullOrEmpty(skill.iconKey) ? skill.iconKey : IconFactory.KeyFor(skill.id, skill.displayName);
+                var sprite = skill != null ? IconFactory.Get(key, Color.Lerp(skill.color, Color.white, 0.15f)) : null;
                 if (icon != null)
                 {
                     icon.sprite = sprite;

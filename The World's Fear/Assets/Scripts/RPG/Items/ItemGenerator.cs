@@ -16,13 +16,6 @@ namespace TWF
             { ItemSlot.Amulet, new[] { "Bone Charm", "Silver Pendant", "Jade Amulet", "Star Talisman" } },
         };
 
-        static readonly Dictionary<string, string[]> weaponNames = new Dictionary<string, string[]>
-        {
-            { "warrior", new[] { "Rusty Blade", "Iron Sword", "Steel Broadsword", "Runed Greatsword" } },
-            { "ranger", new[] { "Short Bow", "Hunting Bow", "Composite Bow", "Elderwood Longbow" } },
-            { "mage", new[] { "Gnarled Wand", "Oak Staff", "Crystal Staff", "Starforged Scepter" } },
-        };
-
         static readonly string[] rareFirst = { "Grim", "Doom", "Storm", "Blood", "Shadow", "Ash", "Soul", "Bone", "Dread", "Wolf", "Raven", "Night", "Ember", "Frost" };
         static readonly string[] rareSecond = { "Song", "Grasp", "Fang", "Ward", "Bite", "Veil", "Call", "Mark", "Shroud", "Edge", "Heart", "Spire", "Gaze", "Hold" };
         static readonly string[] legendaryAdj = { "Ancient", "Fabled", "Mythic", "Forgotten", "Eternal", "Cursed" };
@@ -62,9 +55,8 @@ namespace TWF
             return Rarity.Common;
         }
 
-        public static ItemInstance Generate(int itemLevel, Rarity rarity, ItemSlot slot, System.Random rng, string classId = null)
+        public static ItemInstance Generate(int itemLevel, Rarity rarity, ItemSlot slot, System.Random rng, WeaponType? forcedWeapon = null)
         {
-            classId = classId ?? Profile.Data.classId;
             itemLevel = Mathf.Max(1, itemLevel);
             int tier = Mathf.Clamp((itemLevel - 1) / 8, 0, 3);
             var item = new ItemInstance
@@ -76,16 +68,24 @@ namespace TWF
                 seed = rng.Next(),
             };
 
-            item.baseName = slot == ItemSlot.Weapon
-                ? (weaponNames.TryGetValue(classId, out var w) ? w : weaponNames["warrior"])[tier]
-                : baseNames[slot][tier];
+            if (slot == ItemSlot.Weapon)
+            {
+                // Any weapon type can drop; each has its own basic attack.
+                var wt = forcedWeapon ?? (WeaponType)rng.Next(9);
+                item.weaponType = (int)wt;
+                item.baseName = Weapons.Get(wt).tierNames[tier];
+            }
+            else item.baseName = baseNames[slot][tier];
             // Beyond the base tiers, gear gets grander titles.
             if (itemLevel > 32) item.baseName = (itemLevel > 80 ? "Mythic " : itemLevel > 55 ? "Exalted " : "Ancient ") + item.baseName;
 
             float jitter = 0.9f + (float)rng.NextDouble() * 0.2f;
             switch (slot)
             {
-                case ItemSlot.Weapon: item.implicitStat = StatType.Damage; item.implicitValue = Mathf.Round((3f + itemLevel * 1.8f) * jitter); break;
+                case ItemSlot.Weapon:
+                    item.implicitStat = StatType.Damage;
+                    item.implicitValue = Mathf.Round((3f + itemLevel * 1.8f) * jitter * Weapons.Get((WeaponType)item.weaponType).implicitDamage);
+                    break;
                 case ItemSlot.Chest: item.implicitStat = StatType.Armor; item.implicitValue = Mathf.Round((3f + itemLevel * 1.9f) * jitter); break;
                 case ItemSlot.Helm: item.implicitStat = StatType.Armor; item.implicitValue = Mathf.Round((2f + itemLevel * 1.2f) * jitter); break;
                 case ItemSlot.Gloves: item.implicitStat = StatType.Armor; item.implicitValue = Mathf.Round((1f + itemLevel * 0.8f) * jitter); break;
@@ -148,7 +148,7 @@ namespace TWF
         {
             var sb = new System.Text.StringBuilder();
             sb.Append($"<color={Palette.Hex(RarityInfo.Color(item.rarity))}><b>{item.name}</b></color>\n");
-            string kind = item.slot == ItemSlot.Weapon ? "Weapon" : item.slot.ToString();
+            string kind = item.slot == ItemSlot.Weapon ? Weapons.Name((WeaponType)item.weaponType) : item.slot.ToString();
             sb.Append($"<size=80%><color=#999>{item.rarity} {kind} · Item level {item.itemLevel}</color></size>\n");
             sb.Append($"<color=#fff>{StatInfo.Format(item.implicitStat, ModKind.Flat, item.implicitValue)}</color>\n");
             foreach (var a in item.affixes) sb.Append($"<color=#8cf>{a.Describe()}</color>\n");

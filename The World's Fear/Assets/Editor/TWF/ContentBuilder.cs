@@ -28,7 +28,7 @@ namespace TWF.EditorTools
             Dir("Assets/Prefabs/RPG");
 
             var db = Asset<GameDatabase>(DbPath);
-            db.classes = new List<HeroClassDefinition> { BuildWarrior(), BuildRanger(), BuildMage() };
+            db.classes = new List<HeroClassDefinition> { BuildAdventurer() };
             db.zones = BuildZones();
             db.affixes = BuildAffixes();
             db.heroPrefab = BuildHeroPrefab();
@@ -168,245 +168,60 @@ namespace TWF.EditorTools
                 new StatEntry(StatType.Armor, armor), new StatEntry(StatType.HPRegen, regen),
             };
 
-        // ---------- Warrior ----------
+        // ---------- The hero (no classes) and the shared passive board ----------
 
-        static HeroClassDefinition BuildWarrior()
+        static HeroClassDefinition BuildAdventurer()
         {
-            string red = "#e8573c", steel = "#c9d4e0", gold = "#f2c14e";
+            string red = "#e8573c", gold = "#f2c14e", green = "#7cd65a", ice = "#8fd8ff", venom = "#9be04a", arcane = "#b884ff", fire = "#ff6a2b", storm = "#ffe066";
 
-            var cleave = Skill("w_cleave", "Cleave", "CLV", red, Targeting.Skillshot, 2.6f, 5f,
-                "A wide sweeping strike that knocks enemies back.",
-                new MeleeArcEffect { radius = 2.7f, angle = 170f, damageMult = 1.9f, knockback = 1.3f, color = C(red) });
-            var leap = Radius(Skill("w_leap", "Leap Slam", "LEAP", gold, Targeting.Dash, 5.5f, 9f,
-                "Leap forward and crash down, stunning enemies where you land.",
-                new DashEffect { distance = 5.5f, duration = 0.32f, damageMult = 2.2f, hitRadius = 2.2f, damageAtEnd = true, status = StatusSpec.Stun(0.9f), color = C(gold) }), 2.2f);
-            var warcry = Radius(Skill("w_warcry", "War Cry", "CRY", gold, Targeting.Self, 0f, 15f,
-                "A battle shout that empowers you and hardens your skin.",
-                new BuffEffect { stat = StatType.Damage, kind = ModKind.Percent, value = 0.3f, duration = 6f, color = C(gold) },
-                new ShieldEffect { percentMaxHP = 0.15f, duration = 6f }), 1.5f);
-            var pound = Radius(Skill("w_pound", "Ground Pound", "PND", steel, Targeting.Self, 0f, 11f,
-                "Smash the ground, stunning everything around you.",
-                new GroundAreaEffect { atCaster = true, radius = 3f, delay = 0.05f, damageMult = 1.6f, status = StatusSpec.Stun(1.1f), color = C(steel), knockback = 1.5f }), 3f);
-            var charge = Skill("w_charge", "Shield Charge", "CHG", steel, Targeting.Dash, 6f, 8f,
-                "Charge through enemies, slowing them.",
-                new DashEffect { distance = 6f, duration = 0.28f, damageMult = 1.4f, hitRadius = 1.3f, status = StatusSpec.Slow(0.5f, 2f), color = C(steel) });
-            var whirl = Ult(Radius(Skill("w_whirlwind", "Whirlwind", "WHRL", red, Targeting.Self, 0f, 38f,
-                "Become a storm of steel, hitting everything around you again and again.",
-                new BuffEffect { stat = StatType.MoveSpeed, kind = ModKind.Percent, value = 0.25f, duration = 2.6f, scaleWithRank = false, color = C(red) },
-                new RepeatEffect
-                {
-                    times = 10, interval = 0.25f,
-                    inner = new List<SkillEffect> { new MeleeArcEffect { radius = 2.6f, angle = 360f, damageMult = 0.75f, color = C(red) } },
-                }), 2.6f));
-            var shatter = Ult(Radius(Skill("w_earthshatter", "Earthshatter", "QUAKE", gold, Targeting.GroundAoE, 6f, 50f,
-                "Split the earth: a huge delayed eruption that stuns for a long time.",
-                new GroundAreaEffect { radius = 4.2f, delay = 0.7f, damageMult = 6f, status = StatusSpec.Stun(1.8f), color = C(gold), knockback = 2f }), 4.2f));
+            var thickSkin = Passive("p_thickskin", "Thick Skin", "HP", "#8fbf6a", "Toughened by battle.", 5, new[] { Pct(StatType.MaxHP, 0.05f), Flat(StatType.Armor, 4f) });
+            var mastery = Passive("p_mastery", "Weapon Mastery", "DMG", red, "Every hit lands harder.", 5, new[] { Pct(StatType.Damage, 0.05f), Flat(StatType.CritChance, 0.015f) });
+            var swift = Passive("p_swift", "Swift Strikes", "SPD", green, "Attack faster.", 5, new[] { Pct(StatType.AttackSpeed, 0.06f) });
+            var nimble = Passive("p_nimble", "Nimble", "NMB", "#d7d7d7", "Light on your feet.", 3, new[] { Pct(StatType.MoveSpeed, 0.05f), Flat(StatType.Armor, 2f) });
+            var mind = Passive("p_mind", "Arcane Mind", "CDR", arcane, "Skills recover faster.", 5, new[] { Flat(StatType.CooldownReduction, 0.03f) });
+            var power = Passive("p_power", "Skill Power", "PWR", fire, "Crafted skills hit harder.", 5, new[] { Flat(StatType.SkillPower, 0.06f) });
 
-            var thickSkin = Passive("w_thickskin", "Thick Skin", "HP", "#8fbf6a", "Toughened by battle.", 5,
-                new[] { Pct(StatType.MaxHP, 0.06f), Flat(StatType.Armor, 4f) });
-            var mastery = Passive("w_mastery", "Weapon Mastery", "DMG", red, "Every swing hits harder.", 5,
-                new[] { Pct(StatType.Damage, 0.05f), Flat(StatType.CritChance, 0.02f) });
-            var swift = Passive("w_swift", "Swift Strikes", "SPD", steel, "Attack faster.", 3,
-                new[] { Pct(StatType.AttackSpeed, 0.08f) });
-            var bloodlust = Passive("w_bloodlust", "Bloodlust", "BLD", "#b0302a", "Kills restore life.", 3, null,
-                new HealOnKillProc { percentMaxHPPerRank = 0.025f });
-            var hardened = Passive("w_hardened", "Battle Hardened", "SHLD", "#9fc3ff", "Getting hit raises a barrier.", 3, null,
-                new ShieldOnHitTakenProc { percentPerRank = 0.06f, cooldown = 8f });
-            var execute = Passive("w_execute", "Executioner", "EXE", "#ff4040", "Finish off the weak.", 3, null,
-                new ExecuteProc { bonusPerRank = 0.15f, threshold = 0.35f });
-            var berserk = Passive("w_berserk", "Berserker", "RAGE", "#ff7040", "Deadlier when wounded.", 3,
-                new[] { Flat(StatType.LifeSteal, 0.01f) },
-                new LowLifeProc { stat = StatType.Damage, valuePerRank = 0.12f, threshold = 0.45f });
-            var unstoppable = Passive("w_unstoppable", "Unstoppable", "UNST", gold, "Nothing slows you down for long.", 3,
-                new[] { Pct(StatType.MoveSpeed, 0.04f), Flat(StatType.CooldownReduction, 0.04f) });
+            var bloodlust = Passive("p_bloodlust", "Bloodlust", "BLD", "#b0302a", "Kills restore life.", 3, null, new HealOnKillProc { percentMaxHPPerRank = 0.025f });
+            var eagle = Passive("p_eagle", "Eagle Eye", "EYE", gold, "Find the weak spots.", 5, new[] { Flat(StatType.CritChance, 0.03f), Flat(StatType.CritDamage, 0.1f) });
+            var reach = Passive("p_reach", "Far Reach", "RNG", ice, "Skills travel further.", 3, new[] { Flat(StatType.SkillRange, 0.08f), Flat(StatType.ProjectileSpeed, 0.08f) });
+            var expanse = Passive("p_expanse", "Expanse", "AREA", arcane, "Bigger blasts.", 3, new[] { Flat(StatType.AreaSize, 0.08f) });
 
-            var tree = Asset<SkillTreeDefinition>($"{Root}/Classes/WarriorTree.asset");
+            var hardened = Passive("p_hardened", "Battle Hardened", "SHLD", "#9fc3ff", "Getting hit raises a barrier.", 3, null, new ShieldOnHitTakenProc { percentPerRank = 0.06f, cooldown = 8f });
+            var ignite = Passive("p_ignite", "Ignite", "IGN", fire, "Hits may set enemies on fire.", 3, null, new StatusOnHitProc { chancePerRank = 0.1f, status = StatusSpec.Burn(0.4f, 3f) });
+            var venomTips = Passive("p_venom", "Venom Tips", "VEN", venom, "Hits may poison.", 3, null, new StatusOnHitProc { chancePerRank = 0.1f, status = StatusSpec.Poison(0.4f, 3f) });
+            var frostbite = Passive("p_frostbite", "Frostbite", "CHL", ice, "Hits may chill.", 3, null, new StatusOnHitProc { chancePerRank = 0.12f, status = StatusSpec.Slow(0.35f, 2f) });
+
+            var execute = Passive("p_execute", "Executioner", "EXE", "#ff4040", "Finish off the weak.", 3, null, new ExecuteProc { bonusPerRank = 0.15f, threshold = 0.35f });
+            var berserk = Passive("p_berserk", "Berserker", "RAGE", "#ff7040", "Deadlier when wounded.", 3, new[] { Flat(StatType.LifeSteal, 0.01f) }, new LowLifeProc { stat = StatType.Damage, valuePerRank = 0.12f, threshold = 0.45f });
+            var explosive = Passive("p_explosive", "Volatile", "BOOM", "#ff8a3d", "Enemies may explode on death.", 3, null, new ExplodeOnKillProc { chancePerRank = 0.15f, radius = 2.2f, damageMult = 0.9f, color = C("#ff8a3d") });
+            var staticCharge = Passive("p_static", "Static Charge", "STC", storm, "Hits may stun.", 3, null, new StatusOnHitProc { chancePerRank = 0.04f, status = StatusSpec.Stun(0.6f) });
+
+            var survivor = Passive("p_survivor", "Survivalist", "SRV", "#8fbf6a", "Live off the land.", 3, new[] { Pct(StatType.MaxHP, 0.06f), Flat(StatType.HPRegen, 1f) }, new HealOnKillProc { percentMaxHPPerRank = 0.015f });
+            var lingering = Passive("p_lingering", "Lingering Power", "DUR", arcane, "Effects last longer.", 3, new[] { Flat(StatType.EffectDuration, 0.15f) });
+            var hydra = Passive("p_hydra", "Hydra", "MULTI", green, "One more projectile.", 1, new[] { Flat(StatType.ExtraProjectiles, 1f) });
+
+            var tree = Asset<SkillTreeDefinition>($"{Root}/Classes/PassiveBoard.asset");
+            tree.pointsToUnlockTier = new[] { 0, 3, 7, 12, 18 };
             tree.nodes = new List<SkillTreeNode>
             {
-                Node(cleave, 0, 0, 1), Node(thickSkin, 0, 1, 1), Node(mastery, 0, 2, 1),
-                Node(leap, 1, 0, 2), Node(swift, 1, 1, 3), Node(bloodlust, 1, 2, 3),
-                Node(warcry, 2, 0, 5), Node(pound, 2, 1, 6), Node(hardened, 2, 2, 5),
-                Node(whirl, 3, 0, 8), Node(execute, 3, 1, 9), Node(berserk, 3, 2, 10),
-                Node(shatter, 4, 0, 15), Node(charge, 4, 1, 12), Node(unstoppable, 4, 2, 14),
+                Node(thickSkin, 0, 0, 1), Node(mastery, 0, 1, 1), Node(swift, 0, 2, 1), Node(nimble, 0, 3, 1),
+                Node(mind, 1, 0, 3), Node(power, 1, 1, 3), Node(bloodlust, 1, 2, 3), Node(eagle, 1, 3, 3),
+                Node(reach, 2, 0, 6), Node(expanse, 2, 1, 6), Node(hardened, 2, 2, 6), Node(ignite, 2, 3, 6),
+                Node(venomTips, 3, 0, 10), Node(frostbite, 3, 1, 10), Node(execute, 3, 2, 10), Node(berserk, 3, 3, 10),
+                Node(explosive, 4, 0, 15), Node(staticCharge, 4, 1, 15), Node(survivor, 4, 2, 15), Node(lingering, 4, 3, 15),
             };
+            tree.nodes.Add(Node(hydra, 4, 4, 20));
 
-            var cls = Asset<HeroClassDefinition>($"{Root}/Classes/Warrior.asset");
-            cls.id = "warrior";
-            cls.displayName = "Warrior";
-            cls.description = "A steel-clad brawler. High life and armor, crushing melee skills, and crowd control.";
+            var cls = Asset<HeroClassDefinition>($"{Root}/Classes/Adventurer.asset");
+            cls.id = "adventurer";
+            cls.displayName = "Adventurer";
+            cls.description = "A wanderer who fights with whatever weapon they find and crafts their own skills.";
             cls.tint = Color.white;
-            cls.accentColor = C(red);
-            cls.baseStats = Stats(190, 13, 14, 5.2f, 1.25f, 0.05f, 0f, 1.5f);
-            cls.growthPerLevel = Growth(24, 2.7f, 1.6f, 0.25f);
-            cls.basicAttack = HeroClassDefinition.BasicAttackKind.Melee;
-            cls.attackRange = 1.9f;
-            cls.attackArc = 120f;
-            cls.attackDamageMult = 1f;
-            cls.showSword = true;
-            cls.useArrowSprite = false;
+            cls.accentColor = C(gold);
+            cls.baseStats = Stats(170, 12, 10, 5.4f, 1f, 0.05f, 0f, 1.2f);
+            cls.growthPerLevel = Growth(18, 2.2f, 1.2f, 0.2f);
             cls.skillTree = tree;
-            cls.starterNode = cleave.id;
-            return cls;
-        }
-
-        // ---------- Ranger ----------
-
-        static HeroClassDefinition BuildRanger()
-        {
-            string green = "#7cd65a", ice = "#8fd8ff", venom = "#9be04a", amber = "#f5b041";
-
-            var pierce = Skill("r_pierce", "Piercing Arrow", "PRC", amber, Targeting.Skillshot, 10f, 5f,
-                "A powerful arrow that passes through every enemy in a line.",
-                new ProjectileEffect { speed = 22f, range = 10f, damageMult = 2.1f, pierce = -1, size = 1.1f, useArrowSprite = true, color = C(amber), hitRadius = 0.45f });
-            var multishot = Skill("r_multishot", "Multishot", "MLT", green, Targeting.Skillshot, 7f, 6f,
-                "Loose a fan of arrows.",
-                new ProjectileEffect { count = 5, spread = 55f, speed = 18f, range = 7f, damageMult = 0.95f, size = 0.9f, useArrowSprite = true, color = C(green) });
-            var roll = Skill("r_roll", "Evasive Roll", "ROLL", "#d7d7d7", Targeting.Dash, 4f, 6f,
-                "Roll away, briefly untouchable, and shoot faster after.",
-                new DashEffect { distance = 4f, duration = 0.2f, invulnerable = true, color = Color.white },
-                new BuffEffect { stat = StatType.AttackSpeed, kind = ModKind.Percent, value = 0.3f, duration = 3f, color = C(green) });
-            var trap = Radius(Skill("r_trap", "Frost Trap", "TRAP", ice, Targeting.GroundAoE, 7f, 10f,
-                "Throw a trap that bursts into freezing shards.",
-                new GroundAreaEffect { radius = 2.4f, delay = 0.5f, damageMult = 1.3f, status = StatusSpec.Slow(0.55f, 2.5f), color = C(ice) }), 2.4f);
-            var poison = Skill("r_poison", "Venom Volley", "VNM", venom, Targeting.Skillshot, 8f, 7f,
-                "Three poisoned arrows.",
-                new ProjectileEffect { count = 3, spread = 18f, speed = 18f, range = 8f, damageMult = 0.9f, size = 0.9f, useArrowSprite = true, color = C(venom), status = StatusSpec.Poison(0.5f, 4f) });
-            var rain = Ult(Radius(Skill("r_rain", "Arrow Rain", "RAIN", amber, Targeting.GroundAoE, 8f, 35f,
-                "Darken the sky with arrows over a wide area.",
-                new GroundAreaEffect { radius = 3.4f, delay = 0.4f, ticks = 7, interval = 0.35f, damageMult = 0.85f, status = StatusSpec.Slow(0.3f, 1f), color = C(amber) }), 3.4f));
-            var barrage = Ult(Skill("r_barrage", "Barrage", "BRG", green, Targeting.Skillshot, 9f, 45f,
-                "Unleash a rapid stream of arrows.",
-                new RepeatEffect
-                {
-                    times = 8, interval = 0.12f,
-                    inner = new List<SkillEffect> { new ProjectileEffect { count = 3, spread = 22f, speed = 22f, range = 9f, damageMult = 0.75f, size = 0.9f, useArrowSprite = true, color = C(green) } },
-                }));
-
-            var eagle = Passive("r_eagle", "Eagle Eye", "EYE", amber, "Find the weak spots.", 5,
-                new[] { Flat(StatType.CritChance, 0.035f), Flat(StatType.CritDamage, 0.1f) });
-            var quick = Passive("r_quickdraw", "Quick Draw", "SPD", green, "Faster shooting.", 5,
-                new[] { Pct(StatType.AttackSpeed, 0.07f) });
-            var venomTips = Passive("r_venomtips", "Venom Tips", "VEN", venom, "Arrows may poison.", 3, null,
-                new StatusOnHitProc { chancePerRank = 0.12f, status = StatusSpec.Poison(0.4f, 3f) });
-            var nimble = Passive("r_nimble", "Nimble", "NMB", "#d7d7d7", "Light on your feet.", 3,
-                new[] { Pct(StatType.MoveSpeed, 0.05f), Flat(StatType.Armor, 3f) });
-            var sharp = Passive("r_sharpshooter", "Sharpshooter", "DMG", amber, "More damage on every arrow.", 5,
-                new[] { Pct(StatType.Damage, 0.06f) });
-            var explosive = Passive("r_explosive", "Explosive Tips", "BOOM", "#ff8a3d", "Enemies may explode on death.", 3, null,
-                new ExplodeOnKillProc { chancePerRank = 0.15f, radius = 2.2f, damageMult = 0.9f, color = C("#ff8a3d") });
-            var survivor = Passive("r_survivor", "Survivalist", "SRV", "#8fbf6a", "Live off the land.", 3,
-                new[] { Pct(StatType.MaxHP, 0.06f), Flat(StatType.HPRegen, 1f) },
-                new HealOnKillProc { percentMaxHPPerRank = 0.015f });
-            var hunter = Passive("r_hunter", "Hunter's Focus", "FCS", ice, "Skills come back sooner.", 3,
-                new[] { Flat(StatType.CooldownReduction, 0.04f) });
-
-            var tree = Asset<SkillTreeDefinition>($"{Root}/Classes/RangerTree.asset");
-            tree.nodes = new List<SkillTreeNode>
-            {
-                Node(pierce, 0, 0, 1), Node(eagle, 0, 1, 1), Node(sharp, 0, 2, 1),
-                Node(multishot, 1, 0, 2), Node(quick, 1, 1, 3), Node(nimble, 1, 2, 3),
-                Node(roll, 2, 0, 5), Node(trap, 2, 1, 6), Node(venomTips, 2, 2, 5),
-                Node(rain, 3, 0, 8), Node(explosive, 3, 1, 9), Node(survivor, 3, 2, 10),
-                Node(barrage, 4, 0, 15), Node(poison, 4, 1, 12), Node(hunter, 4, 2, 14),
-            };
-
-            var cls = Asset<HeroClassDefinition>($"{Root}/Classes/Ranger.asset");
-            cls.id = "ranger";
-            cls.displayName = "Ranger";
-            cls.description = "A swift archer. Long range, fast attacks and critical hits; fragile up close.";
-            cls.tint = C("#c8f0b8");
-            cls.accentColor = C(green);
-            cls.baseStats = Stats(145, 11, 7, 5.6f, 1.45f, 0.08f, 0f, 1f);
-            cls.growthPerLevel = Growth(17, 2.4f, 1f, 0.2f);
-            cls.basicAttack = HeroClassDefinition.BasicAttackKind.Projectile;
-            cls.attackRange = 6.5f;
-            cls.attackDamageMult = 1f;
-            cls.projectileSpeed = 20f;
-            cls.projectileColor = C(amber);
-            cls.useArrowSprite = true;
-            cls.showSword = false;
-            cls.skillTree = tree;
-            cls.starterNode = pierce.id;
-            return cls;
-        }
-
-        // ---------- Mage ----------
-
-        static HeroClassDefinition BuildMage()
-        {
-            string fire = "#ff6a2b", frost = "#7fd3ff", arcane = "#b884ff", storm = "#ffe066";
-
-            var fireball = Radius(Skill("m_fireball", "Fireball", "FIRE", fire, Targeting.Skillshot, 9f, 4.5f,
-                "Hurl a ball of fire that explodes and sets enemies alight.",
-                new ProjectileEffect { speed = 14f, range = 9f, damageMult = 2.2f, explodeRadius = 1.7f, size = 0.75f, color = C(fire), status = StatusSpec.Burn(0.35f, 3f) }), 1.7f);
-            var nova = Radius(Skill("m_nova", "Frost Nova", "NOVA", frost, Targeting.Self, 0f, 9f,
-                "A burst of cold that freezes enemies in place.",
-                new GroundAreaEffect { atCaster = true, radius = 3.2f, delay = 0.05f, damageMult = 1.3f, status = StatusSpec.Slow(0.65f, 2.5f), color = C(frost) }), 3.2f);
-            var blink = Skill("m_blink", "Blink", "BLNK", arcane, Targeting.Dash, 5.5f, 8f,
-                "Teleport a short distance.",
-                new DashEffect { distance = 5.5f, blink = true, invulnerable = true, color = C(arcane) });
-            var orb = Skill("m_orb", "Arcane Orb", "ORB", arcane, Targeting.Skillshot, 11f, 7f,
-                "A slow orb of raw magic that tears through everything.",
-                new ProjectileEffect { speed = 7f, range = 11f, damageMult = 1.7f, pierce = -1, size = 1.2f, hitRadius = 0.8f, color = C(arcane) });
-            var barrier = Radius(Skill("m_barrier", "Barrier", "BARR", frost, Targeting.Self, 0f, 15f,
-                "Wrap yourself in a protective ward.",
-                new ShieldEffect { percentMaxHP = 0.35f, duration = 6f }), 1.2f);
-            var chain = Radius(Skill("m_storm", "Thunderclap", "ZAP", storm, Targeting.GroundAoE, 7f, 10f,
-                "Call lightning on a spot, stunning enemies.",
-                new GroundAreaEffect { radius = 2.2f, delay = 0.35f, damageMult = 2f, status = StatusSpec.Stun(0.8f), color = C(storm) }), 2.2f);
-            var meteor = Ult(Radius(Skill("m_meteor", "Meteor", "MTR", fire, Targeting.GroundAoE, 8f, 40f,
-                "Call down a meteor that devastates a large area.",
-                new GroundAreaEffect { radius = 3.6f, delay = 0.9f, damageMult = 6.5f, status = StatusSpec.Burn(0.3f, 4f), color = C(fire), knockback = 2f }), 3.6f));
-            var blizzard = Ult(Radius(Skill("m_blizzard", "Blizzard", "BLZ", frost, Targeting.GroundAoE, 8f, 45f,
-                "A raging storm of ice over a wide area.",
-                new GroundAreaEffect { radius = 3.8f, delay = 0.3f, ticks = 10, interval = 0.35f, damageMult = 0.75f, status = StatusSpec.Slow(0.45f, 1f), color = C(frost) }), 3.8f));
-
-            var mind = Passive("m_arcanemind", "Arcane Mind", "CDR", arcane, "Spells recover faster.", 5,
-                new[] { Flat(StatType.CooldownReduction, 0.03f) });
-            var power = Passive("m_power", "Spell Power", "DMG", fire, "Raw magical might.", 5,
-                new[] { Pct(StatType.Damage, 0.06f) });
-            var ignite = Passive("m_ignite", "Ignite", "IGN", fire, "Attacks may set enemies on fire.", 3, null,
-                new StatusOnHitProc { chancePerRank = 0.12f, status = StatusSpec.Burn(0.4f, 3f) });
-            var manaShield = Passive("m_manashield", "Mana Shield", "SHLD", frost, "Getting hit raises a magical barrier.", 3, null,
-                new ShieldOnHitTakenProc { percentPerRank = 0.08f, cooldown = 9f });
-            var static_ = Passive("m_static", "Static Charge", "STC", storm, "Hits may stun.", 3, null,
-                new StatusOnHitProc { chancePerRank = 0.04f, status = StatusSpec.Stun(0.6f) });
-            var focus = Passive("m_focus", "Focus", "CRIT", storm, "Precise spellcasting.", 3,
-                new[] { Flat(StatType.CritChance, 0.04f), Flat(StatType.CritDamage, 0.12f) });
-            var vitality = Passive("m_vitality", "Arcane Vitality", "HP", "#8fbf6a", "Magic sustains you.", 3,
-                new[] { Pct(StatType.MaxHP, 0.07f), Flat(StatType.HPRegen, 1f) });
-            var chill = Passive("m_frostbite", "Frostbite", "CHL", frost, "Hits may chill enemies.", 3, null,
-                new StatusOnHitProc { chancePerRank = 0.15f, status = StatusSpec.Slow(0.35f, 2f) });
-
-            var tree = Asset<SkillTreeDefinition>($"{Root}/Classes/MageTree.asset");
-            tree.nodes = new List<SkillTreeNode>
-            {
-                Node(fireball, 0, 0, 1), Node(power, 0, 1, 1), Node(vitality, 0, 2, 1),
-                Node(nova, 1, 0, 2), Node(mind, 1, 1, 3), Node(chill, 1, 2, 3),
-                Node(blink, 2, 0, 5), Node(chain, 2, 1, 6), Node(ignite, 2, 2, 5),
-                Node(meteor, 3, 0, 8), Node(manaShield, 3, 1, 9), Node(focus, 3, 2, 10),
-                Node(blizzard, 4, 0, 15), Node(orb, 4, 1, 12), Node(static_, 4, 2, 14),
-            };
-            // Barrier sits beside Frost Nova.
-            tree.nodes.Insert(5, Node(barrier, 1, 3, 4));
-
-            var cls = Asset<HeroClassDefinition>($"{Root}/Classes/Mage.asset");
-            cls.id = "mage";
-            cls.displayName = "Mage";
-            cls.description = "A master of fire, frost and lightning. Huge area damage and control; the frailest hero.";
-            cls.tint = C("#d8c8ff");
-            cls.accentColor = C(arcane);
-            cls.baseStats = Stats(135, 15, 6, 5.2f, 1.1f, 0.05f, 0.05f, 1f);
-            cls.growthPerLevel = Growth(16, 3.1f, 0.9f, 0.2f);
-            cls.basicAttack = HeroClassDefinition.BasicAttackKind.Projectile;
-            cls.attackRange = 6f;
-            cls.attackDamageMult = 1f;
-            cls.projectileSpeed = 13f;
-            cls.projectileColor = C(arcane);
-            cls.useArrowSprite = false;
-            cls.showSword = false;
-            cls.skillTree = tree;
-            cls.starterNode = fireball.id;
+            cls.starterNode = "";
             return cls;
         }
 

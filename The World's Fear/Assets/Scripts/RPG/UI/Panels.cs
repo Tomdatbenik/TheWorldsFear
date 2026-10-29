@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace TWF
 {
-    public enum PanelKind { Skills, Inventory, Map, Shop }
+    public enum PanelKind { Skills, Inventory, Map, Shop, Craft }
 
     // Full-screen menus. Opening one pauses the game and blocks gameplay input.
     public abstract class GamePanel : MonoBehaviour

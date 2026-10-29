@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace TWF
 {
-    public enum Outfit { Warrior, Ranger, Mage, Merchant, Villager }
+    public enum Outfit { Warrior, Ranger, Mage, Merchant, Villager, Adventurer, Smith }
 
     // Front, back, left and right views. In 2.5D the view is chosen relative to the camera.
     public enum FacingDir { Down, Up, Left, Right }
@@ -61,6 +61,20 @@ namespace TWF
                         skin = C("#f0c39c"), hair = C("#d8d8e8"), top = C("#5b3aa0"), topDark = C("#3a2470"), pants = C("#3a2470"),
                         boots = C("#2a1c40"), accent = C("#f2c94c"), hat = C("#4a2e88"), hatDark = C("#2e1c58"), cape = C("#3a2470"),
                         wizardHat = true, robe = true, beard = true,
+                    };
+                case Outfit.Adventurer:
+                    return new Look
+                    {
+                        skin = C("#e8b48a"), hair = C("#7a4a26"), top = C("#4f6f8f"), topDark = C("#33485f"), pants = C("#5a4636"),
+                        boots = C("#3a2a1e"), accent = C("#c9a24a"), hat = C("#7a4a26"), hatDark = C("#5a341a"), cape = C("#8a3a2e"),
+                        cape_ = true,
+                    };
+                case Outfit.Smith:
+                    return new Look
+                    {
+                        skin = C("#c98f6a"), hair = C("#2e2a28"), top = C("#6a6a72"), topDark = C("#44444a"), pants = C("#3a3230"),
+                        boots = C("#241c18"), accent = C("#5a3a24"), hat = C("#2e2a28"), hatDark = C("#1e1a18"), cape = C("#000000"),
+                        apron = true, beard = true,
                     };
                 case Outfit.Merchant:
                     return new Look

@@ -13,9 +13,7 @@ MonoBehaviour:
   m_Name: GameDatabase
   m_EditorClassIdentifier: Assembly-CSharp::TWF.GameDatabase
   classes:
-  - {fileID: 11400000, guid: 62270beac0c4a4cf8890ae37d64c170d, type: 2}
-  - {fileID: 11400000, guid: 610323a7e5bdc442b86f33c5b7857f20, type: 2}
-  - {fileID: 11400000, guid: 678a2258ff9bb4fefa7c10cee8fad19b, type: 2}
+  - {fileID: 11400000, guid: 78c5310d65c294bebad17efc7a23868f, type: 2}
   zones:
   - {fileID: 11400000, guid: 0b911d3fd69714a4da9680ca4081d54f, type: 2}
   - {fileID: 11400000, guid: 0f6b7311135e448079c6c3a799a60b51, type: 2}

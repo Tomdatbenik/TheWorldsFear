@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99e683ea6b2c0472796f91eb3745263f, type: 3}
+  m_Name: p_ignite
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.PassiveDefinition
+  id: p_ignite
+  displayName: Ignite
+  description: Hits may set enemies on fire.
+  glyph: IGN
+  color: {r: 1, g: 0.41568628, b: 0.16862746, a: 1}
+  maxRank: 3
+  modifiersPerRank: []
+  procs:
+  - rid: 3429192701680812536
+  references:
+    version: 2
+    RefIds:
+    - rid: 3429192701680812536
+      type: {class: StatusOnHitProc, ns: TWF, asm: Assembly-CSharp}
+      data:
+        chancePerRank: 0.1
+        status:
+          type: 3
+          magnitude: 0.4
+          duration: 3
+          chance: 1

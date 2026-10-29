@@ -70,6 +70,7 @@ namespace TWF
         public float implicitValue;
         public List<RolledAffix> affixes = new List<RolledAffix>();
         public string legendaryPower;
+        public int weaponType; // WeaponType, for weapons
 
         public IEnumerable<StatModifier> Modifiers(object source)
         {

@@ -14,6 +14,7 @@ namespace TWF
             Panels.Register(PanelKind.Inventory, InventoryPanel.Create(ui.Root));
             Panels.Register(PanelKind.Map, MapPanel.Create(ui.Root));
             Panels.Register(PanelKind.Shop, ShopPanel.Create(ui.Root));
+            Panels.Register(PanelKind.Craft, CraftPanel.Create(ui.Root));
         }
 
         // Dimmed full-screen backdrop with a framed window, title and close button.
@@ -60,7 +61,7 @@ namespace TWF
 
         public static SkillTreePanel Create(Transform root)
         {
-            var content = PanelsBuilder.Frame<SkillTreePanel>(root, "Skill Tree", out var p);
+            var content = PanelsBuilder.Frame<SkillTreePanel>(root, "Passives", out var p);
             p.Build(content);
             return p;
         }
@@ -182,7 +183,7 @@ namespace TWF
             if (tree == null) return;
             var data = Profile.Data;
             int spent = SkillTreeDefinition.PointsSpent(Profile.Ranks);
-            pointsText.text = $"Skill points: <b>{data.skillPoints}</b>   <size=70%><color=#aaa>Spent: {spent}</color></size>";
+            pointsText.text = $"Passive points: <b>{data.skillPoints}</b>   <size=70%><color=#aaa>Spent: {spent}</color></size>";
             respecButton.interactable = spent > 1 && data.gold >= RespecCost;
 
             for (int t = 0; t < tierLabels.Count; t++)
@@ -226,9 +227,9 @@ namespace TWF
 
             if (selected == null)
             {
-                detailTitle.text = Profile.Class.displayName;
-                detailBody.text = Profile.Class.description + "\n\n<color=#aaa>Round nodes are active skills for your buttons. Diamonds are passives that are always on. " +
-                                  "You earn 1 point per level; tiers open as you spend points.</color>";
+                detailTitle.text = "Passive board";
+                detailBody.text = "<color=#aaa>Passives are always on. You earn 1 passive point per level; deeper tiers open as you spend points.\n\n" +
+                                  "Active skills are crafted at the Arcane Forge in the village.</color>";
                 learnButton.gameObject.SetActive(false);
                 foreach (var b in equipButtons) b.gameObject.SetActive(false);
                 return;
@@ -282,7 +283,10 @@ namespace TWF
     public class InventoryPanel : GamePanel
     {
         RectTransform equipArea, bagArea;
-        TextMeshProUGUI statsText, detailText, goldText;
+        TextMeshProUGUI statsText, detailText, goldText, attrHeader;
+        readonly TextMeshProUGUI[] attrLabels = new TextMeshProUGUI[5];
+        readonly Button[] attrPlus = new Button[5];
+        Button attrReset;
         Button equipButton, sellButton, sellJunkButton;
         ItemInstance selected;
         readonly Dictionary<ItemSlot, RectTransform> slotRects = new Dictionary<ItemSlot, RectTransform>();
@@ -300,8 +304,32 @@ namespace TWF
             left.rectTransform.anchorMin = new Vector2(0, 0);
             left.rectTransform.anchorMax = new Vector2(0.3f, 1);
             left.rectTransform.offsetMin = left.rectTransform.offsetMax = Vector2.zero;
-            statsText = UIFactory.Text("Stats", left.transform, "", 26, Palette.Text, TextAlignmentOptions.TopLeft);
+            // Attributes with + buttons on top, derived stats below.
+            attrHeader = UIFactory.Text("AttrHeader", left.transform, "", 28, Palette.Gold, TextAlignmentOptions.Left);
+            attrHeader.rectTransform.Place(new Vector2(0, 1), new Vector2(22, -14), new Vector2(520, 40));
+            for (int i = 0; i < Attributes.Count; i++)
+            {
+                var a = (Attribute)i;
+                var row = UIFactory.Rect("Attr" + a, left.transform).Place(new Vector2(0, 1), new Vector2(18, -60 - i * 58), new Vector2(540, 54));
+                var label = UIFactory.Text("Label", row, "", 26, Attributes.Color(a), TextAlignmentOptions.Left);
+                label.rectTransform.Stretch();
+                label.rectTransform.offsetMax = new Vector2(-70, 0);
+                attrLabels[i] = label;
+                var plus = UIFactory.Button("Plus", row, "+", () => { Profile.AddAttribute(a); Refresh(); }, new Color(0.2f, 0.4f, 0.15f, 1f), 34);
+                ((RectTransform)plus.transform).Place(new Vector2(1, 0.5f), new Vector2(0, 0), new Vector2(60, 50));
+                attrPlus[i] = plus;
+            }
+            attrReset = UIFactory.Button("Reset", left.transform, "", () =>
+            {
+                ConfirmDialog.Show($"Reset attribute points?\n<size=70%>Costs {Profile.AttributeResetCost} gold.</size>", "Reset", () => { Profile.ResetAttributes(); Refresh(); });
+            }, null, 22);
+            ((RectTransform)attrReset.transform).Place(new Vector2(0, 1), new Vector2(18, -356), new Vector2(300, 50));
+            statsText = UIFactory.Text("Stats", left.transform, "", 22, Palette.Text, TextAlignmentOptions.TopLeft);
             statsText.rectTransform.Stretch(22);
+            statsText.rectTransform.offsetMax = new Vector2(-22, -420);
+            statsText.enableAutoSizing = true;
+            statsText.fontSizeMin = 13;
+            statsText.fontSizeMax = 22;
 
             equipArea = UIFactory.Rect("Equipment", content);
             equipArea.anchorMin = new Vector2(0.31f, 0.42f);
@@ -373,8 +401,16 @@ namespace TWF
             if (hero != null)
             {
                 var s = hero.Combatant.Stats;
+                var d = Profile.Data;
+                attrHeader.text = $"Attributes  <size=80%><color=#fff>{d.attributePoints} point{(d.attributePoints == 1 ? "" : "s")} to spend</color></size>";
+                for (int i = 0; i < Attributes.Count; i++)
+                {
+                    attrLabels[i].text = $"{(Attribute)i}  <b>{d.attributes[i]}</b>  <size=70%><color=#aaa>{Attributes.Describe((Attribute)i)}</color></size>";
+                    attrPlus[i].interactable = d.attributePoints > 0;
+                }
+                attrReset.GetComponentInChildren<TextMeshProUGUI>().text = $"Reset ({Profile.AttributeResetCost} gold)";
                 var sb = new System.Text.StringBuilder();
-                sb.Append($"<size=120%><b>{Profile.Class.displayName}</b></size>\n<color=#aaa>Level {Profile.Data.level}</color>\n\n");
+                sb.Append($"<b>Level {d.level}</b>  <color=#aaa>· {Weapons.Name(Weapons.Equipped)}</color>\n");
                 foreach (StatType st in Enum.GetValues(typeof(StatType)))
                 {
                     if (st == StatType.CritDamage) sb.Append($"{StatInfo.Name(st)}: <color=#fff>{Mathf.RoundToInt((1.5f + s.Get(st)) * 100)}%</color>\n");

@@ -57,7 +57,7 @@ namespace TWF
 
         public static void RotateBy(float degrees)
         {
-            if (instance != null) instance.targetYaw += degrees;
+            if (instance != null) instance.targetYaw = Snap(instance.targetYaw) + degrees;
         }
 
         public void SnapToTarget()
@@ -74,11 +74,12 @@ namespace TWF
         void Update()
         {
             float dt = Time.unscaledDeltaTime;
-            if (MobaInput.Blocked) gestureActive = false;
+            if (MobaInput.Blocked) EndGesture();
             if (!MobaInput.Blocked)
             {
-                float keys = (Input.GetKey(KeyCode.C) ? 1f : 0f) - (Input.GetKey(KeyCode.Z) ? 1f : 0f);
-                targetYaw += (keys + RotateInput) * rotateSpeed * dt;
+                // Rotation always lands on 45 degree steps so the world stays aligned.
+                if (Input.GetKeyDown(KeyCode.C)) targetYaw = Snap(targetYaw) + 45f;
+                if (Input.GetKeyDown(KeyCode.Z)) targetYaw = Snap(targetYaw) - 45f;
                 distance = Mathf.Clamp(distance - Input.mouseScrollDelta.y, minDistance, maxDistance);
                 HandleTouchGestures();
             }
@@ -94,7 +95,7 @@ namespace TWF
         {
             if (Input.touchCount != 2)
             {
-                gestureActive = false;
+                EndGesture();
                 return;
             }
             var a = Input.GetTouch(0);
@@ -103,7 +104,7 @@ namespace TWF
             bool overUI = es != null && (es.IsPointerOverGameObject(a.fingerId) || es.IsPointerOverGameObject(b.fingerId));
             if (overUI || a.phase == TouchPhase.Ended || b.phase == TouchPhase.Ended || a.phase == TouchPhase.Canceled || b.phase == TouchPhase.Canceled)
             {
-                gestureActive = false;
+                EndGesture();
                 return;
             }
 
@@ -125,6 +126,15 @@ namespace TWF
             distance = Mathf.Clamp(distance * Mathf.Clamp(lastPinch / pinch, 0.9f, 1.1f), minDistance, maxDistance);
             lastTwistAngle = angle;
             lastPinch = pinch;
+        }
+
+        static float Snap(float y) => Mathf.Round(y / 45f) * 45f;
+
+        // When the fingers lift, settle on the nearest 45 degree step.
+        void EndGesture()
+        {
+            if (gestureActive) targetYaw = Snap(targetYaw);
+            gestureActive = false;
         }
 
         // Snap the view to a 45 degree step (used by the reset button and after teleports).

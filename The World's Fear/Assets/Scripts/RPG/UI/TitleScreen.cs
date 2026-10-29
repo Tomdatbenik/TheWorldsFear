@@ -12,7 +12,8 @@ namespace TWF
         public string worldScene = "World";
 
         RectTransform root, mainMenu, classMenu;
-        string pickedClass = "warrior";
+        WeaponType pickedWeapon = WeaponType.Sword;
+        static readonly WeaponType[] starters = { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff };
         TextMeshProUGUI classInfo;
         Image preview;
         readonly System.Collections.Generic.List<Image> cards = new System.Collections.Generic.List<Image>();
@@ -50,7 +51,7 @@ namespace TWF
             if (Profile.HasSave && Profile.Load())
             {
                 var d = Profile.Data;
-                UIFactory.Button("Continue", mainMenu, $"Continue\n<size=60%>{Profile.Class.displayName} · Level {d.level}</size>", () => SceneManager.LoadScene(worldScene), new Color(0.2f, 0.4f, 0.15f, 1f), 46);
+                UIFactory.Button("Continue", mainMenu, $"Continue\n<size=60%>Level {d.level}</size>", () => SceneManager.LoadScene(worldScene), new Color(0.2f, 0.4f, 0.15f, 1f), 46);
             }
             UIFactory.Button("NewGame", mainMenu, "New Hero", () =>
             {
@@ -73,18 +74,18 @@ namespace TWF
             h.spacing = 24;
             h.childForceExpandHeight = h.childForceExpandWidth = true;
 
-            foreach (var cls in GameDatabase.Instance.classes)
+            foreach (var wt in starters)
             {
-                var c = cls;
-                var card = UIFactory.Panel(c.id, row, new Color(0.1f, 0.08f, 0.1f, 0.95f));
+                var w = wt;
+                var card = UIFactory.Panel(w.ToString(), row, new Color(0.1f, 0.08f, 0.1f, 0.95f));
                 cards.Add(card);
-                var img = UIFactory.Image("Hero", card.transform, CharacterSpriteGenerator.Get(HeroController.OutfitFor(c.id)).idle[0][0], Color.white);
-                img.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -20), new Vector2(200, 230));
+                var img = UIFactory.Image("Weapon", card.transform, Weapons.Sprite(w), Color.white);
+                img.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(200, 200));
                 img.preserveAspect = true;
-                var name = UIFactory.Text("Name", card.transform, c.displayName, 44, c.accentColor);
+                var name = UIFactory.Text("Name", card.transform, Weapons.Name(w), 44, Palette.Gold);
                 name.fontStyle = FontStyles.Bold;
                 name.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, 20), new Vector2(400, 60));
-                card.gameObject.AddComponent<Button>().onClick.AddListener(() => Pick(c.id));
+                card.gameObject.AddComponent<Button>().onClick.AddListener(() => Pick(w));
             }
 
             var info = UIFactory.Panel("Info", classMenu, new Color(0.1f, 0.08f, 0.1f, 0.95f));
@@ -108,22 +109,21 @@ namespace TWF
             ((RectTransform)back.transform).Place(new Vector2(0, 0), new Vector2(20, 20), new Vector2(200, 70));
         }
 
-        void Pick(string id)
+        void Pick(WeaponType w)
         {
-            pickedClass = id;
-            var cls = GameDatabase.Instance.FindClass(id);
+            pickedWeapon = w;
+            var p = Weapons.Get(w);
             var sb = new System.Text.StringBuilder();
-            sb.Append($"<size=130%><b><color={Palette.Hex(cls.accentColor)}>{cls.displayName}</color></b></size>\n\n{cls.description}\n\n");
-            var stats = new CharacterStats();
-            stats.SetBases(cls.baseStats);
-            foreach (StatType st in new[] { StatType.MaxHP, StatType.Damage, StatType.Armor, StatType.AttackSpeed, StatType.MoveSpeed, StatType.CritChance })
-                sb.Append($"{StatInfo.Name(st)}: <color=#fff>{StatInfo.FormatValue(st, stats.Get(st))}</color>\n");
-            sb.Append($"\nAttack: <color=#fff>{(cls.basicAttack == HeroClassDefinition.BasicAttackKind.Melee ? "Melee" : "Ranged")}</color>");
-            var starter = cls.skillTree.Find(cls.starterNode);
-            if (starter != null) sb.Append($"\nStarting skill: <color=#fff>{starter.DisplayName}</color>");
+            sb.Append($"<size=130%><b><color=#ffd040>{Weapons.Name(w)}</color></b></size>\n\n");
+            sb.Append(w == WeaponType.Sword ? "A balanced blade: quick arcs in front of you." :
+                      w == WeaponType.Bow ? "Fast homing arrows from a safe distance." : "Slow arcane orbs that explode on impact.");
+            sb.Append($"\n\n{(p.ranged ? "Ranged" : "Melee")} · range {p.range:0.#}m · {p.attacksPerSecond:0.##} attacks/s");
+            sb.Append("\n\n<color=#aaa>There are no classes: find any of 9 weapon types, spend attribute points as you level, " +
+                      "and craft your own skills from elements, deliveries and modifiers at the Arcane Forge.</color>");
+            sb.Append("\n\n<color=#f88>One life. If you fall, the run is over.</color>");
             classInfo.text = sb.ToString();
             for (int i = 0; i < cards.Count; i++)
-                cards[i].color = GameDatabase.Instance.classes[i].id == id ? new Color(0.3f, 0.22f, 0.12f, 1f) : new Color(0.1f, 0.08f, 0.1f, 0.95f);
+                cards[i].color = starters[i] == w ? new Color(0.3f, 0.22f, 0.12f, 1f) : new Color(0.1f, 0.08f, 0.1f, 0.95f);
         }
 
         float animT;
@@ -138,7 +138,7 @@ namespace TWF
                 animT = 0f;
                 animFrame++;
             }
-            var set = CharacterSpriteGenerator.Get(HeroController.OutfitFor(pickedClass));
+            var set = CharacterSpriteGenerator.Get(Outfit.Adventurer);
             int dir = (animFrame / 16) % 4;
             preview.sprite = (animFrame / 8) % 2 == 0 ? set.walk[dir][animFrame % 4] : set.attack[dir][animFrame % 2];
         }
@@ -153,13 +153,13 @@ namespace TWF
         {
             mainMenu.gameObject.SetActive(false);
             classMenu.gameObject.SetActive(true);
-            Pick(pickedClass);
+            Pick(pickedWeapon);
         }
 
         void StartNew()
         {
             Profile.DeleteSave();
-            Profile.NewGame(pickedClass);
+            Profile.NewGame(pickedWeapon);
             Profile.Save();
             SceneManager.LoadScene(worldScene);
         }

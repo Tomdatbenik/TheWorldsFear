@@ -72,6 +72,14 @@ namespace TWF.EditorTools
             var merchant = new GameObject("Merchant").AddComponent<Merchant>();
             merchant.transform.SetParent(hubRoot.transform, false);
             merchant.transform.position = new Vector2(-3.5f, 0.5f);
+            var forge = new GameObject("Arcane Forge").AddComponent<Merchant>();
+            forge.transform.SetParent(hubRoot.transform, false);
+            forge.transform.position = new Vector2(7.5f, 0.5f);
+            forge.displayName = "Arcane Forge";
+            forge.subtitle = "Craft skills";
+            forge.buttonLabel = "Forge";
+            forge.panel = PanelKind.Craft;
+            forge.outfit = Outfit.Smith;
 
             var world = new GameObject("Infinite World").AddComponent<ChunkWorld>();
             world.hubRect = hub;

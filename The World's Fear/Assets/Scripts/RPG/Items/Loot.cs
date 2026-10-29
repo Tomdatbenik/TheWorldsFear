@@ -24,6 +24,10 @@ namespace TWF
             double potionChance = rank == MonsterRank.Normal ? 0.05 : 0.3;
             if (rng.NextDouble() < potionChance) Pickup.SpawnPotion(at + Random.insideUnitCircle * 0.8f);
 
+            // Skill parts for crafting.
+            double glyphChance = rank == MonsterRank.Normal ? 0.06 : rank == MonsterRank.Elite ? 0.25 : rank == MonsterRank.Rare ? 0.6 : 1.0;
+            if (rng.NextDouble() < glyphChance) Pickup.SpawnGlyph(at + Random.insideUnitCircle * 0.8f, SkillParts.Roll(rng, level, rank));
+
             int items = 0;
             switch (rank)
             {
@@ -47,6 +51,7 @@ namespace TWF
         public ItemInstance item;
         public int gold;
         public bool potion;
+        public PartRef glyph;
 
         float age;
         Transform visual;
@@ -62,6 +67,20 @@ namespace TWF
             var sr = GameAssets.CreateWorldSprite("coin", GameAssets.Circle, Billboard.Create(go.transform), Palette.Gold, SortOrder.Pickup, 0.35f);
             GameAssets.CreateWorldSprite("shine", GameAssets.SoftCircle, go.transform, new Color(1f, 0.9f, 0.4f, 0.35f), SortOrder.Pickup - 1, 0.8f);
             p.visual = sr.transform;
+        }
+
+        public static void SpawnGlyph(Vector2 at, PartRef part)
+        {
+            var go = new GameObject("Glyph " + part.FullName);
+            go.transform.position = at;
+            var p = go.AddComponent<Pickup>();
+            p.glyph = part;
+            Color c = part.kind == PartKind.Element ? SkillParts.ElementColor((ElementPart)part.id) : SkillParts.KindColor(part.kind);
+            var bb = Billboard.Create(go.transform);
+            var sr = GameAssets.CreateWorldSprite("glyph", IconFactory.Get(SkillParts.Icon(part.kind, part.id), c), bb, Color.white, SortOrder.Pickup + 1, 0.7f);
+            RenderAssets.MakeLit(sr, true, RenderAssets.Instance != null ? RenderAssets.Instance.litEmissive : null);
+            p.visual = sr.transform;
+            PointLights.Attach(go.transform, c, 2.5f, 1.2f, new Vector3(0, 0, -0.8f), true);
         }
 
         public static void SpawnPotion(Vector2 at)
@@ -154,6 +173,16 @@ namespace TWF
                         Destroy(gameObject);
                     }
                 }
+                return;
+            }
+
+            if (glyph != null && d < 1.1f)
+            {
+                Color c = glyph.kind == PartKind.Element ? SkillParts.ElementColor((ElementPart)glyph.id) : SkillParts.KindColor(glyph.kind);
+                GameUI.Instance?.Toast(Crafting.AddPart(glyph), c);
+                Sound.Play(Sfx.Pickup, transform.position, 0.5f);
+                Profile.Save();
+                Destroy(gameObject);
                 return;
             }
 
@@ -333,6 +362,7 @@ namespace TWF
 
         public static Sprite Get(ItemInstance item)
         {
+            if (item.slot == ItemSlot.Weapon) return Weapons.Sprite((WeaponType)item.weaponType);
             string shape;
             switch (item.slot)
             {

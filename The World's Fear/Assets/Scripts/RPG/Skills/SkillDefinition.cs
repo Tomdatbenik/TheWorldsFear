@@ -24,6 +24,8 @@ namespace TWF
         public string glyph = "?";
         public Color color = Color.white;
         public Sprite icon;
+        [Tooltip("IconFactory key; empty = picked from the name.")]
+        public string iconKey;
 
         public bool isUltimate;
         public Targeting targeting;

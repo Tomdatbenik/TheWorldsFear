@@ -16,11 +16,15 @@ namespace TWF
     public class SaveData
     {
         public int version = 1;
-        public string classId = "warrior";
+        public string classId = "adventurer";
         public int level = 1;
         public int xp;
         public int gold;
-        public int skillPoints;
+        public int skillPoints;          // passive points
+        public int attributePoints;
+        public int[] attributes = new int[5];
+        public List<PartRef> parts = new List<PartRef>();
+        public List<CraftedSkill> craftedSkills = new List<CraftedSkill>();
         public List<NodeRank> nodeRanks = new List<NodeRank>();
         public string[] equippedSkills = new string[4]; // node ids; slot 3 = ultimate
         public List<ItemInstance> inventory = new List<ItemInstance>();
@@ -61,7 +65,7 @@ namespace TWF
         {
             get
             {
-                if (data == null && !Load()) NewGame("warrior");
+                if (data == null && !Load()) NewGame(WeaponType.Sword);
                 return data;
             }
         }
@@ -81,20 +85,19 @@ namespace TWF
 
         public static HeroClassDefinition Class => GameDatabase.Instance.FindClass(Data.classId) ?? GameDatabase.Instance.classes[0];
 
-        public static void NewGame(string classId)
+        // A new hero: no classes, the starting weapon decides the basic attack.
+        public static void NewGame(WeaponType starterWeapon)
         {
             RunOver = false;
-            data = new SaveData { classId = classId };
+            data = new SaveData { classId = "adventurer" };
             ranks = null;
             exploredSet = null;
-            var cls = GameDatabase.Instance != null ? GameDatabase.Instance.FindClass(classId) : null;
-            if (cls != null && cls.skillTree != null && !string.IsNullOrEmpty(cls.starterNode))
-            {
-                data.nodeRanks.Add(new NodeRank { id = cls.starterNode, rank = 1 });
-                data.equippedSkills[0] = cls.starterNode;
-            }
             data.skillPoints = 1;
+            data.attributePoints = 3;
             data.waypoints.Add("village");
+            var weapon = ItemGenerator.Generate(1, Rarity.Common, ItemSlot.Weapon, new System.Random(), starterWeapon);
+            data.equipment.Add(weapon);
+            Crafting.GiveStarterKit(data);
         }
 
         public static bool Load()
@@ -104,16 +107,16 @@ namespace TWF
                 if (!File.Exists(SavePath)) return false;
                 data = JsonUtility.FromJson<SaveData>(File.ReadAllText(SavePath));
                 if (data == null) return false;
+                // Saves from the class-based version can't carry over.
+                if (data.classId != "adventurer")
+                {
+                    data = null;
+                    return false;
+                }
                 exploredSet = null;
                 if (data.equippedSkills == null || data.equippedSkills.Length != 4) data.equippedSkills = new string[4];
+                if (data.attributes == null || data.attributes.Length != Attributes.Count) data.attributes = new int[Attributes.Count];
                 ranks = null;
-                // Repair saves that are missing the class's free starter skill.
-                var cls = GameDatabase.Instance != null ? GameDatabase.Instance.FindClass(data.classId) : null;
-                if (cls != null && !string.IsNullOrEmpty(cls.starterNode) && RankOf(cls.starterNode) == 0)
-                {
-                    Ranks[cls.starterNode] = 1;
-                    if (Array.IndexOf(data.equippedSkills, cls.starterNode) < 0) data.equippedSkills[0] = cls.starterNode;
-                }
                 return true;
             }
             catch (Exception e)
@@ -121,6 +124,35 @@ namespace TWF
                 Debug.LogWarning("Could not load save: " + e.Message);
                 return false;
             }
+        }
+
+        // ---------- Attributes ----------
+
+        public static int Attr(Attribute a) => Data.attributes[(int)a];
+
+        public static bool AddAttribute(Attribute a)
+        {
+            if (Data.attributePoints <= 0) return false;
+            Data.attributePoints--;
+            Data.attributes[(int)a]++;
+            ItemsChanged?.Invoke(); // rebuilds hero stats
+            Changed?.Invoke();
+            return true;
+        }
+
+        public static int AttributeResetCost => 40 + Data.level * 20;
+
+        public static bool ResetAttributes()
+        {
+            if (Data.gold < AttributeResetCost) return false;
+            int spent = 0;
+            for (int i = 0; i < Attributes.Count; i++) { spent += Data.attributes[i]; Data.attributes[i] = 0; }
+            if (spent == 0) return false;
+            Data.gold -= AttributeResetCost;
+            Data.attributePoints += spent;
+            ItemsChanged?.Invoke();
+            NotifySkills();
+            return true;
         }
 
         public static bool RunOver { get; private set; }
@@ -177,6 +209,7 @@ namespace TWF
                 Data.xp -= XPToNext(Data.level);
                 Data.level++;
                 Data.skillPoints++;
+                Data.attributePoints += 3;
                 LeveledUp?.Invoke(Data.level);
             }
             if (Data.level >= MaxLevel) Data.xp = 0;
@@ -193,30 +226,13 @@ namespace TWF
 
         public static int RankOf(string nodeId) => nodeId != null && Ranks.TryGetValue(nodeId, out int r) ? r : 0;
 
+        // Passive board: spend passive points on nodes.
         public static bool RankUp(SkillTreeNode node)
         {
             var tree = Class.skillTree;
             if (tree.Check(node, Ranks, Data.level, Data.skillPoints) != SkillTreeDefinition.CanRankUp.Yes) return false;
             Ranks[node.id] = RankOf(node.id) + 1;
             Data.skillPoints--;
-
-            // Auto-equip a newly learned active into a free matching slot.
-            if (node.IsActive && RankOf(node.id) == 1 && Array.IndexOf(Data.equippedSkills, node.id) < 0)
-            {
-                if (node.active.isUltimate)
-                {
-                    if (string.IsNullOrEmpty(Data.equippedSkills[3])) Data.equippedSkills[3] = node.id;
-                }
-                else
-                {
-                    for (int i = 0; i < 3; i++)
-                        if (string.IsNullOrEmpty(Data.equippedSkills[i]))
-                        {
-                            Data.equippedSkills[i] = node.id;
-                            break;
-                        }
-                }
-            }
             NotifySkills();
             return true;
         }
@@ -224,15 +240,7 @@ namespace TWF
         public static void Respec()
         {
             int spent = SkillTreeDefinition.PointsSpent(Ranks);
-            var cls = Class;
             Ranks.Clear();
-            Data.equippedSkills = new string[4];
-            if (!string.IsNullOrEmpty(cls.starterNode))
-            {
-                Ranks[cls.starterNode] = 1;
-                Data.equippedSkills[0] = cls.starterNode;
-                spent -= 1;
-            }
             Data.skillPoints += Mathf.Max(0, spent);
             NotifySkills();
         }

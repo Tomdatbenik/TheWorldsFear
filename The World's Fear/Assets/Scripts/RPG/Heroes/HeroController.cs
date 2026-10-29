@@ -34,6 +34,11 @@ namespace TWF
         readonly List<Action> passiveCleanups = new List<Action>();
         readonly object levelSource = new object();
         readonly object itemSource = new object();
+        readonly object attributeSource = new object();
+        readonly object weaponSource = new object();
+        WeaponProfile weaponProfile;
+
+        public WeaponProfile Weapon => weaponProfile ?? Weapons.Get(Weapons.Equipped);
 
         Rigidbody2D body;
         CharacterAnimator animator;
@@ -97,13 +102,8 @@ namespace TWF
             }
             RenderAssets.MakeLit(spriteRenderer);
             if (weapon) RenderAssets.MakeLit(weapon.GetComponent<SpriteRenderer>());
-            var outfit = OutfitFor(Class.id);
-            if (animator) animator.SetOutfit(outfit);
-            if (weapon)
-            {
-                weapon.GetComponent<SpriteRenderer>().sprite = CharacterSpriteGenerator.Get(outfit).weapon;
-                weapon.gameObject.SetActive(false);
-            }
+            if (animator) animator.SetOutfit(Outfit.Adventurer);
+            if (weapon) weapon.gameObject.SetActive(false);
 
             RebuildStats();
             Combatant.ResetLife();
@@ -117,8 +117,6 @@ namespace TWF
             Combatant.Killed += OnKilled;
         }
 
-        public static Outfit OutfitFor(string classId) =>
-            classId == "ranger" ? Outfit.Ranger : classId == "mage" ? Outfit.Mage : Outfit.Warrior;
 
         void OnDestroy()
         {
@@ -144,6 +142,16 @@ namespace TWF
             foreach (var item in Profile.Data.equipment)
                 foreach (var m in item.Modifiers(itemSource)) stats.AddModifier(m);
 
+            stats.RemoveModifiersFrom(attributeSource);
+            for (int i = 0; i < Attributes.Count; i++)
+                foreach (var m in Attributes.Modifiers((Attribute)i, Profile.Data.attributes[i], attributeSource)) stats.AddModifier(m);
+
+            // The equipped weapon sets the attack rhythm and adds its crit bonus.
+            weaponProfile = Weapons.Get(Weapons.Equipped);
+            stats.RemoveModifiersFrom(weaponSource);
+            if (weaponProfile.critBonus > 0f) stats.AddModifier(new StatModifier(StatType.CritChance, ModKind.Flat, weaponProfile.critBonus, weaponSource));
+            if (weapon) weapon.GetComponent<SpriteRenderer>().sprite = Weapons.Sprite(weaponProfile.type);
+
             if (Combatant.MaxHP > 0 && !Combatant.IsDead) Combatant.SetHP(Combatant.MaxHP * hpFraction);
             ItemPowers.Refresh(this);
         }
@@ -156,21 +164,21 @@ namespace TWF
             passiveCleanups.Clear();
 
             var tree = Class.skillTree;
-            if (tree == null) return;
-            foreach (var node in tree.nodes)
-            {
-                int rank = Profile.RankOf(node.id);
-                if (rank > 0 && node.passive != null) passiveCleanups.Add(node.passive.Apply(Combatant, rank));
-            }
+            if (tree != null)
+                foreach (var node in tree.nodes)
+                {
+                    int rank = Profile.RankOf(node.id);
+                    if (rank > 0 && node.passive != null) passiveCleanups.Add(node.passive.Apply(Combatant, rank));
+                }
 
+            // Active skills are all crafted.
+            Crafting.ClearCache();
             for (int i = 0; i < SlotCount; i++)
             {
-                var node = tree.Find(Profile.Data.equippedSkills[i]);
-                int rank = node != null ? Profile.RankOf(node.id) : 0;
-                var skill = node != null && rank > 0 ? node.active : null;
+                var skill = Crafting.Get(Profile.Data.equippedSkills[i]);
                 if (slotSkills[i] != skill) cooldowns[i] = 0f;
                 slotSkills[i] = skill;
-                slotRanks[i] = rank;
+                slotRanks[i] = skill != null ? 1 : 0;
             }
         }
 
@@ -247,7 +255,7 @@ namespace TWF
             HandleKeyboardSkills();
             if (!MobaInput.Blocked && (Input.GetKeyDown(KeyCode.H) || Input.GetKeyDown(KeyCode.Alpha1))) UsePotion();
 
-            CurrentTarget = Combat.NearestHostile(Team.Player, transform.position, Class.attackRange + 0.2f);
+            CurrentTarget = Combat.NearestHostile(Team.Player, transform.position, Weapon.range + 0.2f);
             if (MobaInput.AttackHeld)
             {
                 var chase = CurrentTarget ?? Combat.NearestHostile(Team.Player, transform.position, acquireRange);
@@ -282,53 +290,75 @@ namespace TWF
 
         // ---------- Basic attack ----------
 
+        // The equipped weapon decides how the basic attack works.
         void TryBasicAttack(Combatant target)
         {
             if (attackTimer > 0f || castLock > 0f || Combatant.IsStunned) return;
-            attackTimer = 1f / Combatant.Stats.Get(StatType.AttackSpeed);
+            var w = Weapon;
+            attackTimer = 1f / (w.attacksPerSecond * Combatant.Stats.Get(StatType.AttackSpeed));
             Vector2 dir = ((Vector2)(target.transform.position - transform.position)).normalized;
             Facing = dir;
             attackAnimTimer = 0.2f;
 
-            if (Class.basicAttack == HeroClassDefinition.BasicAttackKind.Melee)
+            if (!w.ranged)
             {
-                VFX.Slash(transform.position, dir, Class.attackRange * 0.9f, Class.attackArc, new Color(1f, 1f, 1f, 0.7f));
-                foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, dir, Class.attackRange, Class.attackArc))
-                    Combat.Hit(Combatant, c, Class.attackDamageMult, default, true, 0.4f);
-                Swing(dir);
-                Sound.Play(Sfx.Swing, transform.position, 0.5f);
+                StartCoroutine(MeleeAttack(w, target, dir));
+                return;
             }
-            else
+
+            var spec = new ProjectileSpec
             {
-                var spec = new ProjectileSpec
-                {
-                    speed = Class.projectileSpeed, range = Class.attackRange + 2f, hitRadius = 0.3f,
-                    damageMult = Class.attackDamageMult, color = Class.projectileColor,
-                    size = Class.useArrowSprite ? 0.9f : 0.4f, pierce = 0,
-                    sprite = Class.useArrowSprite ? HeroVisuals.ArrowSprite : null, rotateSprite = true, homing = true,
-                };
-                spec.speed *= 1f + Combatant.Stats.Get(StatType.ProjectileSpeed);
-                Projectile.Fire(Combatant, (Vector2)transform.position + dir * 0.4f, dir, spec, target);
-                int extra = Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraProjectiles));
-                for (int k = 1; k <= extra; k++)
-                {
-                    float a = (k % 2 == 0 ? 1 : -1) * ((k + 1) / 2) * 14f * (1f + Combatant.Stats.Get(StatType.ProjectileSpread));
-                    var d2 = (Vector2)(Quaternion.Euler(0, 0, a) * dir);
-                    var s2 = spec;
-                    s2.homing = false;
-                    Projectile.Fire(Combatant, (Vector2)transform.position + d2 * 0.4f, d2, s2);
-                }
+                speed = w.projectileSpeed * (1f + Combatant.Stats.Get(StatType.ProjectileSpeed)), range = w.range + 2f, hitRadius = 0.3f,
+                damageMult = w.damageMult, color = w.color, size = w.projectileSize, pierce = w.pierce, explodeRadius = w.explodeRadius,
+                sprite = w.arrow ? HeroVisuals.ArrowSprite : null, rotateSprite = true, homing = w.homing, status = w.status,
+            };
+            Projectile.Fire(Combatant, (Vector2)transform.position + dir * 0.4f, dir, spec, w.homing ? target : null);
+            int extra = Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraProjectiles));
+            for (int k = 1; k <= extra; k++)
+            {
+                float a = (k % 2 == 0 ? 1 : -1) * ((k + 1) / 2) * 14f * (1f + Combatant.Stats.Get(StatType.ProjectileSpread));
+                var d2 = (Vector2)(Quaternion.Euler(0, 0, a) * dir);
+                var s2 = spec;
+                s2.homing = false;
+                Projectile.Fire(Combatant, (Vector2)transform.position + d2 * 0.4f, d2, s2);
             }
+            Swing(dir, 50f);
+            Sound.Play(Sfx.Swing, transform.position, 0.3f);
         }
 
-        void Swing(Vector2 dir)
+        IEnumerator MeleeAttack(WeaponProfile w, Combatant target, Vector2 dir)
         {
-            if (weapon == null || !Class.showSword) return;
-            if (swingRoutine != null) StopCoroutine(swingRoutine);
-            swingRoutine = StartCoroutine(SwingRoutine(dir));
+            for (int h = 0; h < w.hits; h++)
+            {
+                if (w.arc >= 360f)
+                {
+                    // Hammer: slam a circle at the target.
+                    Vector2 at = (Vector2)transform.position + dir * Mathf.Min(w.range * 0.7f, Vector2.Distance(transform.position, target.transform.position));
+                    VFX.Ring(at, new Color(1f, 0.9f, 0.7f), w.range * 0.9f, 0.3f);
+                    CameraFollow.Shake(0.08f);
+                    foreach (var c in Combat.HostilesInRadius(Team.Player, at, w.range * 0.9f))
+                        Combat.Hit(Combatant, c, w.damageMult, w.status, true, w.knockback);
+                }
+                else
+                {
+                    VFX.Slash(transform.position, dir, w.range * 0.9f, w.arc, new Color(1f, 1f, 1f, 0.7f));
+                    foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, dir, w.range, w.arc))
+                        Combat.Hit(Combatant, c, w.damageMult, w.status, true, w.knockback);
+                }
+                Swing(dir, w.arc >= 360f ? 90f : w.arc);
+                Sound.Play(Sfx.Swing, transform.position, 0.5f);
+                if (h < w.hits - 1) yield return new WaitForSeconds(0.12f);
+            }
         }
 
-        IEnumerator SwingRoutine(Vector2 dir)
+        void Swing(Vector2 dir, float arc)
+        {
+            if (weapon == null) return;
+            if (swingRoutine != null) StopCoroutine(swingRoutine);
+            swingRoutine = StartCoroutine(SwingRoutine(dir, arc));
+        }
+
+        IEnumerator SwingRoutine(Vector2 dir, float arc)
         {
             weapon.gameObject.SetActive(true);
             float baseAngle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
@@ -337,7 +367,7 @@ namespace TWF
             while (t < duration)
             {
                 t += Time.deltaTime;
-                float a = baseAngle + Mathf.Lerp(Class.attackArc / 2f, -Class.attackArc / 2f, t / duration);
+                float a = baseAngle + Mathf.Lerp(arc / 2f, -arc / 2f, t / duration);
                 Vector2 off = new Vector2(Mathf.Cos(a * Mathf.Deg2Rad), Mathf.Sin(a * Mathf.Deg2Rad));
                 // Swing around the hero at chest height, drawn facing the camera.
                 weapon.position = (Vector3)((Vector2)transform.position + off * 0.8f) + View.Up * 0.7f;
@@ -366,7 +396,14 @@ namespace TWF
         public float SkillRange(SkillDefinition skill) => skill == null ? 0f : skill.range * (1f + Combatant.Stats.Get(StatType.SkillRange));
 
         public bool CanCast(int slot) =>
-            slotSkills[slot] != null && cooldowns[slot] <= 0f && !Combatant.IsDead && !Combatant.IsStunned;
+            slotSkills[slot] != null && cooldowns[slot] <= 0f && !Combatant.IsDead && !Combatant.IsStunned && RequirementsMet(slot);
+
+        // A crafted skill whose attribute requirements are no longer met can't be used.
+        public bool RequirementsMet(int slot)
+        {
+            var c = Crafting.Find(Profile.Data.equippedSkills[slot]);
+            return c == null || SkillParts.RequirementsMet(c);
+        }
 
         // aim: offset from the hero, magnitude 0..1 of the skill's range. aimed=false = quick cast at the auto-target.
         public bool TryCast(int slot, Vector2 aim, bool aimed)
@@ -410,7 +447,7 @@ namespace TWF
             var ctx = new SkillContext
             {
                 caster = Combatant, runner = this, body = body, origin = pos, direction = dir.normalized,
-                point = point, rank = slotRanks[slot], power = skill.Power(slotRanks[slot]),
+                point = point, rank = slotRanks[slot], power = skill.Power(slotRanks[slot]) * (1f + Combatant.Stats.Get(StatType.SkillPower)),
             };
             skill.Cast(ctx);
 
@@ -419,7 +456,7 @@ namespace TWF
             castLock = skill.castLock;
             attackAnimTimer = 0.25f;
             if (skill.targeting == Targeting.Dash) Sound.Play(Sfx.Dash, pos, 0.6f);
-            else if (Class.basicAttack == HeroClassDefinition.BasicAttackKind.Melee) Swing(dir);
+            else Sound.Play(Sfx.Cast, pos, 0.4f);
             SkillCast?.Invoke(slot);
             return true;
         }

@@ -91,7 +91,7 @@ namespace TWF
             goldText.rectTransform.Place(new Vector2(0, 1), new Vector2(148, -104), new Vector2(260, 34));
 
             // Menu buttons, top right.
-            var menu = UIFactory.Rect("Menu", root).Place(new Vector2(1, 1), new Vector2(-24, -24), new Vector2(330, 100));
+            var menu = UIFactory.Rect("Menu", root).Place(new Vector2(1, 1), new Vector2(-24, -24), new Vector2(440, 100));
             var layout = menu.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 12;
             layout.childAlignment = TextAnchor.UpperRight;
@@ -102,6 +102,7 @@ namespace TWF
             var badgeBg = UIFactory.Circle("bg", skillPointBadge.transform, 44, new Color(0.85f, 0.2f, 0.2f));
             badgeBg.rectTransform.Stretch();
             badgeBg.transform.SetAsFirstSibling();
+            UIFactory.IconButton("CraftBtn", menu, "arcane", new Color(1f, 0.6f, 0.3f), () => { CraftPanel.AtForge = false; Panels.Toggle(PanelKind.Craft); });
             UIFactory.IconButton("BagBtn", menu, "bag", new Color(0.8f, 0.55f, 0.3f), () => Panels.Toggle(PanelKind.Inventory));
             UIFactory.IconButton("MapBtn", menu, "map", new Color(0.85f, 0.75f, 0.5f), () => Panels.Toggle(PanelKind.Map));
 
@@ -354,16 +355,17 @@ namespace TWF
                 bossBar.SetActive(boss != null && !boss.IsDead);
                 if (boss != null) bossFill.fillAmount = boss.HPFraction;
             }
-            if (hero != null && attackIcon.sprite == null)
-                attackIcon.sprite = IconFactory.Get(IconFactory.WeaponKey(hero.Class.id), new Color(0.92f, 0.9f, 0.88f));
+            // The attack button shows the equipped weapon.
+            if (hero != null) attackIcon.sprite = Weapons.Sprite(hero.Weapon.type);
             levelText.text = data.level.ToString();
             potionCount.text = data.potions.ToString();
             xpFill.fillAmount = Profile.XPFraction;
             xpText.text = data.level >= Profile.MaxLevel ? "MAX LEVEL" : $"{data.xp} / {Profile.XPToNext(data.level)} XP";
             goldText.text = $"{data.gold} gold";
             skillPointBadge.transform.parent.gameObject.SetActive(true);
-            skillPointBadge.gameObject.SetActive(data.skillPoints > 0);
-            skillPointBadge.text = data.skillPoints.ToString();
+            int points = data.skillPoints + data.attributePoints;
+            skillPointBadge.gameObject.SetActive(points > 0);
+            skillPointBadge.text = points.ToString();
         }
 
         void OnLevelUp(int level) => Toast($"Level {level}!  +1 skill point", Palette.Gold);
