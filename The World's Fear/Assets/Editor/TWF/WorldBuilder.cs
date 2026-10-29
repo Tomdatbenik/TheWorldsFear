@@ -57,24 +57,25 @@ namespace TWF.EditorTools
             game.AddComponent<WorldManager>();
             game.AddComponent<GameBootstrap>();
 
-            // The original village is the hub at the center of the infinite world.
-            RectInt hub = CopyVillage();
-            // Loaded after the village copy: closing that scene unloads unreferenced assets.
+            // Ashvale, the village at the center of the infinite world, is built at runtime by Village.
+            var hub = new RectInt(-45, -30, 90, 90);
             PrepareDecorSprites();
             PrepareGeneratedTiles();
             BuildWorldTilesAsset();
             var db = AssetDatabase.LoadAssetAtPath<GameDatabase>("Assets/Resources/TWF/GameDatabase.asset");
 
-            var hubZone = new Zone { def = db.FindZone("village"), rect = hub };
             var hubRoot = new GameObject("Hub").AddComponent<Grid>();
-            BuildHubBorder(hubZone, hubRoot.transform);
+            var village = new GameObject("Village").AddComponent<Village>();
+            village.transform.SetParent(hubRoot.transform, false);
+            village.area = hub;
             AddWaypoint(hubRoot.transform, "village", "Ashvale Village", 0, new Vector2(2f, 3f));
+            // The merchant stands at the market stall, the forge keeper at the smithy.
             var merchant = new GameObject("Merchant").AddComponent<Merchant>();
             merchant.transform.SetParent(hubRoot.transform, false);
-            merchant.transform.position = new Vector2(-3.5f, 0.5f);
+            merchant.transform.position = new Vector2(-4.5f, 8.3f);
             var forge = new GameObject("Arcane Forge").AddComponent<Merchant>();
             forge.transform.SetParent(hubRoot.transform, false);
-            forge.transform.position = new Vector2(7.5f, 0.5f);
+            forge.transform.position = new Vector2(8.2f, 8.1f);
             forge.displayName = "Arcane Forge";
             forge.subtitle = "Craft skills";
             forge.buttonLabel = "Forge";

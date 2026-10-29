@@ -145,7 +145,7 @@ namespace TWF
             {
                 var row = treeArea.GetChild(Mathf.Clamp(node.tier, 0, tiers - 1));
                 float x = 220 + node.column * 180;
-                var bg = UIFactory.Circle(node.id, row, 120, new Color(0.15f, 0.12f, 0.12f), true);
+                var bg = UIFactory.Circle(node.id, row, 100, new Color(0.15f, 0.12f, 0.12f), true);
                 bg.rectTransform.anchorMin = bg.rectTransform.anchorMax = new Vector2(0, 0.5f);
                 bg.rectTransform.anchoredPosition = new Vector2(x, 0);
                 // Actives are round, passives are diamonds.
@@ -162,8 +162,12 @@ namespace TWF
                 glyph.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, 14), new Vector2(120, 30));
                 var lockImg = UIFactory.Image("Lock", bg.transform, node.IsActive ? GameAssets.Circle : GameAssets.Diamond, new Color(0, 0, 0, 0.6f));
                 lockImg.rectTransform.Stretch();
-                var rank = UIFactory.Text("Rank", bg.transform, "", 22, Palette.Gold);
-                rank.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, -26), new Vector2(120, 28));
+                // Rank badge sits on the node's lower edge so it never runs into the next tier's row.
+                var badge = UIFactory.Image("RankBadge", bg.transform, GameAssets.Circle, new Color(0.07f, 0.06f, 0.06f, 0.92f));
+                badge.type = Image.Type.Simple;
+                badge.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, 0), new Vector2(76, 32));
+                var rank = UIFactory.Text("Rank", badge.transform, "", 24, Palette.Gold);
+                rank.rectTransform.Stretch();
                 if (node.active != null && node.active.isUltimate)
                 {
                     var ultTag = UIFactory.Text("Ult", bg.transform, "ULT", 18, new Color(1f, 0.5f, 0.3f));
