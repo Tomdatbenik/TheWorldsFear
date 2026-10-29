@@ -115,7 +115,7 @@ namespace TWF
         static Mood MoodFor(int index, bool boss)
         {
             if (boss)
-                return new Mood { sun = new Color(1f, 0.45f, 0.35f), sunIntensity = 0.68f, sunAngles = new Vector2(40, 250), ambient = new Color(0.21f, 0.12f, 0.15f), fog = new Color(0.12f, 0.04f, 0.05f), fogStart = 25, fogEnd = 60 };
+                return new Mood { sun = new Color(1f, 0.72f, 0.6f), sunIntensity = 1.0f, sunAngles = new Vector2(55, 240), ambient = new Color(0.42f, 0.32f, 0.36f), fog = new Color(0.18f, 0.08f, 0.09f), fogStart = 32, fogEnd = 80 };
             switch ((Biome)index)
             {
                 case Biome.Village:

@@ -30,6 +30,7 @@ namespace TWF
         float checkTimer;
         WorldTiles tiles;
         Mesh grassQuad;
+        ArtSet art;
 
         public IEnumerable<Vector2Int> LoadedChunks => chunks.Keys;
 
@@ -38,6 +39,7 @@ namespace TWF
             Instance = this;
             WorldGen.HubRect = hubRect;
             tiles = WorldTiles.Instance;
+            art = ArtSet.Instance;
             // Note: Unity's fake-null objects break '??', so check explicitly.
             if (GetComponent<Grid>() == null) gameObject.AddComponent<Grid>();
 
@@ -163,6 +165,7 @@ namespace TWF
                 {
                     case Cell.Path:
                         groundTiles[i] = PathTile(biome, h);
+                        detailTiles[i] = FringeTile(cells, x, y, biome);
                         break;
                     case Cell.Water:
                     case Cell.Lava:
@@ -194,8 +197,10 @@ namespace TWF
             plateau.SetTilesBlock(bounds, plateauTiles);
             blockers.SetTilesBlock(bounds, blockTiles);
 
-            MeshObject(chunk.root, "Cliffs", rockFaces, WorldTiles.MeshMaterial("cliff" + chunkBiome, WorldTiles.CliffTexture(chunkBiome)), true);
-            MeshObject(chunk.root, "Walls", brickFaces, WorldTiles.MeshMaterial("brick", WorldTiles.BrickTexture()), true);
+            var cliffTex = art != null && art.Cliff(chunkBiome) != null ? art.Cliff(chunkBiome) : WorldTiles.CliffTexture(chunkBiome);
+            var brickTex = art != null && art.brick != null ? art.brick : WorldTiles.BrickTexture();
+            MeshObject(chunk.root, "Cliffs", rockFaces, WorldTiles.MeshMaterial("cliff" + chunkBiome, cliffTex), true);
+            MeshObject(chunk.root, "Walls", brickFaces, WorldTiles.MeshMaterial("brick", brickTex), true);
             MeshObject(chunk.root, "Water", water, RenderAssets.Instance.water, false);
             MeshObject(chunk.root, "Lava", lava, RenderAssets.Instance.lava, false);
             if (lava.Count > 0) PointLights.Attach(chunk.root.transform, new Color(1f, 0.45f, 0.15f), 10f, 1.4f, (Vector3)LavaCenter(cells, x0, y0) + new Vector3(0, 0, -1.5f), true);
@@ -283,6 +288,7 @@ namespace TWF
 
         TileBase GroundTile(Biome b, uint h)
         {
+            if (art != null && art.Ground(b) != null && art.Ground(b).Length > 0) return Pick(art.Ground(b), h);
             switch (b)
             {
                 case Biome.Ruins: return Pick(tiles.ruinsFloor, h);
@@ -293,6 +299,7 @@ namespace TWF
 
         TileBase PathTile(Biome b, uint h)
         {
+            if (art != null && art.Path(b) != null && art.Path(b).Length > 0) return Pick(art.Path(b), h);
             switch (b)
             {
                 case Biome.Ruins: return tiles.ruinsPath;
@@ -301,8 +308,22 @@ namespace TWF
             }
         }
 
+        // Grass creeping onto the edges of paths, picked by which neighbours are grass.
+        TileBase FringeTile(Cell[,] cells, int x, int y, Biome b)
+        {
+            var set = art != null ? art.Fringe(b) : null;
+            if (set == null) return null;
+            int mask = 0;
+            if (At(cells, x, y + 1, Cell.Ground)) mask |= 1;
+            if (At(cells, x + 1, y, Cell.Ground)) mask |= 2;
+            if (At(cells, x, y - 1, Cell.Ground)) mask |= 4;
+            if (At(cells, x - 1, y, Cell.Ground)) mask |= 8;
+            return mask > 0 ? set[mask] : null;
+        }
+
         TileBase DetailTile(Biome b, uint h)
         {
+            if (art != null) return null; // the 64px ground already has its detail
             switch (b)
             {
                 case Biome.Ruins: return tiles.ruinsRubble;
@@ -329,7 +350,7 @@ namespace TWF
                     : biome == Biome.Marsh ? 0.025f : biome == Biome.Ruins ? 0.02f : 0.018f;
                 if (rng.NextDouble() > chance) continue;
                 var sprite = DecorSprite(biome, rng);
-                bool solid = !sprite.name.StartsWith("bush");
+                bool solid = !sprite.name.StartsWith("bush") && !sprite.name.StartsWith("fern");
                 Decor(chunk.root.transform, sprite, new Vector2(wx + 0.5f, wy + 0.3f), biome, solid, rng);
             }
         }
@@ -342,9 +363,23 @@ namespace TWF
             return false;
         }
 
+        static Sprite Any(Sprite[] arr, System.Random rng) => arr != null && arr.Length > 0 ? arr[rng.Next(arr.Length)] : null;
+
         Sprite DecorSprite(Biome b, System.Random rng)
         {
             double r = rng.NextDouble();
+            if (art != null)
+            {
+                Sprite s;
+                switch (b)
+                {
+                    case Biome.Forest: s = r < 0.35 ? Any(art.oak, rng) : r < 0.6 ? Any(art.pine, rng) : r < 0.75 ? Any(art.birch, rng) : r < 0.87 ? Any(art.bush, rng) : r < 0.95 ? Any(art.fern, rng) : Any(art.rockSmall, rng); break;
+                    case Biome.Marsh: s = r < 0.35 ? Any(art.willow, rng) : r < 0.6 ? Any(art.deadTree, rng) : r < 0.75 ? Any(art.mushroomPurple, rng) : r < 0.85 ? Any(art.rockMossy, rng) : Any(art.fern, rng); break;
+                    case Biome.Ruins: s = r < 0.25 ? Any(art.pillar, rng) : r < 0.55 ? Any(art.brokenPillar, rng) : r < 0.75 ? Any(art.rockLarge, rng) : r < 0.9 ? Any(art.deadTree, rng) : Any(art.rockSmall, rng); break;
+                    default: s = r < 0.45 ? Any(art.charredTree, rng) : r < 0.7 ? Any(art.rockLarge, rng) : r < 0.85 ? Any(art.rockSmall, rng) : Any(art.mushroomRed, rng); break;
+                }
+                if (s != null) return s;
+            }
             switch (b)
             {
                 case Biome.Forest: return r < 0.42 ? tiles.treeOrange : r < 0.84 ? tiles.treePink : r < 0.92 ? tiles.trunk : tiles.bushTall;
@@ -378,8 +413,8 @@ namespace TWF
             visual.AddComponent<Billboard>();
             var sr = visual.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
-            sr.color = DecorTint(biome, sprite);
-            bool sways = sprite.name.StartsWith("tree") || sprite.name.StartsWith("bush");
+            sr.color = art != null ? Color.white : DecorTint(biome, sprite);
+            bool sways = sprite.name.StartsWith("tree") || sprite.name.StartsWith("bush") || sprite.name.StartsWith("fern");
             RenderAssets.MakeLit(sr, true, sways ? RenderAssets.Instance.litWind : null);
             if (solid)
             {

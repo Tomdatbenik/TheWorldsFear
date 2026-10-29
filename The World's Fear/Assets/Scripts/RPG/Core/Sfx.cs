@@ -27,6 +27,128 @@ namespace TWF
         public static AudioClip Potion => Get("potion", 0.35f, (t, d) => Sine(t, 500f + Mathf.Sin(t * 60f) * 120f) * Env(t, d, 0.02f, 0.3f) * 0.4f);
         public static AudioClip Buy => Get("buy", 0.3f, (t, d) => Square(t, t < 0.1f ? 1200f : 1800f) * Env(t, d, 0.002f, 0.25f) * 0.25f);
 
+        // A boss roar: a growling low voice ring-modulated with clanging, bell-like partials so it sounds
+        // like a beast inside a suit of armor.
+        public static AudioClip MetalRoar
+        {
+            get
+            {
+                double ph = 0, ring = 0, clang1 = 0, clang2 = 0;
+                float lp = 0f;
+                const float dt = 1f / Rate;
+                return Get("metalroar", 2.6f, (t, d) =>
+                {
+                    float k = t / d;
+                    // Pitch swells up, then sags as the roar runs out of breath, with a rough growl.
+                    float f0 = (t < 0.35f ? Mathf.Lerp(62f, 96f, t / 0.35f) : Mathf.Lerp(96f, 52f, (t - 0.35f) / (d - 0.35f)))
+                               * (1f + Mathf.Sin(t * 2f * Mathf.PI * 6.5f) * 0.03f);
+                    ph += f0 * dt; ring += f0 * 3.07f * dt; clang1 += f0 * 5.43f * dt; clang2 += f0 * 8.91f * dt;
+                    float saw = (float)(ph - System.Math.Floor(ph)) * 2f - 1f;
+                    float growl = 0.75f + 0.25f * Mathf.Sin(t * 2f * Mathf.PI * 31f);
+                    float voice = saw * growl;
+                    // Metallic part: inharmonic partials multiplied by the voice (ring modulation).
+                    float metal = (Mathf.Sin((float)(ring % 1.0) * 2f * Mathf.PI) * 0.6f
+                                 + Mathf.Sin((float)(clang1 % 1.0) * 2f * Mathf.PI) * 0.35f
+                                 + Mathf.Sin((float)(clang2 % 1.0) * 2f * Mathf.PI) * 0.2f) * voice;
+                    lp += (Noise() - lp) * 0.08f;   // breathy rumble
+                    float x = voice * 0.55f + metal * (0.45f + 0.3f * k) + lp * 0.5f;
+                    return (float)System.Math.Tanh(x * 2.2f) * 0.6f * Env(t, d, 0.12f, 1.1f);
+                });
+            }
+        }
+
+        // Spider: a rising, rasping hiss with rapid mandible clicks.
+        public static AudioClip SpiderScreech
+        {
+            get
+            {
+                double ph = 0;
+                float hp = 0f, prev = 0f;
+                const float dt = 1f / Rate;
+                return Get("spiderscreech", 1.6f, (t, d) =>
+                {
+                    float k = t / d;
+                    // High-passed noise for the hiss.
+                    float n = Noise();
+                    hp = 0.85f * (hp + n - prev); prev = n;
+                    // A shrill, wavering screech tone.
+                    float f = Mathf.Lerp(900f, 1500f, Mathf.Sin(k * Mathf.PI)) * (1f + Mathf.Sin(t * 2f * Mathf.PI * 23f) * 0.06f);
+                    ph += f * dt;
+                    float tone = Mathf.Sin((float)(ph % 1.0) * 2f * Mathf.PI) * Mathf.Sin((float)(ph * 0.5 % 1.0) * 2f * Mathf.PI);
+                    // Clicks: short bursts 18 times a second.
+                    float click = Mathf.Repeat(t * 18f, 1f) < 0.08f ? Noise() * 0.9f : 0f;
+                    return (hp * 0.45f + tone * 0.3f + click * 0.4f) * Env(t, d, 0.05f, 0.6f);
+                });
+            }
+        }
+
+        // Skeleton: a hollow, ghostly wail over rattling bones.
+        public static AudioClip BoneWail
+        {
+            get
+            {
+                double ph = 0;
+                const float dt = 1f / Rate;
+                return Get("bonewail", 2.2f, (t, d) =>
+                {
+                    float k = t / d;
+                    float f = Mathf.Lerp(420f, 260f, k) * (1f + Mathf.Sin(t * 2f * Mathf.PI * 5f) * 0.035f);
+                    ph += f * dt;
+                    float p = (float)(ph % 1.0) * 2f * Mathf.PI;
+                    // Hollow: odd harmonics only, like blowing over a bottle.
+                    float wail = Mathf.Sin(p) * 0.6f + Mathf.Sin(p * 3f) * 0.18f + Mathf.Sin(p * 5f) * 0.07f;
+                    // Rattle: random dry clicks, denser at the start.
+                    float rattle = noise.NextDouble() < Mathf.Lerp(0.012f, 0.003f, k) ? 1f : 0f;
+                    return (wail * 0.5f * Mathf.Clamp01(t / 0.3f) + rattle * Noise() * 0.8f) * Env(t, d, 0.02f, 0.8f);
+                });
+            }
+        }
+
+        // Zombie: a slow, wet, guttural groan.
+        public static AudioClip ZombieGroan
+        {
+            get
+            {
+                double ph = 0;
+                float lp = 0f;
+                const float dt = 1f / Rate;
+                return Get("zombiegroan", 2.4f, (t, d) =>
+                {
+                    float k = t / d;
+                    float f = Mathf.Lerp(85f, 60f, k) * (1f + Mathf.Sin(t * 2f * Mathf.PI * 2.2f) * 0.06f);
+                    ph += f * dt;
+                    float saw = (float)(ph - System.Math.Floor(ph)) * 2f - 1f;
+                    // Vocal "uuh-oh" formant: a slow sweep of a lowpass on the saw.
+                    float cutoff = Mathf.Lerp(0.04f, 0.12f, 0.5f + 0.5f * Mathf.Sin(t * 2f * Mathf.PI * 0.7f));
+                    lp += (saw - lp) * cutoff;
+                    float gurgle = Mathf.Sin(t * 2f * Mathf.PI * 9f) > 0.6f ? Noise() * 0.25f : 0f;
+                    return (float)System.Math.Tanh((lp * 1.8f + gurgle) * 1.6f) * 0.6f * Env(t, d, 0.25f, 0.9f);
+                });
+            }
+        }
+
+        // Slime: a deep, bubbling gurgle that wobbles up and down.
+        public static AudioClip SlimeGurgle
+        {
+            get
+            {
+                double ph = 0;
+                const float dt = 1f / Rate;
+                return Get("slimegurgle", 1.9f, (t, d) =>
+                {
+                    // Pitch jumps between "bubbles" every ~90 ms, each one bending upward.
+                    int bubble = (int)(t / 0.09f);
+                    float local = t - bubble * 0.09f;
+                    float baseF = 70f + ((bubble * 7919) % 11) * 9f;
+                    float f = baseF * (1f + local * 9f);
+                    ph += f * dt;
+                    float wob = Mathf.Sin((float)(ph % 1.0) * 2f * Mathf.PI);
+                    float pop = local < 0.006f ? Noise() * 0.6f : 0f;
+                    return (wob * 0.7f * Mathf.Exp(-local * 18f) + pop + Mathf.Sin(t * 2f * Mathf.PI * 45f) * 0.25f) * Env(t, d, 0.04f, 0.6f);
+                });
+            }
+        }
+
         delegate float Synth(float t, float duration);
 
         static AudioClip Get(string key, float duration, Synth f)

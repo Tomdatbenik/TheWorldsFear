@@ -20,11 +20,11 @@ MonoBehaviour:
   maxRank: 3
   modifiersPerRank: []
   procs:
-  - rid: 3429192701680812541
+  - rid: 3429192701680812570
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812541
+    - rid: 3429192701680812570
       type: {class: ExecuteProc, ns: TWF, asm: Assembly-CSharp}
       data:
         bonusPerRank: 0.15

@@ -81,6 +81,18 @@ namespace TWF
             transform.position += (Vector3)(dir * step);
             travelled += step;
 
+            // Walls, pillars, rocks and trees stop projectiles.
+            if (Physics2D.OverlapPoint(transform.position, Walls.Mask) is Collider2D wall && !wall.isTrigger)
+            {
+                if (spec.explodeRadius > 0f) Explode();
+                else
+                {
+                    VFX.Burst(transform.position, spec.color, 4, 0.2f);
+                    Destroy(gameObject);
+                }
+                return;
+            }
+
             foreach (var c in Combat.HostilesInRadius(team, transform.position, spec.hitRadius))
             {
                 if (hit.Contains(c)) continue;
@@ -122,6 +134,19 @@ namespace TWF
                 spec.onHit?.Invoke(c);
             }
             Destroy(gameObject);
+        }
+    }
+
+    public static class Walls
+    {
+        static int mask = -1;
+        public static int Mask => mask >= 0 ? mask : (mask = LayerMask.GetMask("Walls"));
+
+        // True when a wall (pillar, cliff) stands between two points.
+        public static bool Blocked(Vector2 from, Vector2 to)
+        {
+            var hit = Physics2D.Linecast(from, to, Mask);
+            return hit.collider != null && !hit.collider.isTrigger;
         }
     }
 

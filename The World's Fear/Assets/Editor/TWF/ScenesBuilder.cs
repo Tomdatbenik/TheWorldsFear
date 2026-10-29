@@ -12,6 +12,7 @@ namespace TWF.EditorTools
         public static void BuildEverything()
         {
             RenderBuilder.Build();
+            ArtGen.Generate();
             ContentBuilder.BuildAll();
             WorldBuilder.Build();
             BuildTitle();
@@ -34,86 +35,23 @@ namespace TWF.EditorTools
             EditorSceneManager.SaveScene(scene, "Assets/Scenes/Title.unity");
         }
 
-        // Copies BossBattle and swaps the old hero, joysticks and HUD for the RPG systems.
+        // The 2.5D boss arena: everything is generated at runtime by BossArenaSetup.
         [MenuItem("TWF/Build Boss Arena")]
         public static void BuildBossArena()
         {
-            const string path = "Assets/Scenes/BossArena.unity";
-            AssetDatabase.DeleteAsset(path);
-            AssetDatabase.CopyAsset("Assets/Scenes/BossBattle.unity", path);
-            var scene = EditorSceneManager.OpenScene(path, OpenSceneMode.Single);
-
-            Vector3 spawn = Vector3.zero;
-            foreach (var root in scene.GetRootGameObjects())
-            {
-                switch (root.name)
-                {
-                    case "Hero":
-                        spawn = root.transform.position;
-                        Object.DestroyImmediate(root);
-                        break;
-                    case "Joysticks":
-                    case "UI":
-                    case "Scene Handler":
-                    case "Spider":
-                    case "EventSystem":
-                        Object.DestroyImmediate(root);
-                        break;
-                }
-            }
-
-            foreach (var vcam in Object.FindObjectsByType<Transform>())
-                if (vcam != null && vcam.name == "Virtual Cam") vcam.gameObject.SetActive(false);
-
-            // Old renderers used custom sorting layers; draw the arena under the RPG characters.
-            foreach (var r in Object.FindObjectsByType<Renderer>())
-            {
-                if (r.sortingLayerName == "Background" || r.sortingLayerName == "Vegitation" || r.sortingLayerName == "Decorating")
-                {
-                    int order = r.sortingLayerName == "Background" ? -95 : r.sortingLayerName == "Vegitation" ? -93 : -92;
-                    r.sortingLayerName = "Default";
-                    r.sortingOrder = order;
-                }
-                else if (r.sortingLayerName != "Default")
-                {
-                    r.sortingLayerName = "Default";
-                    r.sortingOrder = SortOrder.Units + 2;
-                }
-            }
-
-            // HD-2D: the arena and boss are lit and receive shadows.
-            var ra = AssetDatabase.LoadAssetAtPath<RenderAssets>("Assets/Resources/TWF/RenderAssets.asset");
-            foreach (var r in Object.FindObjectsByType<Renderer>())
-            {
-                if (ra == null || !(r is SpriteRenderer || r is UnityEngine.Tilemaps.TilemapRenderer)) continue;
-                bool background = r.transform.parent != null && r.transform.parent.name == "Background";
-                r.sharedMaterial = background ? ra.litGround : ra.litDetail;
-                r.receiveShadows = true;
-            }
-
-            var armor = GameObject.Find("Boss Armor");
-            if (armor != null)
-            {
-                armor.AddComponent<Combatant>();
-                armor.AddComponent<BossBridge>();
-            }
-
-            var spawnGo = new GameObject("HeroSpawn");
-            spawnGo.transform.position = new Vector3(spawn.x, spawn.y, 0f);
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var camGo = new GameObject("Main Camera");
+            camGo.tag = "MainCamera";
+            camGo.AddComponent<Camera>();
+            camGo.transform.position = new Vector3(0, -9, -10);
+            var follow = camGo.AddComponent<CameraFollow>();
+            follow.distance = 20f;
+            var spawn = new GameObject("HeroSpawn");
+            spawn.transform.position = new Vector3(0, -9, 0);
+            new GameObject("Arena").AddComponent<BossArenaSetup>();
             var game = new GameObject("Game").AddComponent<GameBootstrap>();
-            game.defaultSpawn = spawnGo.transform;
-
-            var cam = Camera.main;
-            if (cam != null)
-            {
-                cam.transform.SetParent(null, true);
-                cam.transform.position = new Vector3(spawn.x, spawn.y, -10f);
-                cam.orthographicSize = 9f;
-                var follow = cam.gameObject.AddComponent<CameraFollow>();
-                follow.orthographicSize = 9f;
-            }
-
-            EditorSceneManager.SaveScene(scene);
+            game.defaultSpawn = spawn.transform;
+            EditorSceneManager.SaveScene(scene, "Assets/Scenes/BossArena.unity");
         }
 
         public static void ConfigureProject()
@@ -123,8 +61,6 @@ namespace TWF.EditorTools
                 new EditorBuildSettingsScene("Assets/Scenes/Title.unity", true),
                 new EditorBuildSettingsScene("Assets/Scenes/World.unity", true),
                 new EditorBuildSettingsScene("Assets/Scenes/BossArena.unity", true),
-                new EditorBuildSettingsScene("Assets/Scenes/Victory.unity", true),
-                new EditorBuildSettingsScene("Assets/Scenes/GameOver.unity", true),
             };
             EditorBuildSettings.scenes = scenes.ToArray();
 

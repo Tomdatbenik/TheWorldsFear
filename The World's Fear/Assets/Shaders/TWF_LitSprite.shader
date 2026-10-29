@@ -13,12 +13,13 @@ Shader "TWF/LitSprite"
         _Ambient ("Ambient Boost", Range(0,2)) = 1
         _FlatGround ("Ground (no self shading)", Float) = 0
         _MeshNormals ("Use Mesh Normals (cliffs)", Float) = 0
+        [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
     }
 
     SubShader
     {
         Tags { "RenderPipeline"="UniversalPipeline" "Queue"="AlphaTest" "RenderType"="TransparentCutout" "IgnoreProjector"="True" }
-        Cull Off
+        Cull [_Cull]
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"

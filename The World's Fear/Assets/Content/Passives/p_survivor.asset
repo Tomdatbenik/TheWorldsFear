@@ -26,11 +26,11 @@ MonoBehaviour:
     kind: 0
     value: 1
   procs:
-  - rid: 3429192701680812535
+  - rid: 3429192701680812564
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812535
+    - rid: 3429192701680812564
       type: {class: HealOnKillProc, ns: TWF, asm: Assembly-CSharp}
       data:
         percentMaxHPPerRank: 0.015

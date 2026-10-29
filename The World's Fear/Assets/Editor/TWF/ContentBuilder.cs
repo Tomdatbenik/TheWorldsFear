@@ -32,6 +32,19 @@ namespace TWF.EditorTools
             db.zones = BuildZones();
             db.affixes = BuildAffixes();
             db.heroPrefab = BuildHeroPrefab();
+            db.bossHead = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Boss/Boss Head.png");
+            db.bossHeadSad = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Boss/Boss Head Sad.png");
+            db.bossArmor = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Boss/Boss Armor.png");
+            db.bossHand = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Boss/Boss Hand.png");
+            db.bossFist = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Boss/Fists/RightFist.png");
+            db.bossFistReady = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Boss/Fists/RightFistReadyUp.png");
+            db.bossHandShadow = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Boss/Hand Shadow.png");
+            db.bossFire = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/Particles/FireAttack/Fire Attack Boss.png");
+            var risk = new List<Sprite>();
+            foreach (var o in AssetDatabase.LoadAllAssetsAtPath("Assets/Sprites/Particles/RiskSpotAttack/RiskSpotAttack.png"))
+                if (o is Sprite sp) risk.Add(sp);
+            risk.Sort((a, b) => int.Parse(a.name.Substring(a.name.LastIndexOf('_') + 1)).CompareTo(int.Parse(b.name.Substring(b.name.LastIndexOf('_') + 1))));
+            db.bossRiskSpot = risk.ToArray();
             db.handmadeMonsters = new List<HandmadeMonster>
             {
                 new HandmadeMonster

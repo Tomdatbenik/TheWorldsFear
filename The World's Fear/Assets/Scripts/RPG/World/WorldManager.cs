@@ -15,6 +15,49 @@ namespace TWF
 
         // Set when walking into a boss gate; read by the boss arena.
         public static int PendingBossLevel = 25;
+        public static Biome PendingBossBiome = Biome.Ember;
+        public static string PendingGateKey = "";
+        public static BossKind PendingBossKind = BossKind.WorldsFear;
+
+        // The bosses in the order you face them. Gates hold them by distance from the village (the
+        // nearest gates hold the Slime, the furthest the World's Fear), and each lair stays sealed
+        // until the boss before it has been slain.
+        public static readonly BossKind[] BossOrder = { BossKind.Slime, BossKind.Spider, BossKind.Zombie, BossKind.Skeleton, BossKind.WorldsFear };
+        static readonly float[] bandEnds = { 400f, 560f, 760f, 1000f };
+
+        public static BossKind KindForGate(Vector2 p)
+        {
+            float d = p.magnitude;
+            for (int i = 0; i < bandEnds.Length; i++)
+                if (d < bandEnds[i]) return BossOrder[i];
+            return BossKind.WorldsFear;
+        }
+
+        public static bool Slain(BossKind k) => Profile.Data.guardiansSlain.Contains(k.ToString());
+
+        public static BossKind Previous(BossKind k)
+        {
+            int i = System.Array.IndexOf(BossOrder, k);
+            return i > 0 ? BossOrder[i - 1] : k;
+        }
+
+        public static bool IsUnlocked(BossKind k)
+        {
+            if (k == BossKind.WorldsFear) return GuardiansLeft().Count == 0;
+            int i = System.Array.IndexOf(BossOrder, k);
+            return i <= 0 || Slain(BossOrder[i - 1]);
+        }
+
+        // The World's Fear is the end boss: its lairs stay sealed until all four guardians are slain.
+        public static List<BossKind> GuardiansLeft()
+        {
+            var left = new List<BossKind>();
+            foreach (var g in BossTitan.Guardians)
+                if (!Profile.Data.guardiansSlain.Contains(g.ToString())) left.Add(g);
+            return left;
+        }
+
+        public static string GateKey(Vector2 p) => $"{Mathf.RoundToInt(p.x)}_{Mathf.RoundToInt(p.y)}";
 
         readonly List<Waypoint> waypoints = new List<Waypoint>();
         string currentRegion;
@@ -61,7 +104,10 @@ namespace TWF
 
         public Vector2 SpawnPoint()
         {
-            var p = WaypointPosition(Profile.Data.lastWaypoint) + Vector2.down * 1.5f;
+            var d = Profile.Data;
+            // Coming back from a boss: appear next to the gate you entered.
+            Vector2 p = d.hasReturn ? new Vector2(d.returnX, d.returnY) : WaypointPosition(d.lastWaypoint) + Vector2.down * 1.5f;
+            d.hasReturn = false;
             ChunkWorld.Instance?.LoadAround(p);
             return p;
         }
@@ -116,9 +162,16 @@ namespace TWF
             if (wp != null) Teleport(wp.id);
         }
 
-        public void EnterBoss(int level)
+        public void EnterBoss(int level, Vector2 gatePosition)
         {
             PendingBossLevel = level;
+            PendingBossBiome = WorldGen.BiomeAt(gatePosition);
+            if (PendingBossBiome == Biome.Village) PendingBossBiome = Biome.Ember;
+            PendingGateKey = GateKey(gatePosition);
+            PendingBossKind = KindForGate(gatePosition);
+            Profile.Data.hasReturn = true;
+            Profile.Data.returnX = gatePosition.x;
+            Profile.Data.returnY = gatePosition.y - 3f;
             Profile.Save();
             SceneManager.LoadScene(bossSceneName);
         }

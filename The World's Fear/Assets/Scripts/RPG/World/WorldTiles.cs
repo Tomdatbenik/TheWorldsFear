@@ -89,7 +89,7 @@ namespace TWF
         {
             string key = "grass" + b;
             if (textures.TryGetValue(key, out var t) && t) return t;
-            Color light = b == Biome.Marsh ? new Color(0.55f, 0.65f, 0.4f) : b == Biome.Ember ? new Color(0.45f, 0.3f, 0.2f) : new Color(0.85f, 0.68f, 0.3f);
+            Color light = b == Biome.Marsh ? new Color(0.45f, 0.55f, 0.32f) : b == Biome.Ember ? new Color(0.45f, 0.3f, 0.2f) : new Color(0.5f, 0.72f, 0.28f);
             Color dark = light * 0.6f;
             var rng = new System.Random(11 + (int)b);
             t = GameAssets.NewTexture(16, 16);

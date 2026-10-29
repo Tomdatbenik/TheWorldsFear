@@ -41,6 +41,10 @@ namespace TWF
         public float farthest;          // furthest distance from the village this run
         public string bestItem = "";
         public int bossesKilled;
+        public List<string> guardiansSlain = new List<string>();   // the four guardians unseal the World's Fear
+        public List<string> defeatedGates = new List<string>();
+        public bool hasReturn;          // come back to this spot after a boss fight
+        public float returnX, returnY;
     }
 
     // The player's persistent progress: level, XP, gold, skills, items.

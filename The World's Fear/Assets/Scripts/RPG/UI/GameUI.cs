@@ -304,6 +304,79 @@ namespace TWF
 
         public void SetControlsVisible(bool visible) => controls.gameObject.SetActive(visible);
 
+        RectTransform barTop, barBottom;
+        CanvasGroup titleGroup;
+        TextMeshProUGUI titleText;
+        GameObject hudStatus, hudMenu;
+
+        // Letterbox bars for cutscenes; hides the HUD and controls.
+        public void SetCinematic(bool on)
+        {
+            if (barTop == null)
+            {
+                barTop = UIFactory.Image("BarTop", root, GameAssets.Pixel, Color.black).rectTransform;
+                barTop.anchorMin = new Vector2(0, 1); barTop.anchorMax = new Vector2(1, 1); barTop.pivot = new Vector2(0.5f, 1);
+                barBottom = UIFactory.Image("BarBottom", root, GameAssets.Pixel, Color.black).rectTransform;
+                barBottom.anchorMin = new Vector2(0, 0); barBottom.anchorMax = new Vector2(1, 0); barBottom.pivot = new Vector2(0.5f, 0);
+                hudStatus = root.Find("Status")?.gameObject;
+                hudMenu = root.Find("Menu")?.gameObject;
+            }
+            StopCoroutine(nameof(AnimateBars));
+            StartCoroutine(AnimateBars(on ? 150f : 0f));
+            SetControlsVisible(!on);
+            if (hudStatus) hudStatus.SetActive(!on);
+            if (hudMenu) hudMenu.SetActive(!on);
+        }
+
+        IEnumerator AnimateBars(float target)
+        {
+            float start = barTop.sizeDelta.y;
+            for (float t = 0; t < 0.5f; t += Time.unscaledDeltaTime)
+            {
+                float h = Mathf.Lerp(start, target, t / 0.5f);
+                barTop.sizeDelta = barBottom.sizeDelta = new Vector2(0, h);
+                yield return null;
+            }
+            barTop.sizeDelta = barBottom.sizeDelta = new Vector2(0, target);
+        }
+
+        // Big boss name card during the entrance.
+        public void ShowBossTitle(string title, string subtitle)
+        {
+            if (titleText == null)
+            {
+                var rt = UIFactory.Rect("BossTitle", root).Place(new Vector2(0.5f, 0.5f), new Vector2(0, -180), new Vector2(1600, 220));
+                titleGroup = rt.gameObject.AddComponent<CanvasGroup>();
+                titleGroup.blocksRaycasts = false;
+                titleText = UIFactory.Text("Text", rt, "", 96, new Color(1f, 0.5f, 0.35f));
+                titleText.fontStyle = FontStyles.Bold | FontStyles.SmallCaps;
+                titleText.outlineWidth = 0.25f;
+                titleText.outlineColor = Color.black;
+                titleText.rectTransform.Stretch();
+            }
+            titleText.text = $"{title}\n<size=40%><color=#ddd>{subtitle}</color></size>";
+            StopCoroutine(nameof(FadeTitle));
+            StartCoroutine(FadeTitle());
+        }
+
+        IEnumerator FadeTitle()
+        {
+            for (float t = 0; t < 0.4f; t += Time.unscaledDeltaTime)
+            {
+                titleGroup.alpha = t / 0.4f;
+                titleText.transform.localScale = Vector3.one * Mathf.Lerp(1.3f, 1f, t / 0.4f);
+                yield return null;
+            }
+            titleGroup.alpha = 1f;
+            yield return new WaitForSecondsRealtime(2f);
+            for (float t = 0; t < 0.6f; t += Time.unscaledDeltaTime)
+            {
+                titleGroup.alpha = 1f - t / 0.6f;
+                yield return null;
+            }
+            titleGroup.alpha = 0f;
+        }
+
         public void ShowBossBar(Combatant c)
         {
             boss = c;

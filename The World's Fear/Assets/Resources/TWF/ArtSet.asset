@@ -1,0 +1,152 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1685301f1a4d42ca9c36e79f7631d7a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.ArtSet
+  forestGround:
+  - {fileID: 11400000, guid: ec7a7b84c125d4f7b861b9642bf415d1, type: 2}
+  - {fileID: 11400000, guid: 71cef840be5a64d3c88ea1505b5c5b49, type: 2}
+  - {fileID: 11400000, guid: 9afe2c20483034a51873a89ca86058ca, type: 2}
+  - {fileID: 11400000, guid: 48229049d8fa8461e86ce8f23b809593, type: 2}
+  - {fileID: 11400000, guid: e4577f8009d9f4ac4a592f1464245d2c, type: 2}
+  - {fileID: 11400000, guid: 6dca0c527873b45f4a71dbada03630af, type: 2}
+  marshGround:
+  - {fileID: 11400000, guid: 96204141b0cc04bea9d2ee832ed83300, type: 2}
+  - {fileID: 11400000, guid: 2544fab236611435399ff411dab92b07, type: 2}
+  - {fileID: 11400000, guid: e1c33ce37a2954b498f6680a2f934335, type: 2}
+  - {fileID: 11400000, guid: a392f9208f4ac4434b0313e11938f375, type: 2}
+  - {fileID: 11400000, guid: 31bc1fdac2c474708acda1bbac77437c, type: 2}
+  ruinsGround:
+  - {fileID: 11400000, guid: 3cf0ad7c6256b4c74adf1c33184598d6, type: 2}
+  - {fileID: 11400000, guid: 08dc85fcfebe74ba9a3f020594bf48dc, type: 2}
+  - {fileID: 11400000, guid: e4623b57bed3342e99af390ac37d025a, type: 2}
+  - {fileID: 11400000, guid: 4d23cf66a106e464e86010af2083e43c, type: 2}
+  - {fileID: 11400000, guid: fed08bafc431f4d119355bded7013548, type: 2}
+  emberGround:
+  - {fileID: 11400000, guid: 029033e01b45543efa30caa9d7d1074c, type: 2}
+  - {fileID: 11400000, guid: 28bd99cdfbf35441293e59fefa20ac58, type: 2}
+  - {fileID: 11400000, guid: f35501f17fb9a41ab8f3d3d1fa4f5a5e, type: 2}
+  - {fileID: 11400000, guid: ae6db753c0e304dd1a68e161842a8d06, type: 2}
+  - {fileID: 11400000, guid: 2a54d85f416174626a54a68d373c7b58, type: 2}
+  forestPath:
+  - {fileID: 11400000, guid: ac87790e970844829a645c8e2401fa58, type: 2}
+  - {fileID: 11400000, guid: 791039f30b90a41c3bf66cf871aa64e1, type: 2}
+  - {fileID: 11400000, guid: c429c08fab2904d63b2cb0dd2d2cd470, type: 2}
+  - {fileID: 11400000, guid: d739c9ce344524b209f79e0b7d9399e6, type: 2}
+  - {fileID: 11400000, guid: f31b123d378124600a73a2c7eeb877e7, type: 2}
+  marshPath:
+  - {fileID: 11400000, guid: 86b316a8e4d2b44e099861577783e418, type: 2}
+  - {fileID: 11400000, guid: ae415713fd6344a7795fc9d3831bda6b, type: 2}
+  - {fileID: 11400000, guid: b2ed7027fbbd34e47baca3371d23030c, type: 2}
+  - {fileID: 11400000, guid: f122ee484c8564ef19a7396ad9ba1070, type: 2}
+  ruinsPath:
+  - {fileID: 11400000, guid: 9bd677ec6f3dc426699c4146f3c644c9, type: 2}
+  - {fileID: 11400000, guid: 51d71fcc2e8a74ec3842b71804183c46, type: 2}
+  - {fileID: 11400000, guid: 5c7b282aef6bc4594a05db58a6e2cb60, type: 2}
+  - {fileID: 11400000, guid: 23b080bad2d6547f0b43c5cc3b9ccfca, type: 2}
+  emberPath:
+  - {fileID: 11400000, guid: 02bd2b60754124c5aa5bbf34dfb1a72d, type: 2}
+  - {fileID: 11400000, guid: 46bed2733820143388a57a793ff46094, type: 2}
+  - {fileID: 11400000, guid: f3f7388c0a938424b884b69b20510fa2, type: 2}
+  - {fileID: 11400000, guid: 03133a38bf83a49c285a59c66481bbef, type: 2}
+  forestFringe:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: fa9bb79e7961d469fa904883035b1c0d, type: 2}
+  - {fileID: 11400000, guid: 0f85c920652ad4a0ea9f41128ee84c32, type: 2}
+  - {fileID: 11400000, guid: 6075478652f814cee8ad754da2ecd533, type: 2}
+  - {fileID: 11400000, guid: ad969ae1e31ee4b0d97cd59e1843e86b, type: 2}
+  - {fileID: 11400000, guid: 9003873114d474a0590725d5757aaac2, type: 2}
+  - {fileID: 11400000, guid: 66c2ae1af88df4b6da1aa0edee75a4c2, type: 2}
+  - {fileID: 11400000, guid: 69b5c2cf6c6cc42038fcd71c179bd6b0, type: 2}
+  - {fileID: 11400000, guid: d592f624c954540348068d7ef07aac76, type: 2}
+  - {fileID: 11400000, guid: 680b83e9abffa47aaa88bb4fec5ae93b, type: 2}
+  - {fileID: 11400000, guid: ace6bec5152a447ddacd7277c3728803, type: 2}
+  - {fileID: 11400000, guid: 98eeae8a659fd443cafd031486164435, type: 2}
+  - {fileID: 11400000, guid: 3d3020e7625dc44fc8f6d578cc1ea773, type: 2}
+  - {fileID: 11400000, guid: a9e6b75b2497f4440b80eeee49b59a88, type: 2}
+  - {fileID: 11400000, guid: d8c79936f9a174ce0b8e80e45dd6adf2, type: 2}
+  - {fileID: 11400000, guid: 093e412239de94c9a85a3b6fee5a61a7, type: 2}
+  marshFringe:
+  - {fileID: 0}
+  - {fileID: 11400000, guid: 7161ed7e1aa14409d8dbb251b764c9ac, type: 2}
+  - {fileID: 11400000, guid: 9d48849ee22da4569b405b696ef367fd, type: 2}
+  - {fileID: 11400000, guid: daba984d1ab18432bb95207c9e0dee60, type: 2}
+  - {fileID: 11400000, guid: 2e6f6c2e1d39440c8a943b48568ae91f, type: 2}
+  - {fileID: 11400000, guid: df5e7993d49244404b8b5f378a7aceff, type: 2}
+  - {fileID: 11400000, guid: 0b4dfe0d2c9db4c99859b40a2c873650, type: 2}
+  - {fileID: 11400000, guid: 261a6ca9f6ff2430c8c313528bb42e75, type: 2}
+  - {fileID: 11400000, guid: 4c016bc621abf4d86998d06bc3cf76ab, type: 2}
+  - {fileID: 11400000, guid: b12a49645f1e04b7b8946ae00128c219, type: 2}
+  - {fileID: 11400000, guid: 17675f3c3431e4e3088ab6a6f5df72cf, type: 2}
+  - {fileID: 11400000, guid: e41988bdd22f7471289c40cd45f1f774, type: 2}
+  - {fileID: 11400000, guid: be11d05d030e2406b847f238cdcee843, type: 2}
+  - {fileID: 11400000, guid: 184560a3d32fb4f058b5aeafbd16f70e, type: 2}
+  - {fileID: 11400000, guid: 5bb330f1dde6b40cbadd55b4d194fb74, type: 2}
+  - {fileID: 11400000, guid: c40b9ed8f6c74490ea8c12b215e5ec4c, type: 2}
+  cliff:
+  - {fileID: 2800000, guid: f8aac0622e4c64485a8e0b1804e5c112, type: 3}
+  - {fileID: 2800000, guid: 0f99dc179ecf54c8587dcb58e431988b, type: 3}
+  - {fileID: 2800000, guid: c659bb40ffa014ca69cb8d5ecd8ec64f, type: 3}
+  - {fileID: 2800000, guid: e3eea3370b6a14b3c81af14ef19ac324, type: 3}
+  brick: {fileID: 2800000, guid: cd83ed617020e426698b07b228c37988, type: 3}
+  oak:
+  - {fileID: 21300000, guid: 8ca1af6aadb6d48bc945dfce8639017d, type: 3}
+  - {fileID: 21300000, guid: 536c15c123f8a4673a309946b9c226a4, type: 3}
+  - {fileID: 21300000, guid: dbea552d8e10f438199e08de985bb720, type: 3}
+  birch:
+  - {fileID: 21300000, guid: 40c4f519eeb864cb9b5b16f9a26eed3d, type: 3}
+  - {fileID: 21300000, guid: 20d15885ba6f34a90a6b6f8a818ab1e1, type: 3}
+  pine:
+  - {fileID: 21300000, guid: c83db1369ac4b4d14916e0c4f3ecf812, type: 3}
+  - {fileID: 21300000, guid: b63fb21309b644969ada447f6ce24cb8, type: 3}
+  - {fileID: 21300000, guid: ef7316ffec3b14309bf7c324af912856, type: 3}
+  willow:
+  - {fileID: 21300000, guid: b2ef5fe4d7a344dd48d27ea71a85011a, type: 3}
+  - {fileID: 21300000, guid: ceab9cda9448549f79cbbb3f09b71eb1, type: 3}
+  deadTree:
+  - {fileID: 21300000, guid: a158fba66a7134dcab1ea00cc89436e0, type: 3}
+  - {fileID: 21300000, guid: 2e603d20f44bb49e3b589ea79cffe98d, type: 3}
+  - {fileID: 21300000, guid: ad4f06c6723ad4bc7a84cc947283236b, type: 3}
+  charredTree:
+  - {fileID: 21300000, guid: 8cfad40ada38c4afb8cda517ce250253, type: 3}
+  - {fileID: 21300000, guid: 4e8d342de225546a1b5a5e4c7362ec04, type: 3}
+  - {fileID: 21300000, guid: 17963e816ff764cd4974f9302d243e1d, type: 3}
+  mushroomRed:
+  - {fileID: 21300000, guid: 6c043967011354a3e92a610ae77e7a03, type: 3}
+  - {fileID: 21300000, guid: 7a1a866ccd1a24d88a1d8e74aab9b5e0, type: 3}
+  mushroomPurple:
+  - {fileID: 21300000, guid: 0fd7ccaff963842a584f2269b9ca4fbe, type: 3}
+  - {fileID: 21300000, guid: a0aae21bd2c9146cab175ad135d76e5c, type: 3}
+  rockSmall:
+  - {fileID: 21300000, guid: 07b5ff98162c247f9827e985cb9c27ac, type: 3}
+  - {fileID: 21300000, guid: ba85f138f23e64cadbdc431cb35acf70, type: 3}
+  - {fileID: 21300000, guid: 69a61e44ffecf4fa5a7f253d06b55d29, type: 3}
+  rockLarge:
+  - {fileID: 21300000, guid: d9b8f5158edd14f86a75d28d4c8ec026, type: 3}
+  - {fileID: 21300000, guid: d8ec59ec543ba45ba8b399e71bea4287, type: 3}
+  - {fileID: 21300000, guid: 3aa152ae4bf38471585df511e9fb514b, type: 3}
+  rockMossy:
+  - {fileID: 21300000, guid: bd49982c500ce41e4a40161d2afb8239, type: 3}
+  - {fileID: 21300000, guid: 12a3bb5e5cf3a4ed496d308c0bd81845, type: 3}
+  bush:
+  - {fileID: 21300000, guid: caab31613e5404effbc6609d33118173, type: 3}
+  - {fileID: 21300000, guid: 3b60b7c0ca1eb4363b4474e63220ffe0, type: 3}
+  - {fileID: 21300000, guid: 425a32bf944da420a9863852052e24c0, type: 3}
+  fern:
+  - {fileID: 21300000, guid: 163b85062307a4803932d9077341d30a, type: 3}
+  - {fileID: 21300000, guid: a395278991e8e4dd2906bb8947df500a, type: 3}
+  pillar:
+  - {fileID: 21300000, guid: 005a0e5337ca7459a85548db91d43c46, type: 3}
+  - {fileID: 21300000, guid: 7295f09a2fa184ac8ad1fe21c6b93f23, type: 3}
+  brokenPillar:
+  - {fileID: 21300000, guid: 7e35ce4b514824a63bc248e9fed0833d, type: 3}
+  - {fileID: 21300000, guid: e892b8af50fb34bdb8bf461e8b37086d, type: 3}

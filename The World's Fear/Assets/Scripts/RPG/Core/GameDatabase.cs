@@ -27,6 +27,10 @@ namespace TWF
 
         public GameObject heroPrefab;
 
+        [Header("Original boss art")]
+        public Sprite bossHead, bossHeadSad, bossArmor, bossHand, bossFist, bossFistReady, bossHandShadow, bossFire;
+        public Sprite[] bossRiskSpot;
+
         public HeroClassDefinition FindClass(string id) => classes.Find(c => c != null && c.id == id);
         public ZoneDefinition FindZone(string id) => zones.Find(z => z != null && z.id == id);
     }

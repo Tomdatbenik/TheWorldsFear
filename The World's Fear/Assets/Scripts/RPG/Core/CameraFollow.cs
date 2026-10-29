@@ -19,6 +19,7 @@ namespace TWF
         public float fieldOfView = 38f;
         public float rotateSpeed = 120f;   // degrees per second for keys / buttons
         public Vector2 lookAhead = new Vector2(0.8f, 0.6f);
+        [System.NonSerialized] public float focusHeight;   // lift the focus off the ground (cutscene close-ups)
 
         float yaw, targetYaw;
         Vector3 velocity;
@@ -160,7 +161,7 @@ namespace TWF
             Vector2 ahead = Vector2.zero;
             if (HeroController.Instance != null && target == HeroController.Instance.transform)
                 ahead = Vector2.Scale(MobaInput.Move, lookAhead);
-            Vector3 goal = new Vector3(target.position.x + ahead.x, target.position.y + ahead.y, 0f);
+            Vector3 goal = new Vector3(target.position.x + ahead.x, target.position.y + ahead.y, -focusHeight);
             focus = Vector3.SmoothDamp(focus, goal, ref velocity, smoothTime);
             shake = Mathf.MoveTowards(shake, 0f, Time.unscaledDeltaTime * 1.5f);
             Apply(shake);

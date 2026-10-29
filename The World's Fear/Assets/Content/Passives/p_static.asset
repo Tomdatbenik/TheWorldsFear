@@ -20,11 +20,11 @@ MonoBehaviour:
   maxRank: 3
   modifiersPerRank: []
   procs:
-  - rid: 3429192701680812537
+  - rid: 3429192701680812566
   references:
     version: 2
     RefIds:
-    - rid: 3429192701680812537
+    - rid: 3429192701680812566
       type: {class: StatusOnHitProc, ns: TWF, asm: Assembly-CSharp}
       data:
         chancePerRank: 0.04
