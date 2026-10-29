@@ -1159,6 +1159,9 @@ namespace TWF
             dead = true;
             StopAllCoroutines();
             visual.localPosition = Vector3.zero;
+            // The body no longer blocks anything, so the loot it drops can be picked up.
+            foreach (var col in GetComponentsInChildren<Collider2D>()) col.enabled = false;
+            self.Targetable = false;
             StartCoroutine(Victory());
         }
 

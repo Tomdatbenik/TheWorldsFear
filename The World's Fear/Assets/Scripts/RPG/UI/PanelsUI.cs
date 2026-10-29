@@ -587,6 +587,9 @@ namespace TWF
         public override void Refresh()
         {
             foreach (Transform c in mapArea) if (c != mapImage.transform) Destroy(c.gameObject);
+            // Markers live on the map image itself; clear them too, or every refresh stacks another set.
+            foreach (Transform c in mapImage.transform) Destroy(c.gameObject);
+            heroDot = null;
             foreach (Transform c in list) Destroy(c.gameObject);
             var wm = WorldManager.Instance;
             var hero = HeroController.Instance;
