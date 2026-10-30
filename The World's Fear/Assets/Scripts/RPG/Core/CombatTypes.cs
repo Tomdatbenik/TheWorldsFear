@@ -44,6 +44,7 @@ namespace TWF
         public bool silent;       // no floating text
         public Vector2 knockback;
         public StatusSpec status;
+        public int elements;      // Elements.Mask of the attack (0 = physical)
     }
 
     public static class Combat
@@ -133,11 +134,12 @@ namespace TWF
             return best;
         }
 
-        public static void Hit(Combatant attacker, Combatant target, float multiplier, StatusSpec status = default, bool basicAttack = false, float knockback = 0f, float baseDamage = -1f)
+        public static void Hit(Combatant attacker, Combatant target, float multiplier, StatusSpec status = default, bool basicAttack = false, float knockback = 0f, float baseDamage = -1f, int elements = 0)
         {
             if (target == null || target.IsDead) return;
             var info = Roll(attacker, multiplier, basicAttack, baseDamage);
             info.status = status;
+            info.elements = elements;
             if (knockback > 0f && attacker != null && target != null)
                 info.knockback = ((Vector2)(target.transform.position - attacker.transform.position)).normalized * knockback;
             target.TakeDamage(info);

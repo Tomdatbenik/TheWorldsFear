@@ -14,7 +14,7 @@ namespace TWF
         RectTransform elementRow, deliveryRow, modRow, craftedList, stockRow;
         TextMeshProUGUI previewTitle, previewBody, stockTitle;
         Button craftButton;
-        ElementPart? element;
+        readonly List<ElementPart> elements = new List<ElementPart>();   // first = main element
         DeliveryPart? delivery;
         readonly List<ModPart> mods = new List<ModPart>();
         string focusText = "";
@@ -109,9 +109,10 @@ namespace TWF
             foreach (Transform c in craftedList) Destroy(c.gameObject);
             foreach (Transform c in stockRow) Destroy(c.gameObject);
 
-            for (int i = 0; i < SkillParts.Count(PartKind.Element); i++) PartButton(elementRow, PartKind.Element, i, element.HasValue && (int)element.Value == i);
-            for (int i = 0; i < SkillParts.Count(PartKind.Delivery); i++) PartButton(deliveryRow, PartKind.Delivery, i, delivery.HasValue && (int)delivery.Value == i);
-            for (int i = 0; i < SkillParts.Count(PartKind.Modifier); i++) PartButton(modRow, PartKind.Modifier, i, mods.Contains((ModPart)i));
+            // Only parts you've found are shown; the rest are left for you to discover.
+            Row(elementRow, PartKind.Element, i => elements.Contains((ElementPart)i));
+            Row(deliveryRow, PartKind.Delivery, i => delivery.HasValue && (int)delivery.Value == i);
+            Row(modRow, PartKind.Modifier, i => mods.Contains((ModPart)i));
 
             foreach (var c in Profile.Data.craftedSkills) CraftedRow(c);
 
@@ -120,6 +121,24 @@ namespace TWF
             craftButton.gameObject.SetActive(AtForge);
             if (AtForge) foreach (var part in ForgeStock.Items) StockButton(part);
             UpdatePreview();
+        }
+
+        void Row(RectTransform row, PartKind kind, System.Func<int, bool> isSelected)
+        {
+            int hidden = 0;
+            for (int i = 0; i < SkillParts.Count(kind); i++)
+            {
+                bool weaponArt = kind == PartKind.Delivery && i >= SkillParts.FirstWeaponArt;
+                if (weaponArt && !BossUnlocks.WeaponArts) continue;   // not even a hint until unlocked
+                if (Crafting.Owned(kind, i) == null) { hidden++; continue; }
+                PartButton(row, kind, i, isSelected(i));
+            }
+            if (hidden > 0)
+            {
+                var q = UIFactory.Image("Undiscovered", row, GameAssets.RoundedRect, new Color(0.06f, 0.06f, 0.07f), false);
+                var t = UIFactory.Text("Count", q.transform, $"?\n<size=60%>{hidden} more</size>", 26, Palette.MutedText);
+                t.rectTransform.Stretch();
+            }
         }
 
         void PartButton(RectTransform row, PartKind kind, int id, bool selected)
@@ -148,7 +167,12 @@ namespace TWF
                 if (owned == null) { UpdatePreview(); return; }
                 switch (kind)
                 {
-                    case PartKind.Element: element = (ElementPart)id; break;
+                    case PartKind.Element:
+                        var e = (ElementPart)id;
+                        if (elements.Contains(e)) elements.Remove(e);
+                        else if (BossUnlocks.MaxElements <= 1) { elements.Clear(); elements.Add(e); }
+                        else if (elements.Count < BossUnlocks.MaxElements) elements.Add(e);
+                        break;
                     case PartKind.Delivery: delivery = (DeliveryPart)id; break;
                     default:
                         var m = (ModPart)id;
@@ -164,35 +188,45 @@ namespace TWF
         {
             var sb = new System.Text.StringBuilder();
             if (!string.IsNullOrEmpty(focusText)) sb.Append(focusText).Append("\n\n");
-            if (!element.HasValue || !delivery.HasValue)
+            if (elements.Count == 0 || !delivery.HasValue)
             {
                 previewTitle.text = "New skill";
                 previewTitle.color = Palette.Text;
-                sb.Append("<color=#aaa>Pick an element, then how it's delivered, then up to ")
+                sb.Append("<color=#aaa>Pick ").Append(BossUnlocks.MaxElements > 1 ? $"up to {BossUnlocks.MaxElements} elements" : "an element")
+                  .Append(", then how it's delivered, then up to ")
                   .Append(SkillParts.MaxMods(Profile.Data.level)).Append(" modifiers.\n\nParts drop from monsters (better ones far from the village) and some are sold here.")
+                  .Append("\n\nDefeating bosses unlocks more: extra elements, weapon arts and modifier slots.")
                   .Append(AtForge ? "" : "\n\nVisit the Arcane Forge in the village to craft.").Append("</color>");
                 previewBody.text = sb.ToString();
                 craftButton.interactable = false;
                 return;
             }
 
-            var recipe = new CraftedSkill { uid = "preview", element = element.Value, delivery = delivery.Value, mods = new List<ModPart>(mods) };
-            recipe.elementTier = Crafting.Owned(PartKind.Element, (int)element.Value).tier;
+            var recipe = new CraftedSkill { uid = "preview", element = elements[0], delivery = delivery.Value, mods = new List<ModPart>(mods) };
+            recipe.elementTier = Crafting.Owned(PartKind.Element, (int)elements[0]).tier;
+            for (int i = 1; i < elements.Count; i++)
+            {
+                recipe.extraElements.Add(elements[i]);
+                recipe.extraElementTiers.Add(Crafting.Owned(PartKind.Element, (int)elements[i]).tier);
+            }
             recipe.deliveryTier = Crafting.Owned(PartKind.Delivery, (int)delivery.Value).tier;
             foreach (var m in mods) recipe.modTiers.Add(Crafting.Owned(PartKind.Modifier, (int)m).tier);
-            recipe.name = SkillParts.NameFor(recipe.element, recipe.delivery, recipe.mods);
+            recipe.name = SkillParts.NameFor(elements, recipe.delivery, recipe.mods);
             var skill = SkillComposer.Build(recipe);
             previewTitle.text = recipe.name;
             previewTitle.color = skill.color;
             sb.Append(skill.Describe(1));
             if (recipe.mods.Count >= 3) sb.Append("\n<color=#ffb060>Ultimate: can go on the U button.</color>");
             sb.Append("\n\n");
-            sb.Append($"{recipe.element}: {SkillParts.RequirementText(PartKind.Element, (int)recipe.element, recipe.elementTier)}\n");
+            for (int i = 0; i < elements.Count; i++)
+                sb.Append($"{elements[i]}: {SkillParts.RequirementText(PartKind.Element, (int)elements[i], Crafting.Owned(PartKind.Element, (int)elements[i]).tier)}\n");
+            var art = SkillParts.WeaponOf(recipe.delivery);
+            if (art.HasValue) sb.Append($"<color=#fc8>Weapon art: only castable with a {Weapons.Name(art.Value)} in hand.</color>\n");
             sb.Append($"{recipe.delivery}: {SkillParts.RequirementText(PartKind.Delivery, (int)recipe.delivery, recipe.deliveryTier)}\n");
             for (int i = 0; i < recipe.mods.Count; i++)
                 sb.Append($"{recipe.mods[i]}: {SkillParts.RequirementText(PartKind.Modifier, (int)recipe.mods[i], recipe.modTiers[i])}\n");
-            int cost = SkillParts.CraftCost(Profile.Data.level, mods.Count);
-            bool ok = Crafting.CanCraft(recipe.element, recipe.delivery, mods, out var why);
+            int cost = SkillParts.CraftCost(Profile.Data.level, mods.Count + elements.Count - 1);
+            bool ok = Crafting.CanCraft(elements, recipe.delivery, mods, out var why);
             if (AtForge) sb.Append($"\n<color=#ffd040>Cost: {cost} gold</color> <size=80%>(you have {Profile.Data.gold})</size>");
             if (!ok && AtForge) sb.Append($"\n<color=#f77>{why}</color>");
             previewBody.text = sb.ToString();
@@ -202,8 +236,8 @@ namespace TWF
 
         void OnCraft()
         {
-            if (!element.HasValue || !delivery.HasValue) return;
-            var c = Crafting.Craft(element.Value, delivery.Value, mods);
+            if (elements.Count == 0 || !delivery.HasValue) return;
+            var c = Crafting.Craft(elements, delivery.Value, mods);
             if (c != null)
             {
                 Sound.Play(Sfx.LevelUp, Vector3.zero, 0.4f);

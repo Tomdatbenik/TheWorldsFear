@@ -73,6 +73,7 @@ namespace TWF
         public List<RolledAffix> affixes = new List<RolledAffix>();
         public string legendaryPower;
         public int weaponType; // WeaponType, for weapons
+        public int element = (int)ElementPart.Physical;   // weapons: the element of basic attacks
         public int reforgedAffix = -1;   // once one affix is reforged, only that one can be reforged again
         public int reforgeCount;
 

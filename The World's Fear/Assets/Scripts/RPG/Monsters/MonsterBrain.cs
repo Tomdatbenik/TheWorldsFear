@@ -83,6 +83,7 @@ namespace TWF
             c.radius = radius + 0.15f;
             c.height = species.look.pixelSize / 16f * scale * 0.75f;
             c.displayName = species.name;
+            c.element = species.element;
 
             float hp = MonsterGenerator.BaseHP(level) * species.hpMult;
             float dmg = MonsterGenerator.BaseDamage(level) * species.damageMult;
@@ -181,6 +182,7 @@ namespace TWF
         void OnDied(Combatant killer)
         {
             body.linearVelocity = Vector2.zero;
+            if (killer != null && killer.team == Team.Player) Codex.RecordKill(Species, Combatant.level);
             Sound.Play(Sfx.MonsterDeath, transform.position, 0.35f);
             VFX.Burst(transform.position + View.Up * 0.5f, Species.look.primary, 14, 0.8f);
             if (Has(MonsterAffix.Molten))
@@ -356,7 +358,7 @@ namespace TWF
             {
                 Vector2 dir = (hero.transform.position - transform.position).normalized;
                 StartCoroutine(Lunge(dir));
-                Combat.Hit(Combatant, hero, 1f, Species.onHitStatus);
+                Combat.Hit(Combatant, hero, 1f, Species.onHitStatus, false, 0f, -1f, Elements.Mask(Species.element));
             }
             busy = false;
         }
@@ -398,7 +400,7 @@ namespace TWF
                 if (!hit && hero != null && Vector2.Distance(transform.position, hero.transform.position) < Combatant.radius + hero.radius + 0.3f)
                 {
                     hit = true;
-                    Combat.Hit(Combatant, hero, 1.6f, StatusSpec.Stun(0.6f), false, 2f);
+                    Combat.Hit(Combatant, hero, 1.6f, StatusSpec.Stun(0.6f), false, 2f, -1f, Elements.Mask(Species.element));
                 }
                 yield return new WaitForFixedUpdate();
             }

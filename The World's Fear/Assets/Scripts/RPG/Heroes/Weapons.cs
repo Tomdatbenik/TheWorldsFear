@@ -70,6 +70,16 @@ namespace TWF
             }
         }
 
+        // The element of the weapon in your hands (physical when it has none).
+        public static ElementPart EquippedElement
+        {
+            get
+            {
+                var w = Profile.Equipped(ItemSlot.Weapon);
+                return w != null ? (ElementPart)w.element : ElementPart.Physical;
+            }
+        }
+
         public static string Name(WeaponType t) => t == WeaponType.Daggers ? "Daggers" : t.ToString();
 
         // ---------- Generated weapon art (16x16, used in hand, as loot and as icons) ----------

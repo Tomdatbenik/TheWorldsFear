@@ -86,6 +86,12 @@ namespace TWF
                 case ItemSlot.Weapon:
                     item.implicitStat = StatType.Damage;
                     item.implicitValue = Mathf.Round((3f + itemLevel * 1.8f) * jitter * Weapons.Get((WeaponType)item.weaponType).implicitDamage);
+                    // Magic and better weapons may carry an element.
+                    if (rarity >= Rarity.Magic && rng.NextDouble() < 0.5)
+                    {
+                        int e = rng.Next(7);
+                        item.element = e >= (int)ElementPart.Physical ? e + 1 : e;   // any element but physical
+                    }
                     break;
                 case ItemSlot.Chest: item.implicitStat = StatType.Armor; item.implicitValue = Mathf.Round((3f + itemLevel * 1.9f) * jitter); break;
                 case ItemSlot.Helm: item.implicitStat = StatType.Armor; item.implicitValue = Mathf.Round((2f + itemLevel * 1.2f) * jitter); break;
@@ -161,6 +167,8 @@ namespace TWF
             string kind = item.slot == ItemSlot.Weapon ? Weapons.Name((WeaponType)item.weaponType) : item.slot.ToString();
             sb.Append($"<size=80%><color=#999>{item.rarity} {kind} · Item level {item.itemLevel}</color></size>\n");
             sb.Append($"<color=#fff>{StatInfo.Format(item.implicitStat, ModKind.Flat, item.implicitValue)}</color>\n");
+            if (item.slot == ItemSlot.Weapon && item.element != (int)ElementPart.Physical)
+                sb.Append($"Element: {Elements.Tag((ElementPart)item.element)}  <size=80%><color=#aaa>(basic attacks)</color></size>\n");
             foreach (var a in item.affixes) sb.Append($"<color=#8cf>{a.Describe()}</color>\n");
             if (!string.IsNullOrEmpty(item.legendaryPower))
                 sb.Append($"<color=#ff9a30>{(item.rarity == Rarity.Mythic ? "Mythic power" : "Legendary")}: {ItemPowers.Describe(item.legendaryPower)}</color>\n");

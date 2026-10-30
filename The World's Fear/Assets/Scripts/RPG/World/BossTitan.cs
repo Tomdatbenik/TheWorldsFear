@@ -58,6 +58,20 @@ namespace TWF
             }
         }
 
+        // Each boss has an element (and so a weakness).
+        public static ElementPart ElementOf(BossKind k)
+        {
+            switch (k)
+            {
+                case BossKind.Slime: return ElementPart.Frost;
+                case BossKind.Spider: return ElementPart.Poison;
+                case BossKind.Zombie: return ElementPart.Shadow;
+                case BossKind.Skeleton: return ElementPart.Arcane;
+                case BossKind.WorldsFear: return ElementPart.Fire;
+                default: return ElementPart.Physical;
+            }
+        }
+
         // Each guardian fights on its own home ground.
         public static Biome ArenaBiome(BossKind k, Biome gate)
         {
@@ -130,6 +144,7 @@ namespace TWF
             var col = go.AddComponent<CircleCollider2D>();
             col.radius = 1.5f;
 
+            c.element = ElementOf(kind);
             var t = go.AddComponent<BossTitan>();
             t.db = GameDatabase.Instance;
             t.kind = kind;
@@ -355,7 +370,9 @@ namespace TWF
             }
             Sound.Play(RoarClip, transform.position, 1f);
             CameraFollow.Shake(0.25f);
-            GameUI.Instance?.ShowBossTitle(self.displayName, Subtitle(kind));
+            Codex.SeeBoss(kind);
+            var weak = Elements.WeaknessOf(self.element);
+            GameUI.Instance?.ShowBossTitle(self.displayName, Subtitle(kind) + (weak.HasValue ? $"  ·  {Elements.Tag(self.element)}, weak to {Elements.Tag(weak.Value)}" : ""));
             yield return Windup(0.8f);
             yield return new WaitForSeconds(1.4f);
             if (cam != null) yield return CameraMove(cam, anchor, 12f, pitch0, 8.5f, dist0, 1f, 0f, 0.7f);
@@ -1165,6 +1182,12 @@ namespace TWF
             StartCoroutine(Victory());
         }
 
+        IEnumerator AnnounceUnlock(BossKind k)
+        {
+            yield return new WaitForSeconds(5.5f);
+            GameUI.Instance?.Toast($"New mechanic unlocked: {BossUnlocks.Describe(k)}", Palette.Gold, 5f);
+        }
+
         IEnumerator Victory()
         {
             foreach (var m in FindObjectsByType<MonsterBrain>()) m.Combatant.Die(null);
@@ -1176,8 +1199,8 @@ namespace TWF
             }
             Profile.AddXP(Profile.MonsterXP(self.level, MonsterRank.Boss));
             Profile.Data.bossesKilled++;
-            if (System.Array.IndexOf(Guardians, kind) >= 0 && !Profile.Data.guardiansSlain.Contains(kind.ToString()))
-                Profile.Data.guardiansSlain.Add(kind.ToString());
+            bool firstKill = !Profile.Data.guardiansSlain.Contains(kind.ToString());
+            if (firstKill && kind != BossKind.Titan) Profile.Data.guardiansSlain.Add(kind.ToString());
             Profile.Data.defeatedGates.Add(WorldManager.PendingGateKey);
             Loot.Drop(self, transform.position);
             Pickup.SpawnGlyph((Vector2)transform.position + Vector2.right * 2f, SkillParts.Roll(new System.Random(), self.level, MonsterRank.Boss));
@@ -1190,6 +1213,8 @@ namespace TWF
                     : "All four guardians have fallen. The World's Fear awaits at the edge of the world!";
                 GameUI.Instance?.Toast(msg, new Color(1f, 0.5f, 0.35f), 5f);
             }
+            // Each boss's first defeat unlocks a new crafting mechanic.
+            if (firstKill && BossUnlocks.Describe(kind) != null) StartCoroutine(AnnounceUnlock(kind));
             ExitPortal.Spawn(Vector2.zero, returnScene);
             visual.gameObject.SetActive(false);
             if (leftHand != null)

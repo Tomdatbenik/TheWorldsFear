@@ -44,7 +44,13 @@ namespace TWF
         public List<string> guardiansSlain = new List<string>();
         public List<int> weaponSkillsOwned = new List<int>();          // WeaponSkillId values
         public int[] weaponSkillAttached = new int[10];                 // per WeaponType: skill id + 1, 0 = none
-        public List<string> revealedGates = new List<string>();         // boss lairs bought from the cartographer   // the four guardians unseal the World's Fear
+        public List<string> revealedGates = new List<string>();         // boss lairs bought from the cartographer
+        // Codex
+        public List<CodexMonster> codexMonsters = new List<CodexMonster>();
+        public List<string> bossesSeen = new List<string>();
+        public List<string> codexPowers = new List<string>();
+        public List<int> codexWeapons = new List<int>();
+        public int[] lootByRarity = new int[5];   // the four guardians unseal the World's Fear
         public List<string> defeatedGates = new List<string>();
         public bool hasReturn;          // come back to this spot after a boss fight
         public float returnX, returnY;
@@ -127,6 +133,11 @@ namespace TWF
                 if (data.weaponSkillAttached == null || data.weaponSkillAttached.Length != 10) data.weaponSkillAttached = new int[10];
                 data.weaponSkillsOwned ??= new List<int>();
                 data.revealedGates ??= new List<string>();
+                data.codexMonsters ??= new List<CodexMonster>();
+                data.bossesSeen ??= new List<string>();
+                data.codexPowers ??= new List<string>();
+                data.codexWeapons ??= new List<int>();
+                if (data.lootByRarity == null || data.lootByRarity.Length < 5) data.lootByRarity = new int[5];
                 ranks = null;
                 return true;
             }
@@ -276,6 +287,7 @@ namespace TWF
         {
             if (Data.inventory.Count >= InventorySize) return false;
             Data.inventory.Add(item);
+            Codex.RecordItem(item);
             ItemsChanged?.Invoke();
             return true;
         }

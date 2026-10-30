@@ -15,6 +15,7 @@ namespace TWF
         public string displayName = "";
         public int level = 1;
         public MonsterRank rank = MonsterRank.Normal;
+        public ElementPart element = ElementPart.Physical;   // weak to one element, resists its own
         [Tooltip("Hit radius in world units.")]
         public float radius = 0.5f;
         public bool destroyOnDeath = true;
@@ -245,6 +246,10 @@ namespace TWF
             if (info.silent) amount = info.amount;
             if (IsExposed) amount *= exposedMult;
             if (info.source != null && info.source.team != team) amount *= Combat.LevelGapFactor(info.source, this);
+            float elemental = Elements.Factor(info.elements, element);
+            amount *= elemental;
+            if (!info.silent && elemental != 1f && showDamageNumbers)
+                FloatingText.Spawn(transform.position + View.Up * (HeadHeight + 0.7f), elemental > 1f ? "Weak!" : "Resist", elemental > 1f ? new Color(1f, 0.6f, 0.2f) : new Color(0.65f, 0.65f, 0.7f), 0.7f);
 
             if (ShieldHP > 0f)
             {

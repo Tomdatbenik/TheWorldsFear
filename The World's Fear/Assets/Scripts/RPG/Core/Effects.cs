@@ -21,6 +21,7 @@ namespace TWF
         public bool homing;
         public float snapshotDamage;
         public System.Action<Combatant> onHit;
+        public int elements;
 
         public static ProjectileSpec Default(Color color) => new ProjectileSpec
         {
@@ -102,7 +103,7 @@ namespace TWF
                     Explode();
                     return;
                 }
-                Combat.Hit(owner, c, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage);
+                Combat.Hit(owner, c, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);
                 spec.onHit?.Invoke(c);
                 VFX.Burst(transform.position, spec.color, 5, 0.25f);
                 if (spec.pierce >= 0)
@@ -130,7 +131,7 @@ namespace TWF
             VFX.Burst(transform.position, spec.color, 12, spec.explodeRadius);
             foreach (var c in Combat.HostilesInRadius(team, transform.position, spec.explodeRadius).ToArray())
             {
-                Combat.Hit(owner, c, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage);
+                Combat.Hit(owner, c, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);
                 spec.onHit?.Invoke(c);
             }
             Destroy(gameObject);
@@ -163,6 +164,7 @@ namespace TWF
         public bool followOwner;   // e.g. Whirlwind, auras
         public float snapshotDamage;
         public System.Action<Combatant> onHit;
+        public int elements;
     }
 
     // A circle on the ground: telegraphed, then deals damage one or more times.
@@ -211,7 +213,7 @@ namespace TWF
                 VFX.Burst(transform.position, c, 8, spec.radius * 0.8f);
                 foreach (var target in Combat.HostilesInRadius(team, transform.position, spec.radius).ToArray())
                 {
-                    Combat.Hit(owner, target, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage);
+                    Combat.Hit(owner, target, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);
                     spec.onHit?.Invoke(target);
                 }
                 float w = 0f;

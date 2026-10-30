@@ -91,7 +91,7 @@ namespace TWF
             goldText.rectTransform.Place(new Vector2(0, 1), new Vector2(148, -104), new Vector2(260, 34));
 
             // Menu buttons, top right.
-            var menu = UIFactory.Rect("Menu", root).Place(new Vector2(1, 1), new Vector2(-24, -24), new Vector2(440, 100));
+            var menu = UIFactory.Rect("Menu", root).Place(new Vector2(1, 1), new Vector2(-24, -24), new Vector2(552, 100));
             var layout = menu.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 12;
             layout.childAlignment = TextAnchor.UpperRight;
@@ -105,6 +105,7 @@ namespace TWF
             UIFactory.IconButton("CraftBtn", menu, "arcane", new Color(1f, 0.6f, 0.3f), () => { CraftPanel.AtForge = false; Panels.Toggle(PanelKind.Craft); });
             UIFactory.IconButton("BagBtn", menu, "bag", new Color(0.8f, 0.55f, 0.3f), () => Panels.Toggle(PanelKind.Inventory));
             UIFactory.IconButton("MapBtn", menu, "map", new Color(0.85f, 0.75f, 0.5f), () => Panels.Toggle(PanelKind.Map));
+            UIFactory.IconButton("CodexBtn", menu, "codex", new Color(0.6f, 0.85f, 0.75f), () => Panels.Toggle(PanelKind.Codex));
 
             var bannerRt = UIFactory.Rect("ZoneBanner", root).Place(new Vector2(0.5f, 1), new Vector2(0, -170), new Vector2(1100, 190));
             bannerGroup = bannerRt.gameObject.AddComponent<CanvasGroup>();

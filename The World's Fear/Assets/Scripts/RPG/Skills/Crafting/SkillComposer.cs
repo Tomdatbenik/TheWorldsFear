@@ -18,6 +18,9 @@ namespace TWF
             public float weaken;    // Shadow: enemies hit deal less damage
         }
 
+        // The status an element's hits apply (also used by elemental weapons).
+        public static StatusSpec ElementStatus(ElementPart e, int tier = 1) => ElementData(e, tier).status;
+
         static Element ElementData(ElementPart e, int tier)
         {
             float t = 1f + 0.15f * (tier - 1);
@@ -46,6 +49,19 @@ namespace TWF
             s.powerPerRank = 0f;
             s.cooldownPerRank = 0f;
             var el = ElementData(c.element, c.elementTier);
+            // Extra elements (dual / triple spells) add their status and effects, and a bit of damage.
+            var extras = new List<Element>();
+            for (int i = 0; c.extraElements != null && i < c.extraElements.Count; i++)
+                extras.Add(ElementData(c.extraElements[i], i < c.extraElementTiers.Count ? c.extraElementTiers[i] : 1));
+            foreach (var x in extras)
+            {
+                el.heal = Mathf.Max(el.heal, x.heal);
+                el.weaken = Mathf.Max(el.weaken, x.weaken);
+                el.chain = Mathf.Max(el.chain, x.chain);
+                el.knockback = Mathf.Max(el.knockback, x.knockback);
+                el.damage *= 1.12f;
+                el.color = Color.Lerp(el.color, x.color, 0.35f);
+            }
             s.color = el.color;
             s.iconKey = SkillParts.Icon(PartKind.Element, (int)c.element);
             s.isUltimate = c.mods.Count >= 3;
@@ -69,7 +85,8 @@ namespace TWF
 
             var effects = new List<SkillEffect>();
             var hit = new HitExtras { chain = chain, chainMult = 0.6f, lingering = lingering, status = el.status, color = el.color, knockback = knock,
-                heal = el.heal, weaken = el.weaken };
+                heal = el.heal, weaken = el.weaken, elements = Elements.Mask(c.AllElements) };
+            foreach (var x in extras) if (x.status.IsSet) hit.extraStatuses.Add(x.status);
             // Debuff modifiers ride along on every hit.
             if (Has(ModPart.Weaken)) hit.weaken = Mathf.Max(hit.weaken, 0.3f + 0.05f * (Tier(ModPart.Weaken) - 1));
             if (Has(ModPart.Expose)) hit.expose = 0.25f + 0.05f * (Tier(ModPart.Expose) - 1);
@@ -133,6 +150,58 @@ namespace TWF
                     hit.expose = Mathf.Max(hit.expose, 0.35f + 0.05f * (c.deliveryTier - 1));
                     effects.Add(new CraftedHex { range = 8f, targets = 1 + split, damageMult = 0.9f * dmg, duration = 6f, hit = hit });
                     break;
+                case DeliveryPart.Whirlwind:
+                    s.targeting = Targeting.Self; s.range = 0f; s.baseCooldown = 8f; s.indicatorRadius = 2.4f * area;
+                    effects.Add(new CraftedArea { atCaster = true, followCaster = true, radius = 2.4f * area, delay = 0.05f, ticks = lingering ? 7 : 5, interval = 0.25f,
+                        damageMult = 0.7f * dmg, extraBlasts = split * 2, hit = hit });
+                    break;
+                case DeliveryPart.AxeThrow:
+                    s.targeting = Targeting.Skillshot; s.range = 9f; s.baseCooldown = 5f;
+                    effects.Add(new CraftedProjectile { count = 1 + split * 2, spread = 20f, speed = 14f * speedMult, range = 9f, size = 0.9f * sizeMult, hitRadius = 0.6f * sizeMult,
+                        damageMult = 2f * dmg, pierce = -1, homing = homing, hit = hit });
+                    break;
+                case DeliveryPart.Quake:
+                    s.targeting = Targeting.Self; s.range = 0f; s.baseCooldown = 10f; s.indicatorRadius = 4.5f * area;
+                    effects.Add(new RepeatEffect { times = 3, interval = 0.5f, inner = new List<SkillEffect> {
+                        new CraftedArea { atCaster = true, radius = 4.5f * area, delay = 0.05f, ticks = lingering ? 2 : 1, interval = 0.4f, damageMult = 1.1f * dmg, extraBlasts = split, hit = hit } } });
+                    break;
+                case DeliveryPart.KnifeFan:
+                    s.targeting = Targeting.Self; s.range = 0f; s.baseCooldown = 6f; s.indicatorRadius = 7f;
+                    effects.Add(new CraftedProjectile { count = 10 + split * 4, spread = 360f, speed = 16f * speedMult, range = 7f, size = 0.45f * sizeMult, hitRadius = 0.35f * sizeMult,
+                        damageMult = 0.8f * dmg, homing = homing, hit = hit });
+                    break;
+                case DeliveryPart.SpearThrow:
+                    s.targeting = Targeting.Skillshot; s.range = 11f; s.baseCooldown = 6f;
+                    effects.Add(new CraftedProjectile { count = 1 + split * 2, spread = 16f, speed = 30f * speedMult, range = 11f, size = 0.6f * sizeMult, hitRadius = 0.5f * sizeMult,
+                        damageMult = 2.4f * dmg, pierce = -1, homing = homing, hit = hit });
+                    break;
+                case DeliveryPart.Barrage:
+                    s.targeting = Targeting.Skillshot; s.range = 10f; s.baseCooldown = 7f;
+                    effects.Add(new RepeatEffect { times = 5, interval = 0.12f, inner = new List<SkillEffect> {
+                        new CraftedProjectile { count = 3 + split, spread = 18f, speed = 22f * speedMult, range = 10f, size = 0.45f * sizeMult, hitRadius = 0.35f * sizeMult,
+                            damageMult = 0.6f * dmg, homing = homing, hit = hit } } });
+                    break;
+                case DeliveryPart.BoltVolley:
+                    s.targeting = Targeting.Skillshot; s.range = 12f; s.baseCooldown = 8f;
+                    effects.Add(new RepeatEffect { times = 3, interval = 0.2f, inner = new List<SkillEffect> {
+                        new CraftedProjectile { count = 1 + split, spread = 12f, speed = 30f * speedMult, range = 12f, size = 0.5f * sizeMult, hitRadius = 0.45f * sizeMult,
+                            damageMult = 1.2f * dmg, pierce = -1, homing = homing, hit = hit } } });
+                    break;
+                case DeliveryPart.Meteor:
+                    s.targeting = Targeting.GroundAoE; s.range = 9f; s.baseCooldown = 10f; s.indicatorRadius = 3f * area;
+                    effects.Add(new CraftedArea { radius = 3f * area, delay = Has(ModPart.Speed) ? 0.5f : 0.9f, ticks = lingering ? 4 : 1, interval = 0.45f,
+                        damageMult = (lingering ? 1.5f : 4f) * dmg, extraBlasts = split * 2, hit = hit });
+                    break;
+                case DeliveryPart.Missiles:
+                    s.targeting = Targeting.Skillshot; s.range = 10f; s.baseCooldown = 6f;
+                    effects.Add(new RepeatEffect { times = 6 + split * 2, interval = 0.1f, inner = new List<SkillEffect> {
+                        new CraftedProjectile { speed = 14f * speedMult, range = 10f, size = 0.45f * sizeMult, hitRadius = 0.4f * sizeMult, damageMult = 0.65f * dmg, homing = true, hit = hit } } });
+                    break;
+                case DeliveryPart.Flurry:
+                    s.targeting = Targeting.Skillshot; s.range = 2.4f; s.baseCooldown = 7f;
+                    effects.Add(new RepeatEffect { times = 8, interval = 0.08f, inner = new List<SkillEffect> {
+                        new CraftedWave { radius = 2.4f * area, angle = 90f + 30f * split, damageMult = 0.45f * dmg, hit = hit } } });
+                    break;
                 default: // Dash
                     s.targeting = Targeting.Dash; s.range = 6f; s.baseCooldown = 6f; s.castLock = 0.28f;
                     effects.Add(new DashEffect { distance = 6f, duration = 0.28f / speedMult, damageMult = 1.4f * dmg, hitRadius = 1.3f * area,
@@ -172,6 +241,8 @@ namespace TWF
         public float weaken;          // enemies hit deal this much less damage
         public float expose;          // enemies hit take this much more damage
         public float debuffDuration = 4f;
+        public int elements;                                           // Elements.Mask
+        public List<StatusSpec> extraStatuses = new List<StatusSpec>(); // from extra elements
 
         // Heals and debuffs, applied to every enemy hit.
         public void Afflict(SkillContext ctx, Combatant target)
@@ -181,6 +252,8 @@ namespace TWF
             if (weaken > 0f) target.Weaken(weaken, dur);
             if (expose > 0f) target.Expose(expose, dur);
             if (heal > 0f) ctx.caster.Heal(ctx.caster.MaxHP * heal);
+            float hitDamage = ctx.caster.Stats.Get(StatType.Damage) * ctx.power;
+            foreach (var st in extraStatuses) target.ApplyStatus(ctx.Scale(st), ctx.caster, hitDamage);
         }
 
         public void OnHit(SkillContext ctx, Combatant target)
@@ -192,7 +265,7 @@ namespace TWF
                 AreaEffect.Spawn(ctx.caster, target.transform.position, new AreaSpec
                 {
                     radius = 1.3f * ctx.Area, delay = 0.1f, ticks = 4, interval = 0.5f, damageMult = 0.25f * ctx.power,
-                    status = ctx.Scale(status), color = color,
+                    status = ctx.Scale(status), color = color, elements = elements,
                 });
         }
 
@@ -216,7 +289,7 @@ namespace TWF
                 Vector2 a = current.transform.position, b = next.transform.position;
                 var line = LineTelegraph.Show(a, (b - a).normalized, Vector2.Distance(a, b), 0.18f, color, 0.15f);
                 line.transform.position += Vector3.back * 0.6f;
-                Combat.Hit(ctx.caster, next, chainMult * ctx.power, ctx.Scale(status), false, 0f);
+                Combat.Hit(ctx.caster, next, chainMult * ctx.power, ctx.Scale(status), false, 0f, -1f, elements);
                 current = next;
             }
         }
@@ -248,7 +321,7 @@ namespace TWF
                 {
                     speed = speed * ctx.ProjectileSpeed, range = range * ctx.Range, hitRadius = hitRadius, damageMult = damageMult * ctx.power,
                     pierce = pierce, status = ctx.Scale(hit.status), color = hit.color, size = size, knockback = hit.knockback,
-                    homing = homing && target != null, rotateSprite = true, explodeRadius = explodeRadius * ctx.Area,
+                    homing = homing && target != null, rotateSprite = true, explodeRadius = explodeRadius * ctx.Area, elements = hit.elements,
                     onHit = t => hit.OnHit(c, t),
                 };
                 Projectile.Fire(ctx.caster, ctx.origin + d * 0.4f, d, spec, target);
@@ -279,7 +352,7 @@ namespace TWF
                 Vector3 p = t.transform.position;
                 VFX.Burst(p + Vector3.back * 0.8f, hit.color, 14, 0.8f);
                 VFX.Ring(p, hit.color, 1f, 0.25f);
-                Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, hit.knockback);
+                Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, hit.knockback, -1f, hit.elements);
                 hit.OnHit(ctx, t);
             }
         }
@@ -320,7 +393,7 @@ namespace TWF
             AreaEffect.Spawn(ctx.caster, at, new AreaSpec
             {
                 radius = r, delay = delay, ticks = ticks, interval = interval, damageMult = mult * ctx.power,
-                status = ctx.Scale(hit.status), color = hit.color, knockback = hit.knockback, followOwner = followCaster,
+                status = ctx.Scale(hit.status), color = hit.color, knockback = hit.knockback, followOwner = followCaster, elements = hit.elements,
                 onHit = t => { hit.Afflict(c, t); if (hit.chain > 0) hit.OnHit(c, t); },
             });
         }
@@ -341,7 +414,7 @@ namespace TWF
             VFX.Slash(ctx.caster.transform.position, ctx.direction, r, angle, hit.color);
             foreach (var t in Combat.HostilesInArc(ctx.caster.team, ctx.caster.transform.position, ctx.direction, r, angle))
             {
-                Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, hit.knockback);
+                Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, hit.knockback, -1f, hit.elements);
                 hit.OnHit(ctx, t);
             }
         }
@@ -487,7 +560,7 @@ namespace TWF
                 VFX.Ring(at, hit.color, r, 0.3f);
                 foreach (var t in Combat.HostilesInRadius(ctx.caster.team, at, r))
                 {
-                    Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, 0f);
+                    Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, 0f, -1f, hit.elements);
                     hit.Afflict(ctx, t);
                 }
                 yield return new WaitForSeconds(interval);
@@ -519,7 +592,7 @@ namespace TWF
                 var mark = new Color(0.6f, 0.3f, 0.9f);
                 VFX.Ring(p, mark, 1.2f, 0.5f);
                 VFX.Burst(p + View.Up * (t.HeadHeight + 0.2f), Color.Lerp(mark, hit.color, 0.5f), 16, 0.7f);
-                Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, 0f);
+                Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, 0f, -1f, hit.elements);
                 hit.OnHit(ctx, t);
             }
         }
@@ -588,14 +661,22 @@ namespace TWF
         public static CraftedSkill Find(string equippedId) =>
             equippedId != null && equippedId.StartsWith("craft:") ? Profile.Data.craftedSkills.Find(x => x.uid == equippedId.Substring(6)) : null;
 
-        public static bool CanCraft(ElementPart e, DeliveryPart d, List<ModPart> mods, out string why)
+        public static bool CanCraft(List<ElementPart> els, DeliveryPart d, List<ModPart> mods, out string why)
         {
             why = null;
-            var pe = Owned(PartKind.Element, (int)e);
+            if (els == null || els.Count == 0) { why = "Pick an element."; return false; }
+            if (els.Count > BossUnlocks.MaxElements) { why = "Defeat more bosses to combine that many elements."; return false; }
             var pd = Owned(PartKind.Delivery, (int)d);
-            if (pe == null || pd == null) { why = "You don't own those parts."; return false; }
-            if (mods.Count > SkillParts.MaxMods(Profile.Data.level)) { why = "Too many modifiers for your level."; return false; }
-            if (!SkillParts.RequirementsMet(PartKind.Element, (int)e, pe.tier) || !SkillParts.RequirementsMet(PartKind.Delivery, (int)d, pd.tier))
+            if (pd == null) { why = "You don't own those parts."; return false; }
+            if (SkillParts.WeaponOf(d).HasValue && !BossUnlocks.WeaponArts) { why = "Weapon arts are not unlocked yet."; return false; }
+            if (mods.Count > SkillParts.MaxMods(Profile.Data.level)) { why = "Too many modifiers: defeat more bosses for extra slots."; return false; }
+            foreach (var e in els)
+            {
+                var pe = Owned(PartKind.Element, (int)e);
+                if (pe == null) { why = "You don't own those parts."; return false; }
+                if (!SkillParts.RequirementsMet(PartKind.Element, (int)e, pe.tier)) { why = $"{e} needs more attributes."; return false; }
+            }
+            if (!SkillParts.RequirementsMet(PartKind.Delivery, (int)d, pd.tier))
             {
                 why = "Your attributes are too low.";
                 return false;
@@ -611,17 +692,24 @@ namespace TWF
             return true;
         }
 
-        public static CraftedSkill Craft(ElementPart e, DeliveryPart d, List<ModPart> mods)
+        public static CraftedSkill Craft(ElementPart e, DeliveryPart d, List<ModPart> mods) => Craft(new List<ElementPart> { e }, d, mods);
+
+        public static CraftedSkill Craft(List<ElementPart> els, DeliveryPart d, List<ModPart> mods)
         {
-            if (!CanCraft(e, d, mods, out _)) return null;
-            Profile.AddGold(-SkillParts.CraftCost(Profile.Data.level, mods.Count));
+            if (!CanCraft(els, d, mods, out _)) return null;
+            Profile.AddGold(-SkillParts.CraftCost(Profile.Data.level, mods.Count + els.Count - 1));
             var c = new CraftedSkill
             {
-                uid = NewUid(), element = e, delivery = d, mods = new List<ModPart>(mods),
-                elementTier = Owned(PartKind.Element, (int)e).tier, deliveryTier = Owned(PartKind.Delivery, (int)d).tier,
+                uid = NewUid(), element = els[0], delivery = d, mods = new List<ModPart>(mods),
+                elementTier = Owned(PartKind.Element, (int)els[0]).tier, deliveryTier = Owned(PartKind.Delivery, (int)d).tier,
             };
+            for (int i = 1; i < els.Count; i++)
+            {
+                c.extraElements.Add(els[i]);
+                c.extraElementTiers.Add(Owned(PartKind.Element, (int)els[i]).tier);
+            }
             foreach (var m in mods) c.modTiers.Add(Owned(PartKind.Modifier, (int)m).tier);
-            c.name = SkillParts.NameFor(e, d, c.mods);
+            c.name = SkillParts.NameFor(els, d, c.mods);
             Profile.Data.craftedSkills.Add(c);
             // Fill an empty slot automatically.
             for (int i = 0; i < 4; i++)

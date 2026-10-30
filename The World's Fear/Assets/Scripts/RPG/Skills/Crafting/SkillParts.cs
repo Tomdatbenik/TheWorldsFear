@@ -8,7 +8,12 @@ namespace TWF
     public enum PartKind { Element, Delivery, Modifier }
     // New parts are appended so saved recipes keep their meaning.
     public enum ElementPart { Fire, Frost, Lightning, Poison, Arcane, Physical, Holy, Shadow }
-    public enum DeliveryPart { Forward, Single, Pierce, Explosion, Nova, Wave, Blink, Dash, Self, Aura, Hex }
+    // The last ten are weapon arts: they need that weapon in your hands (unlocked by Vexa, the Brood Mother).
+    public enum DeliveryPart
+    {
+        Forward, Single, Pierce, Explosion, Nova, Wave, Blink, Dash, Self, Aura, Hex,
+        Whirlwind, AxeThrow, Quake, KnifeFan, SpearThrow, Barrage, BoltVolley, Meteor, Missiles, Flurry,
+    }
     public enum ModPart { Speed, Split, Chain, Echo, Wide, Lingering, Swift, Homing, Heavy, Empower, Haste, Barrier, Mend, Weaken, Expose }
 
     // A collected part ("glyph"). Tiers I-III make it stronger but need more attributes.
@@ -33,6 +38,19 @@ namespace TWF
         public int elementTier = 1, deliveryTier = 1;
         public List<int> modTiers = new List<int>();
         public string name;
+        // Extra elements (dual / triple-element spells, unlocked by bosses).
+        public List<ElementPart> extraElements = new List<ElementPart>();
+        public List<int> extraElementTiers = new List<int>();
+
+        public List<ElementPart> AllElements
+        {
+            get
+            {
+                var l = new List<ElementPart> { element };
+                if (extraElements != null) l.AddRange(extraElements);
+                return l;
+            }
+        }
 
         public int ModTier(ModPart m)
         {
@@ -56,7 +74,12 @@ namespace TWF
     {
         public static string Roman(int t) => t >= 3 ? "III" : t == 2 ? "II" : "I";
 
-        public static int Count(PartKind k) => k == PartKind.Element ? 8 : k == PartKind.Delivery ? 11 : 15;
+        public static int Count(PartKind k) => k == PartKind.Element ? 8 : k == PartKind.Delivery ? 21 : 15;
+
+        public const int FirstWeaponArt = (int)DeliveryPart.Whirlwind;
+
+        // The weapon a weapon-art delivery needs, or null for ordinary deliveries.
+        public static WeaponType? WeaponOf(DeliveryPart d) => (int)d >= FirstWeaponArt ? (WeaponType)((int)d - FirstWeaponArt) : (WeaponType?)null;
 
         public static string PartName(PartKind k, int id)
         {
@@ -97,6 +120,16 @@ namespace TWF
                         case DeliveryPart.Self: return "Cast on yourself: a blessing that depends on the element.";
                         case DeliveryPart.Aura: return "A field around you that pulses for several seconds.";
                         case DeliveryPart.Hex: return "Curses an enemy: it takes much more damage for a while.";
+                        case DeliveryPart.Whirlwind: return "Sword art: spin, hitting everything around you again and again.";
+                        case DeliveryPart.AxeThrow: return "Axe art: hurl a spinning axe through every enemy.";
+                        case DeliveryPart.Quake: return "Hammer art: pound the ground three times around you.";
+                        case DeliveryPart.KnifeFan: return "Dagger art: knives in every direction.";
+                        case DeliveryPart.SpearThrow: return "Spear art: throw your spear in a long, piercing line.";
+                        case DeliveryPart.Barrage: return "Bow art: five rapid volleys of arrows.";
+                        case DeliveryPart.BoltVolley: return "Crossbow art: three piercing bolts in a row.";
+                        case DeliveryPart.Meteor: return "Staff art: call a meteor down on the target spot.";
+                        case DeliveryPart.Missiles: return "Wand art: six homing missiles.";
+                        case DeliveryPart.Flurry: return "Fist art: a flurry of eight punches.";
                         default: return "Charge forward, hitting everything in the way.";
                     }
                 default:
@@ -152,6 +185,12 @@ namespace TWF
                         case DeliveryPart.Self: return new[] { R(Attribute.Vitality, 2) };
                         case DeliveryPart.Aura: return new[] { R(Attribute.Magic, 5), R(Attribute.Vitality, 3) };
                         case DeliveryPart.Hex: return new[] { R(Attribute.Magic, 6) };
+                        case DeliveryPart.Whirlwind: case DeliveryPart.AxeThrow: case DeliveryPart.Quake: case DeliveryPart.Flurry:
+                            return new[] { R(Attribute.Strength, 6) };
+                        case DeliveryPart.KnifeFan: case DeliveryPart.SpearThrow: case DeliveryPart.Barrage: case DeliveryPart.BoltVolley:
+                            return new[] { R(Attribute.Dexterity, 6) };
+                        case DeliveryPart.Meteor: case DeliveryPart.Missiles:
+                            return new[] { R(Attribute.Magic, 6) };
                         default: return new[] { R(Attribute.Swiftness, 8) };
                     }
                 default:
@@ -186,6 +225,9 @@ namespace TWF
         public static bool RequirementsMet(CraftedSkill c)
         {
             if (!RequirementsMet(PartKind.Element, (int)c.element, c.elementTier)) return false;
+            if (c.extraElements != null)
+                for (int i = 0; i < c.extraElements.Count; i++)
+                    if (!RequirementsMet(PartKind.Element, (int)c.extraElements[i], i < c.extraElementTiers.Count ? c.extraElementTiers[i] : 1)) return false;
             if (!RequirementsMet(PartKind.Delivery, (int)c.delivery, c.deliveryTier)) return false;
             for (int i = 0; i < c.mods.Count; i++)
                 if (!RequirementsMet(PartKind.Modifier, (int)c.mods[i], c.ModTier(c.mods[i]))) return false;
@@ -245,6 +287,16 @@ namespace TWF
                         case DeliveryPart.Self: return "self";
                         case DeliveryPart.Aura: return "aura";
                         case DeliveryPart.Hex: return "hex";
+                        case DeliveryPart.Whirlwind: return "spiral";
+                        case DeliveryPart.AxeThrow: return "slash";
+                        case DeliveryPart.Quake: return "nova";
+                        case DeliveryPart.KnifeFan: return "poison";
+                        case DeliveryPart.SpearThrow: return "sword";
+                        case DeliveryPart.Barrage: return "bow";
+                        case DeliveryPart.BoltVolley: return "bow";
+                        case DeliveryPart.Meteor: return "meteor";
+                        case DeliveryPart.Missiles: return "staff";
+                        case DeliveryPart.Flurry: return "fist";
                         default: return "leap";
                     }
                 default:
@@ -285,6 +337,10 @@ namespace TWF
             { DeliveryPart.Explosion, "Blast" }, { DeliveryPart.Nova, "Nova" }, { DeliveryPart.Wave, "Wave" },
             { DeliveryPart.Blink, "Blink" }, { DeliveryPart.Dash, "Rush" },
             { DeliveryPart.Self, "Blessing" }, { DeliveryPart.Aura, "Aura" }, { DeliveryPart.Hex, "Hex" },
+            { DeliveryPart.Whirlwind, "Whirlwind" }, { DeliveryPart.AxeThrow, "Axe" }, { DeliveryPart.Quake, "Quake" },
+            { DeliveryPart.KnifeFan, "Knives" }, { DeliveryPart.SpearThrow, "Spear" }, { DeliveryPart.Barrage, "Barrage" },
+            { DeliveryPart.BoltVolley, "Volley" }, { DeliveryPart.Meteor, "Meteor" }, { DeliveryPart.Missiles, "Missiles" },
+            { DeliveryPart.Flurry, "Flurry" },
         };
 
         static readonly Dictionary<ModPart, string> modNouns = new Dictionary<ModPart, string>
@@ -296,9 +352,13 @@ namespace TWF
             { ModPart.Weaken, "Frailty" }, { ModPart.Expose, "Ruin's Mark" },
         };
 
-        public static string NameFor(ElementPart e, DeliveryPart d, List<ModPart> mods)
+        public static string NameFor(ElementPart e, DeliveryPart d, List<ModPart> mods) => NameFor(new List<ElementPart> { e }, d, mods);
+
+        public static string NameFor(List<ElementPart> els, DeliveryPart d, List<ModPart> mods)
         {
-            string n = $"{adjectives[e]} {nouns[d]}";
+            var adj = new List<string>();
+            foreach (var e in els) adj.Add(adjectives[e]);
+            string n = $"{string.Join(" ", adj)} {nouns[d]}";
             if (mods.Count == 1) n += $" of {modNouns[mods[0]]}";
             else if (mods.Count >= 2) n += $" of {modNouns[mods[0]]} and {modNouns[mods[1]]}";
             return n;
@@ -306,7 +366,8 @@ namespace TWF
 
         public static int CraftCost(int level, int mods) => 40 + level * 15 + mods * 30;
         public const int MaxCrafted = 6;
-        public static int MaxMods(int level) => level >= 15 ? 3 : 2;
+        // Bosses unlock more modifiers (see BossUnlocks).
+        public static int MaxMods(int level) => BossUnlocks.MaxMods;
 
         // A random part drop; further from the village means higher tiers.
         public static PartRef Roll(System.Random rng, int monsterLevel, MonsterRank rank)
@@ -315,7 +376,9 @@ namespace TWF
             var kind = r < 0.3 ? PartKind.Element : r < 0.6 ? PartKind.Delivery : PartKind.Modifier;
             int tier = 1 + (monsterLevel >= 15 ? 1 : 0) + (monsterLevel >= 35 ? 1 : 0);
             if (rank >= MonsterRank.Rare && rng.NextDouble() < 0.4) tier++;
-            return new PartRef { kind = kind, id = rng.Next(Count(kind)), tier = Mathf.Clamp(tier, 1, 3) };
+            // Weapon arts only drop once Vexa, the Brood Mother has fallen.
+            int count = kind == PartKind.Delivery && !BossUnlocks.WeaponArts ? FirstWeaponArt : Count(kind);
+            return new PartRef { kind = kind, id = rng.Next(count), tier = Mathf.Clamp(tier, 1, 3) };
         }
     }
 }

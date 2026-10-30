@@ -25,6 +25,8 @@ namespace TWF
         public bool isSpider;
         public Color projectileColor = Color.white;
         public StatusSpec onHitStatus;
+        public ElementPart element = ElementPart.Physical;
+        public int seed;              // to redraw it in the codex
     }
 
     public static class MonsterGenerator
@@ -110,7 +112,8 @@ namespace TWF
             // Some chasers and swarmlings are spiders.
             bool spider = forceSpider || ((arch == MonsterArchetype.Chaser || arch == MonsterArchetype.Swarmling) && ((seed >> 3) & 3) == 0);
             var look = spider ? SpiderSpriteGenerator.Generate(seed, biome) : MonsterSpriteGenerator.Generate(seed, biome, arch);
-            var sp = new MonsterSpecies { archetype = arch, biome = biome, look = look, isSpider = spider };
+            var sp = new MonsterSpecies { archetype = arch, biome = biome, look = look, isSpider = spider, seed = seed };
+            sp.element = Elements.ForBiome(biome, new System.Random(seed * 31 + 7));
             sp.projectileColor = sp.look.accent;
 
             if (spider) sp.onHitStatus = StatusSpec.Poison(0.3f, 3f);

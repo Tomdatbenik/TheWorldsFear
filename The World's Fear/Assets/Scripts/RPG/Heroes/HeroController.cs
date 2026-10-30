@@ -341,8 +341,10 @@ namespace TWF
             {
                 speed = w.projectileSpeed * (1f + Combatant.Stats.Get(StatType.ProjectileSpeed)), range = w.range + 2f, hitRadius = 0.3f,
                 damageMult = w.damageMult, color = w.color, size = w.projectileSize, pierce = w.pierce, explodeRadius = w.explodeRadius,
-                sprite = w.arrow ? HeroVisuals.ArrowSprite : null, rotateSprite = true, homing = w.homing, status = w.status,
+                sprite = w.arrow ? HeroVisuals.ArrowSprite : null, rotateSprite = true, homing = w.homing, status = WeaponStatus(w),
+                elements = Elements.Mask(Weapons.EquippedElement),
             };
+            if (Weapons.EquippedElement != ElementPart.Physical && !w.arrow) spec.color = Elements.Color(Weapons.EquippedElement);
             Projectile.Fire(Combatant, (Vector2)transform.position + dir * 0.4f, dir, spec, w.homing ? target : null);
             int extra = Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraProjectiles));
             for (int k = 1; k <= extra; k++)
@@ -357,6 +359,16 @@ namespace TWF
             Sound.Play(Sfx.Swing, transform.position, 0.3f);
         }
 
+        // An elemental weapon sometimes applies its element's effect (burn, chill, ...).
+        static StatusSpec WeaponStatus(WeaponProfile w)
+        {
+            var e = Weapons.EquippedElement;
+            if (e == ElementPart.Physical || w.status.IsSet) return w.status;
+            var st = SkillComposer.ElementStatus(e);
+            if (st.IsSet) st.chance = st.type == StatusType.Stun ? st.chance : 0.25f;
+            return st;
+        }
+
         IEnumerator MeleeAttack(WeaponProfile w, Combatant target, Vector2 dir)
         {
             for (int h = 0; h < w.hits; h++)
@@ -368,13 +380,13 @@ namespace TWF
                     VFX.Ring(at, new Color(1f, 0.9f, 0.7f), w.range * 0.9f, 0.3f);
                     CameraFollow.Shake(0.08f);
                     foreach (var c in Combat.HostilesInRadius(Team.Player, at, w.range * 0.9f))
-                        Combat.Hit(Combatant, c, w.damageMult, w.status, true, w.knockback);
+                        Combat.Hit(Combatant, c, w.damageMult, WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
                 }
                 else
                 {
                     VFX.Slash(transform.position, dir, w.range * 0.9f, w.arc, new Color(1f, 1f, 1f, 0.7f));
                     foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, dir, w.range, w.arc))
-                        Combat.Hit(Combatant, c, w.damageMult, w.status, true, w.knockback);
+                        Combat.Hit(Combatant, c, w.damageMult, WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
                 }
                 Swing(dir, w.arc >= 360f ? 90f : w.arc);
                 Sound.Play(Sfx.Swing, transform.position, 0.5f);
@@ -464,7 +476,11 @@ namespace TWF
         {
             if (slot >= Profile.Data.equippedSkills.Length) return true;
             var c = Crafting.Find(Profile.Data.equippedSkills[slot]);
-            return c == null || SkillParts.RequirementsMet(c);
+            if (c == null) return true;
+            // Weapon arts need their weapon in your hands.
+            var needs = SkillParts.WeaponOf(c.delivery);
+            if (needs.HasValue && needs.Value != Weapons.Equipped) return false;
+            return SkillParts.RequirementsMet(c);
         }
 
         // aim: offset from the hero, magnitude 0..1 of the skill's range. aimed=false = quick cast at the auto-target.
