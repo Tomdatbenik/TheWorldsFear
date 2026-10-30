@@ -511,7 +511,7 @@ namespace TWF
                     if (st == StatType.CritDamage) sb.Append($"{StatInfo.Name(st)}: <color=#fff>{Mathf.RoundToInt((1.5f + s.Get(st)) * 100)}%</color>\n");
                     else sb.Append($"{StatInfo.Name(st)}: <color=#fff>{StatInfo.FormatValue(st, s.Get(st))}</color>\n");
                 }
-                sb.Append($"\n<color=#aaa>Damage reduction from armor: {Mathf.RoundToInt((1f - Combat.Mitigate(100f, s.Get(StatType.Armor)) / 100f) * 100)}%</color>");
+                sb.Append($"\n<color=#aaa>Damage blocked by armor (vs your level): {Mathf.RoundToInt((1f - Combat.Mitigate(100f, s.Get(StatType.Armor), d.level) / 100f) * 100)}%</color>");
                 sb.Append($"\n<color=#aaa>Monsters slain: {Profile.Data.kills}</color>");
                 statsText.text = sb.ToString();
             }

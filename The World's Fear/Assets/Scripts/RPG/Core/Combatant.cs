@@ -241,7 +241,7 @@ namespace TWF
         {
             if (IsDead || Invulnerable || !isActiveAndEnabled) return 0f;
 
-            float amount = info.trueDamage ? info.amount : Combat.Mitigate(info.amount, Stats.Get(StatType.Armor));
+            float amount = info.trueDamage ? info.amount : Combat.Mitigate(info.amount, Stats.Get(StatType.Armor), info.source != null ? info.source.level : level);
             amount = Mathf.Max(info.amount > 0f ? 1f : 0f, amount);
             if (info.silent) amount = info.amount;
             if (IsExposed) amount *= exposedMult;

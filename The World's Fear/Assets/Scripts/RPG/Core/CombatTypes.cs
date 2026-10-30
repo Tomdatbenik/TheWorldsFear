@@ -85,9 +85,11 @@ namespace TWF
             return gap < 0 ? Mathf.Min(2.5f, 1f + 0.06f * -gap) : Mathf.Max(0.5f, 1f - 0.03f * gap);
         }
 
-        public static float Mitigate(float amount, float armor)
+        // Armor is weighed against the attacker's level: the same armor blocks less from stronger foes.
+        public static float Mitigate(float amount, float armor, int attackerLevel = 1)
         {
-            return amount * 100f / (100f + Mathf.Max(0f, armor));
+            armor = Mathf.Max(0f, armor);
+            return amount * (1f - armor / (armor + 60f + 15f * Mathf.Max(1, attackerLevel)));
         }
 
         public static List<Combatant> HostilesInRadius(Team team, Vector2 center, float radius)
