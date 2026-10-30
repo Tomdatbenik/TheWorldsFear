@@ -18,6 +18,9 @@ namespace TWF
         Image preview;
         readonly System.Collections.Generic.List<Image> cards = new System.Collections.Generic.List<Image>();
 
+        // Set before loading the title to jump straight to picking a new hero's weapon.
+        public static bool OpenNewHero;
+
         void Start()
         {
             Time.timeScale = 1f;
@@ -40,6 +43,11 @@ namespace TWF
             BuildMain();
             BuildClassSelect();
             ShowMain();
+            if (OpenNewHero)
+            {
+                OpenNewHero = false;
+                ShowClasses();
+            }
         }
 
         void BuildMain()

@@ -1193,6 +1193,24 @@ namespace TWF
             StartCoroutine(Victory());
         }
 
+        IEnumerator WinScreen()
+        {
+            yield return new WaitForSeconds(4f);
+            var d = Profile.Data;
+            GameUI.Instance?.ShowVictory(
+                "VICTORY\n<size=45%><color=#fff>The World's Fear is vanquished. The world can breathe again.</color>\n\n" +
+                $"<color=#ddd>Level {d.level}  ·  Monsters slain: {d.kills}  ·  Bosses slain: {d.bossesKilled}\n" +
+                $"Furthest journey: {Mathf.RoundToInt(d.farthest)}m  ·  Codex entries: {d.codexMonsters.Count}</color>\n\n" +
+                $"<color=#ffd040>Unlocked: {BossUnlocks.Describe(BossKind.WorldsFear)}</color></size>",
+                () => GameUI.Instance?.Toast("Your legend continues. Step into the portal to return.", Palette.Gold, 3f),
+                () => ConfirmDialog.Show("Start a new hero?\n<size=70%>This hero's journey ends here.</size>", "New hero", () =>
+                {
+                    Profile.DeleteSave();
+                    TitleScreen.OpenNewHero = true;
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("Title");
+                }));
+        }
+
         IEnumerator AnnounceUnlock(BossKind k)
         {
             yield return new WaitForSeconds(5.5f);
@@ -1225,7 +1243,9 @@ namespace TWF
                 GameUI.Instance?.Toast(msg, new Color(1f, 0.5f, 0.35f), 5f);
             }
             // Each boss's first defeat unlocks a new crafting mechanic.
-            if (firstKill && BossUnlocks.Describe(kind) != null) StartCoroutine(AnnounceUnlock(kind));
+            if (firstKill && kind != BossKind.WorldsFear && BossUnlocks.Describe(kind) != null) StartCoroutine(AnnounceUnlock(kind));
+            // Beating the World's Fear the first time ends the story.
+            if (firstKill && kind == BossKind.WorldsFear) StartCoroutine(WinScreen());
             ExitPortal.Spawn(Vector2.zero, returnScene);
             visual.gameObject.SetActive(false);
             if (leftHand != null)

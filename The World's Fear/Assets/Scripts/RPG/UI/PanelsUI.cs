@@ -19,6 +19,7 @@ namespace TWF
             Panels.Register(PanelKind.Cartographer, CartographerPanel.Create(ui.Root));
             Panels.Register(PanelKind.Reforge, ReforgePanel.Create(ui.Root));
             Panels.Register(PanelKind.Codex, CodexPanel.Create(ui.Root));
+            Panels.Register(PanelKind.Settings, SettingsPanel.Create(ui.Root));
         }
 
         // Dimmed full-screen backdrop with a framed window, title and close button.
