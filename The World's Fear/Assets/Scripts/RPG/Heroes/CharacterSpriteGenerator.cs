@@ -22,13 +22,15 @@ namespace TWF
     // Original procedural pixel-art characters (no third-party art).
     public static class CharacterSpriteGenerator
     {
-        const int W = 24, H = 28;
+        const int W = 48, H = 56;
+        const int PPU = GameAssets.WorldPPU * 2;   // twice the detail at the same size
         static readonly Dictionary<Outfit, CharacterSprites> cache = new Dictionary<Outfit, CharacterSprites>();
 
         struct Look
         {
             public Color skin, hair, top, topDark, pants, boots, accent, hat, hatDark, cape, hands;   // hands: gloves (clear = bare)
             public bool helmet, hood, wizardHat, robe, cape_, quiver, beard, apron, plume;
+            public bool armored;   // metal chest: sheen, rivets
         }
 
         static Color C(string hex)
@@ -46,7 +48,7 @@ namespace TWF
                     {
                         skin = C("#e8b48a"), hair = C("#5a3a22"), top = C("#9aa6b4"), topDark = C("#5f6875"), pants = C("#4a3a30"),
                         boots = C("#3a2a22"), accent = C("#c8372d"), hat = C("#b8c2cc"), hatDark = C("#6c7681"), cape = C("#a52a24"),
-                        helmet = true, cape_ = true, plume = true,
+                        helmet = true, cape_ = true, plume = true, armored = true,
                     };
                 case Outfit.Ranger:
                     return new Look
@@ -138,6 +140,7 @@ namespace TWF
                 var m = Metal(g.chest);
                 l.top = m;
                 l.topDark = m * 0.62f;
+                l.armored = true;
                 // Rare and better chest armor comes with a cloak in its color.
                 l.cape_ = g.chest >= 2;
                 l.cape = g.chest >= 4 ? C("#7a1a34") : g.chest == 3 ? C("#a8501c") : C("#8a3a2e");
@@ -192,7 +195,7 @@ namespace TWF
             for (int d = 0; d < 4; d++)
             for (int f = 0; f < 8; f++)
             {
-                var s = Sprite.Create(tex, new Rect(f * W, d * H, W, H), new Vector2(0.5f, 0.12f), GameAssets.WorldPPU);
+                var s = Sprite.Create(tex, new Rect(f * W, d * H, W, H), new Vector2(0.5f, 0.04f), PPU);
                 s.name = $"{name}_{(FacingDir)d}_{f}";
                 if (f < 2) set.idle[d][f] = s;
                 else if (f < 6) set.walk[d][f - 2] = s;
@@ -229,161 +232,274 @@ namespace TWF
             public bool Filled(int x, int y) => x >= 0 && y >= 0 && x < W && y < H && px[x, y].a > 0f;
         }
 
+        // ---------- Drawing (48x56 px at 32 px per unit: same size in the world, twice the detail) ----------
+
+        static Color Mul(Color c, float k) { var r = c * k; r.a = 1f; return r; }
+
+        // Light comes from the upper left: brighter on the left edge of a shape, darker on the right.
+        static Color Lit(Color c, int x, int x0, int x1)
+        {
+            float t = x1 > x0 ? (x - x0) / (float)(x1 - x0) : 0.5f;
+            return Mul(c, Mathf.Lerp(1.12f, 0.72f, t));
+        }
+
+        static void Shaded(Canvas c, int x0, int y0, int w, int h, Color col)
+        {
+            for (int x = x0; x < x0 + w; x++)
+            for (int y = y0; y < y0 + h; y++)
+                c.Set(x, y, Lit(col, x, x0, x0 + w - 1));
+        }
+
+        // A rounded block (chamfered corners), shaded.
+        static void Rounded(Canvas c, int x0, int y0, int w, int h, Color col, int r = 2)
+        {
+            for (int x = x0; x < x0 + w; x++)
+            for (int y = y0; y < y0 + h; y++)
+            {
+                int dx = Mathf.Min(x - x0, x0 + w - 1 - x), dy = Mathf.Min(y - y0, y0 + h - 1 - y);
+                if (dx + dy < r) continue;
+                c.Set(x, y, Lit(col, x, x0, x0 + w - 1));
+            }
+        }
+
+        static void Disc(Canvas c, float cx, float cy, float rad, Color col)
+        {
+            for (int x = Mathf.FloorToInt(cx - rad); x <= Mathf.CeilToInt(cx + rad); x++)
+            for (int y = Mathf.FloorToInt(cy - rad); y <= Mathf.CeilToInt(cy + rad); y++)
+            {
+                float dx = x + 0.5f - cx, dy = y + 0.5f - cy;
+                if (dx * dx + dy * dy > rad * rad) continue;
+                c.Set(x, y, Mul(col, dx < 0 && dy > 0 ? 1.15f : dx > 0 ? 0.8f : 1f));
+            }
+        }
+
         static Color[,] Draw(Look l, Pose p)
         {
             var c = new Canvas();
             bool side = p.dir == DrawDir.Side, up = p.dir == DrawDir.Up, down = p.dir == DrawDir.Down;
-            int cx = W / 2;
+            const int cx = W / 2;
             int b = p.bob;
-            int legTop = 8;
+            int hip = 17 - b;
+            var ink = new Color(0.1f, 0.07f, 0.09f);
+            var eyeWhite = new Color(0.95f, 0.95f, 0.98f);
 
-            // Cape behind (drawn first).
+            // ----- Cape behind everything -----
             if (l.cape_ && !up)
             {
-                if (down) c.Rect(cx - 5, legTop + 1 - b, 10, 8, l.cape * 0.8f);
-                if (side) c.Rect(cx - 6, legTop - b, 3, 9, l.cape * 0.85f);
+                var cape = Mul(l.cape, 0.75f);
+                if (down) Shaded(c, cx - 11, 8 - b, 22, hip + 15 - 8, cape);
+                if (side) Shaded(c, cx - 11, 7 - b, 5, hip + 14 - 7, cape);
             }
 
-            // Legs.
+            // ----- Legs and boots -----
             if (!l.robe)
             {
                 if (side)
                 {
-                    c.Rect(cx - 2 + p.step, 3, 3, legTop - 3, l.pants);
-                    c.Rect(cx - 1 - p.step, 3, 3, legTop - 3, l.pants * 0.8f);
-                    c.Rect(cx - 2 + p.step, 2, 4, 2, l.boots);
-                    c.Rect(cx - 1 - p.step, 2, 4, 2, l.boots * 0.85f);
+                    int f = p.step * 3;
+                    Shaded(c, cx - 3 - f, 7, 5, hip - 6, Mul(l.pants, 0.8f));   // back leg
+                    Rounded(c, cx - 4 - f, 2, 7, 6, Mul(l.boots, 0.8f), 1);
+                    Shaded(c, cx - 2 + f, 7, 5, hip - 6, l.pants);              // front leg
+                    Rounded(c, cx - 2 + f, 2, 8, 6, l.boots, 1);
+                    c.Rect(cx - 2 + f, 7, 6, 1, Mul(l.boots, 1.25f));             // boot cuff
                 }
                 else
                 {
-                    int lo = p.step == 1 ? 1 : 0, ro = p.step == -1 ? 1 : 0;
-                    c.Rect(cx - 4, 3 + lo, 3, legTop - 3, l.pants);
-                    c.Rect(cx + 1, 3 + ro, 3, legTop - 3, l.pants);
-                    c.Rect(cx - 4, 2 + lo, 3, 2, l.boots);
-                    c.Rect(cx + 1, 2 + ro, 3, 2, l.boots);
+                    int lo = p.step == 1 ? 2 : 0, ro = p.step == -1 ? 2 : 0;
+                    Shaded(c, cx - 7, 7 + lo, 6, hip - 6 - lo, l.pants);
+                    Shaded(c, cx + 1, 7 + ro, 6, hip - 6 - ro, l.pants);
+                    Rounded(c, cx - 8, 2 + lo, 7, 7, l.boots, 1);
+                    Rounded(c, cx + 1, 2 + ro, 7, 7, l.boots, 1);
+                    c.Rect(cx - 8, 8 + lo, 7, 1, Mul(l.boots, 1.3f));
+                    c.Rect(cx + 1, 8 + ro, 7, 1, Mul(l.boots, 1.3f));
+                    c.Rect(cx - 7, 2 + lo, 5, 1, Mul(l.boots, 0.6f));             // soles
+                    c.Rect(cx + 2, 2 + ro, 5, 1, Mul(l.boots, 0.6f));
                 }
             }
 
-            // Torso.
-            int torsoY = legTop - b;
-            int torsoH = 8;
+            // ----- Torso -----
+            int torsoY = hip, torsoH = 16;
+            int tw = side ? 12 : 16;
+            int tx = cx - tw / 2;
             if (l.robe)
             {
-                // Long robe flaring to the ground.
                 for (int y = 2; y < torsoY + torsoH; y++)
                 {
-                    int half = y < torsoY ? 5 + (torsoY - y) / 3 : 4;
-                    if (side) half = Mathf.Max(3, half - 1);
-                    c.Rect(cx - half, y, half * 2, 1, y < 4 ? l.topDark : l.top);
+                    int half = y < torsoY ? 9 + (torsoY - y) / 4 : 8;
+                    if (side) half -= 2;
+                    for (int x = cx - half; x < cx + half; x++) c.Set(x, y, Lit(y < 5 ? l.topDark : l.top, x, cx - half, cx + half - 1));
                 }
-                c.Rect(cx - 1, 2, 2, torsoY + torsoH - 2, l.accent * 0.9f);
-                c.Rect(cx - (side ? 3 : 4), 2 + (p.step != 0 ? 1 : 0), 3, 1, l.boots);
+                for (int y = 2; y < torsoY + torsoH - 2; y++) c.Set(cx - 1, y, Mul(l.accent, 0.9f));   // trim
+                c.Rect(cx - 8, torsoY + 3, 16, 2, Mul(l.accent, 0.85f));                               // sash
             }
             else
             {
-                int tw = side ? 6 : 8;
-                c.Rect(cx - tw / 2, torsoY, tw, torsoH, l.top);
-                c.Rect(cx - tw / 2, torsoY, tw, 2, l.topDark);
-                c.Rect(cx - tw / 2, torsoY + 2, tw, 1, l.accent * 0.8f); // belt
-                if (l.apron && !up) c.Rect(cx - 3, torsoY - 1, 6, 6, l.accent);
-                if (l.helmet && !up) c.Rect(cx - 1, torsoY + 3, 2, 4, l.topDark); // plate seam
+                Rounded(c, tx, torsoY - 2, tw, torsoH + 2, l.top, 2);
+                // Tunic hem below the belt.
+                Shaded(c, tx + 1, torsoY - 3, tw - 2, 2, l.topDark);
+                // Belt with buckle.
+                c.Rect(tx, torsoY + 2, tw, 2, Mul(l.accent, 0.55f));
+                c.Rect(cx - 1, torsoY + 2, 3, 2, Mul(l.accent, 1.15f));
+                // Collar.
+                if (down)
+                {
+                    c.Rect(cx - 2, torsoY + torsoH - 3, 4, 3, l.skin);
+                    c.Set(cx - 3, torsoY + torsoH - 2, l.topDark);
+                    c.Set(cx + 2, torsoY + torsoH - 2, l.topDark);
+                }
+                // Metal armor: a breastplate sheen, rivets and shoulder plates.
+                if (l.armored)
+                {
+                    for (int y = torsoY + 5; y < torsoY + torsoH - 3; y++) c.Set(tx + 3, y, Mul(l.top, 1.35f));
+                    if (!up) { c.Set(tx + 2, torsoY + 6, Mul(l.top, 1.5f)); c.Set(tx + tw - 3, torsoY + 6, Mul(l.top, 0.6f)); }
+                }
+                if (l.apron && !up) Shaded(c, cx - 6, torsoY - 3, 12, 12, l.accent);
+            }
+            // Shoulder plates.
+            if (l.armored && !side)
+            {
+                var plate = l.helmet ? l.hat : l.top;
+                Disc(c, tx, torsoY + torsoH - 3, 3.5f, plate);
+                Disc(c, tx + tw, torsoY + torsoH - 3, 3.5f, plate);
             }
 
-            // Arms (swing with walk, raised on attack).
-            int armY = torsoY + 3;
-            int swing = p.attack > 0 ? 0 : p.step;
+            // ----- Arms -----
+            int armTop = torsoY + torsoH - 2;
+            int swing = p.attack > 0 ? 0 : p.step * 2;
             Color sleeve = l.robe ? l.top : l.topDark;
             if (side)
             {
-                int ax = p.attack == 2 ? cx + 3 : p.attack == 1 ? cx - 3 : cx - 1 + swing;
-                int ay = p.attack == 1 ? armY + 3 : armY;
-                c.Rect(ax, ay, 2, 4, sleeve);
-                c.Rect(ax, ay - 1, 2, 1, Hand(l));
+                int ax = p.attack == 2 ? cx + 4 : p.attack == 1 ? cx - 5 : cx - 2 + swing;
+                int ay = p.attack == 1 ? armTop - 4 : armTop - 10;
+                Shaded(c, ax, ay, 4, 10, sleeve);
+                Rounded(c, ax, ay - 3, 4, 4, Hand(l), 1);
             }
             else
             {
-                int raise = p.attack == 1 ? 3 : p.attack == 2 ? -1 : 0;
-                c.Rect(cx - 6, armY + swing, 2, 5, sleeve);
-                c.Rect(cx + 4, armY - swing + raise, 2, 5, sleeve);
-                c.Rect(cx - 6, armY - 1 + swing, 2, 1, Hand(l));
-                c.Rect(cx + 4, armY - 1 - swing + raise, 2, 1, Hand(l));
+                int raise = p.attack == 1 ? 6 : p.attack == 2 ? -2 : 0;
+                Shaded(c, tx - 4, armTop - 11 + swing, 4, 11, sleeve);
+                Shaded(c, tx + tw, armTop - 11 - swing + raise, 4, 11, sleeve);
+                Rounded(c, tx - 4, armTop - 14 + swing, 4, 4, Hand(l), 1);
+                Rounded(c, tx + tw, armTop - 14 - swing + raise, 4, 4, Hand(l), 1);
             }
 
-            // Head.
+            // ----- Head -----
             int headY = torsoY + torsoH;
-            int hw = side ? 7 : 8;
-            int hx = side ? cx - 3 : cx - 4;
-            c.Rect(hx, headY, hw, 7, l.skin);
-            c.Rect(hx + 1, headY - 1, hw - 2, 1, l.skin * 0.85f);
-            // Hair.
-            if (up) c.Rect(hx, headY + 1, hw, 6, l.hair);
-            else if (side) { c.Rect(hx, headY + 4, hw, 3, l.hair); c.Rect(hx, headY + 1, 2, 4, l.hair); }
-            else c.Rect(hx, headY + 5, hw, 2, l.hair);
-            // Face.
-            if (down)
+            int hw = side ? 14 : 16;
+            int hx = side ? cx - 6 : cx - 8;
+            c.Rect(cx - 2, headY - 1, 4, 2, Mul(l.skin, 0.8f));   // neck
+            Rounded(c, hx, headY, hw, 15, l.skin, 3);
+
+            if (up)
             {
-                c.Set(cx - 2, headY + 3, new Color(0.1f, 0.08f, 0.1f));
-                c.Set(cx + 1, headY + 3, new Color(0.1f, 0.08f, 0.1f));
-                c.Set(cx - 3, headY + 2, l.skin * new Color(1f, 0.8f, 0.8f));
-                c.Set(cx + 2, headY + 2, l.skin * new Color(1f, 0.8f, 0.8f));
+                Rounded(c, hx - 1, headY + 2, hw + 2, 14, l.hair, 3);
+                for (int y = headY + 4; y < headY + 14; y += 3) c.Set(cx - 3 + (y % 2), y, Mul(l.hair, 0.7f));   // strands
             }
             else if (side)
             {
-                c.Set(cx + 2, headY + 3, new Color(0.1f, 0.08f, 0.1f));
-                c.Set(cx + 4, headY + 2, l.skin * 0.9f); // nose
+                // Profile: hair at the back and top, one eye, a nose.
+                Rounded(c, hx - 1, headY + 8, hw + 1, 8, l.hair, 2);
+                Shaded(c, hx - 1, headY + 3, 6, 7, l.hair);
+                c.Rect(hx + 5, headY + 5, 2, 3, Mul(l.skin, 0.8f));                   // ear
+                c.Rect(hx + 10, headY + 6, 2, 3, ink);                               // eye
+                c.Set(hx + 10, headY + 8, eyeWhite);
+                c.Rect(hx + hw, headY + 5, 1, 2, Mul(l.skin, 0.9f));                  // nose
+                c.Rect(hx + 10, headY + 3, 3, 1, Mul(l.skin, 0.7f));                  // mouth
+                c.Rect(hx + 9, headY + 9, 4, 1, Mul(l.hair, 0.9f));                   // brow
+            }
+            else
+            {
+                // Face.
+                c.Rect(cx - 5, headY + 5, 2, 3, ink);
+                c.Rect(cx + 3, headY + 5, 2, 3, ink);
+                c.Set(cx - 5, headY + 7, eyeWhite);
+                c.Set(cx + 3, headY + 7, eyeWhite);
+                c.Rect(cx - 6, headY + 9, 3, 1, Mul(l.hair, 0.85f));                  // brows
+                c.Rect(cx + 3, headY + 9, 3, 1, Mul(l.hair, 0.85f));
+                c.Set(cx, headY + 4, Mul(l.skin, 0.82f));                             // nose
+                c.Rect(cx - 1, headY + 2, 3, 1, Mul(l.skin, 0.68f));                  // mouth
+                c.Rect(cx - 7, headY + 3, 2, 2, l.skin * new Color(1f, 0.82f, 0.82f)); // cheeks
+                c.Rect(cx + 5, headY + 3, 2, 2, l.skin * new Color(1f, 0.82f, 0.82f));
+                // Hair: a cap with a jagged fringe and side locks.
+                Rounded(c, hx - 1, headY + 10, hw + 2, 6, l.hair, 2);
+                for (int x = hx; x < hx + hw; x++)
+                    if ((x + 1) % 3 != 0) c.Set(x, headY + 9 - (x % 2), Lit(l.hair, x, hx, hx + hw));
+                Shaded(c, hx - 1, headY + 3, 2, 8, l.hair);
+                Shaded(c, hx + hw - 1, headY + 3, 2, 8, l.hair);
+                c.Rect(hx + 2, headY + 13, 4, 1, Mul(l.hair, 1.3f));                  // shine
             }
             if (l.beard && !up)
             {
-                if (down) c.Rect(cx - 3, headY - 1, 6, 3, l.hair);
-                else c.Rect(cx, headY - 1, 4, 3, l.hair);
+                if (down) { Rounded(c, cx - 6, headY - 2, 12, 5, l.hair, 2); c.Rect(cx - 1, headY + 2, 3, 1, Mul(l.skin, 0.68f)); }
+                else Rounded(c, hx + 6, headY - 2, 8, 5, l.hair, 2);
             }
 
-            // Headgear.
-            int top = headY + 7;
+            // ----- Headgear -----
+            int top = headY + 15;
             if (l.helmet)
             {
-                c.Rect(hx - 1, headY + 3, hw + 2, 5, l.hat);
-                c.Rect(hx - 1, headY + 3, hw + 2, 1, l.hatDark);
-                if (down) { c.Rect(cx - 3, headY + 2, 6, 2, l.hat); c.Rect(cx - 2, headY + 3, 4, 1, new Color(0.1f, 0.1f, 0.12f)); }
-                if (side) c.Rect(cx + 1, headY + 3, 3, 1, new Color(0.1f, 0.1f, 0.12f));
-                if (l.plume) c.Rect(cx - 1, top, 2, 3, l.accent);
+                Rounded(c, hx - 2, headY + 7, hw + 4, 10, l.hat, 4);
+                c.Rect(hx - 2, headY + 7, hw + 4, 2, l.hatDark);                       // rim
+                if (down)
+                {
+                    c.Rect(cx - 5, headY + 5, 10, 2, l.hat);                           // cheek guards
+                    c.Rect(cx - 1, headY + 3, 2, 5, l.hat);                            // nose guard
+                    c.Rect(cx - 5, headY + 7, 3, 1, ink);                              // eye slits
+                    c.Rect(cx + 2, headY + 7, 3, 1, ink);
+                }
+                if (side) c.Rect(hx + 8, headY + 7, 5, 1, ink);
+                c.Rect(hx + 1, headY + 13, 3, 2, Mul(l.hat, 1.4f));                    // sheen
+                if (l.plume)
+                    for (int i = 0; i < 6; i++) c.Rect(cx - 1 - (side ? i / 2 : 0), top + i - 1, 3, 1, Mul(l.accent, 1f - i * 0.05f));
             }
             else if (l.hood)
             {
-                c.Rect(hx - 1, headY + 2, hw + 2, 6, l.hat);
-                c.Rect(hx - 1, top, hw + 2, 1, l.hatDark);
-                if (down) c.Rect(hx + 1, headY + 1, hw - 2, 5, l.skin);
-                if (side) c.Rect(hx + 3, headY + 1, hw - 3, 5, l.skin);
-                if (down) { c.Set(cx - 2, headY + 3, new Color(0.1f, 0.08f, 0.1f)); c.Set(cx + 1, headY + 3, new Color(0.1f, 0.08f, 0.1f)); }
-                if (side) c.Set(cx + 2, headY + 3, new Color(0.1f, 0.08f, 0.1f));
+                Rounded(c, hx - 2, headY + 1, hw + 4, 16, l.hat, 4);
+                c.Rect(hx - 2, top, hw + 4, 1, l.hatDark);
+                if (down)
+                {
+                    Rounded(c, hx + 2, headY + 1, hw - 4, 10, l.skin, 2);
+                    c.Rect(cx - 5, headY + 5, 2, 3, ink); c.Rect(cx + 3, headY + 5, 2, 3, ink);
+                    c.Set(cx - 5, headY + 7, eyeWhite); c.Set(cx + 3, headY + 7, eyeWhite);
+                    c.Rect(cx - 1, headY + 2, 3, 1, Mul(l.skin, 0.68f));
+                }
+                if (side)
+                {
+                    Rounded(c, hx + 6, headY + 1, hw - 6, 10, l.skin, 2);
+                    c.Rect(hx + 10, headY + 6, 2, 3, ink);
+                }
             }
             else if (l.wizardHat)
             {
-                c.Rect(hx - 2, headY + 5, hw + 4, 2, l.hat); // brim
-                for (int i = 0; i < 6; i++)
+                Rounded(c, hx - 4, headY + 10, hw + 8, 3, l.hat, 1);                  // brim
+                for (int i = 0; i < 12; i++)
                 {
-                    int wHat = Mathf.Max(1, hw - i - 1);
-                    int off = side ? -i / 2 : 0;
-                    c.Rect(cx - wHat / 2 + off, headY + 7 + i, wHat, 1, i % 3 == 1 ? l.accent : l.hat);
+                    int wHat = Mathf.Max(2, hw - 2 - i);
+                    int off = side ? -i / 3 : (i > 8 ? 1 : 0);
+                    for (int x = cx - wHat / 2 + off; x < cx + wHat / 2 + off; x++)
+                        c.Set(x, headY + 13 + i, i == 2 || i == 3 ? l.accent : Lit(l.hat, x, cx - wHat / 2 + off, cx + wHat / 2 + off));
                 }
             }
             else if (l.apron)
             {
-                c.Rect(hx, headY + 5, hw, 2, l.hat); // cap
+                Rounded(c, hx - 1, headY + 11, hw + 2, 4, l.hat, 1);                  // cap
             }
 
-            // Cape over the back when seen from behind, quiver on the back.
-            if (up && l.cape_) c.Rect(cx - 5, torsoY - 2, 10, torsoH + 1, l.cape);
+            // ----- On the back: cape seen from behind, quiver -----
+            if (up && l.cape_)
+            {
+                Shaded(c, cx - 10, torsoY - 4, 20, torsoH + 3, l.cape);
+                for (int y = torsoY - 3; y < torsoY + torsoH - 2; y += 1)
+                    if (y % 4 == 0) { c.Set(cx - 4, y, Mul(l.cape, 0.7f)); c.Set(cx + 3, y, Mul(l.cape, 0.7f)); }
+            }
             if (l.quiver && (up || side))
             {
-                int qx = up ? cx + 1 : cx - 4;
-                c.Rect(qx, torsoY + 2, 3, 8, new Color(0.45f, 0.3f, 0.18f));
-                c.Rect(qx, torsoY + 10, 1, 2, Color.white);
-                c.Rect(qx + 2, torsoY + 10, 1, 2, Color.white);
+                int qx = up ? cx + 2 : cx - 8;
+                Shaded(c, qx, torsoY + 3, 5, 14, new Color(0.45f, 0.3f, 0.18f));
+                for (int i = 0; i < 3; i++) c.Rect(qx + i * 2, torsoY + 17, 1, 3, new Color(0.92f, 0.9f, 0.85f));
             }
 
-            // Outline.
-            var outline = new Color(0.07f, 0.05f, 0.07f, 1f);
+            // ----- Selective outline: a dark version of whatever it borders -----
             var result = new Color[W, H];
             for (int y = 0; y < H; y++)
             for (int x = 0; x < W; x++)
@@ -393,9 +509,14 @@ namespace TWF
                     var col = c.px[x, y];
                     col.a = 1f;
                     result[x, y] = col;
+                    continue;
                 }
-                else if (c.Filled(x + 1, y) || c.Filled(x - 1, y) || c.Filled(x, y + 1) || c.Filled(x, y - 1)) result[x, y] = outline;
-                else result[x, y] = Color.clear;
+                Color? n = null;
+                if (c.Filled(x + 1, y)) n = c.px[x + 1, y];
+                else if (c.Filled(x - 1, y)) n = c.px[x - 1, y];
+                else if (c.Filled(x, y + 1)) n = c.px[x, y + 1];
+                else if (c.Filled(x, y - 1)) n = c.px[x, y - 1];
+                result[x, y] = n.HasValue ? Color.Lerp(Mul(n.Value, 0.3f), ink, 0.6f) : Color.clear;
             }
             return result;
         }
