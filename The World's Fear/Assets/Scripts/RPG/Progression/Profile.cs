@@ -50,7 +50,8 @@ namespace TWF
         public List<string> bossesSeen = new List<string>();
         public List<string> codexPowers = new List<string>();
         public List<int> codexWeapons = new List<int>();
-        public int[] lootByRarity = new int[5];   // the four guardians unseal the World's Fear
+        public int[] lootByRarity = new int[5];
+        public List<string> openedChests = new List<string>();   // the four guardians unseal the World's Fear
         public List<string> defeatedGates = new List<string>();
         public bool hasReturn;          // come back to this spot after a boss fight
         public float returnX, returnY;
@@ -137,6 +138,7 @@ namespace TWF
                 data.bossesSeen ??= new List<string>();
                 data.codexPowers ??= new List<string>();
                 data.codexWeapons ??= new List<int>();
+                data.openedChests ??= new List<string>();
                 if (data.lootByRarity == null || data.lootByRarity.Length < 5) data.lootByRarity = new int[5];
                 ranks = null;
                 return true;

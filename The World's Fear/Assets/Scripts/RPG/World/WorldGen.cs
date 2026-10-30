@@ -178,6 +178,27 @@ namespace TWF
             return true;
         }
 
+        // Challenge chests: scattered about one per 4x4 chunks, never near the village.
+        // Waves 3-10, with long challenges rarer; further out they tend to be longer.
+        public const int ChestGrid = 4;
+
+        public static bool HasChest(int cx, int cy, out Vector2Int cell, out int waves)
+        {
+            cell = default;
+            waves = 0;
+            if (Mod(cx + 1, ChestGrid) != 0 || Mod(cy + 2, ChestGrid) != 0) return false;
+            uint h = Hash(cx * 7 + 3, cy * 13 + 5);
+            if ((h & 3) == 0) return false;   // some grid spots stay empty
+            var p = new Vector2Int(cx * ChunkSize + 4 + (int)(h >> 4) % (ChunkSize - 8), cy * ChunkSize + 4 + (int)(h >> 12) % (ChunkSize - 8));
+            float d = ((Vector2)p).magnitude;
+            if (d < HubRadius + 30f) return false;
+            float r = Hash01(cx * 31 + 11, cy * 17 + 2);
+            float far = Mathf.Clamp01(d / 900f);
+            waves = Mathf.Clamp(3 + Mathf.FloorToInt(Mathf.Pow(r, 1.6f - far) * 8f), 3, 10);
+            cell = p;
+            return true;
+        }
+
         public static int Mod(int a, int m) => ((a % m) + m) % m;
 
         public static Vector2Int ChunkOf(Vector2 p) => new Vector2Int(Mathf.FloorToInt(p.x / ChunkSize), Mathf.FloorToInt(p.y / ChunkSize));

@@ -275,7 +275,10 @@ namespace TWF
             bool met = SkillParts.RequirementsMet(c);
             var icon = UIFactory.Image("Icon", row.transform, IconFactory.Get(SkillParts.Icon(PartKind.Element, (int)c.element), SkillParts.ElementColor(c.element)), Color.white);
             icon.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(6, 0), new Vector2(46, 46));
-            var name = UIFactory.Text("Name", row.transform, c.name + (met ? "" : " <color=#f66>(requirements!)</color>"), 18, met ? Palette.Text : Palette.MutedText, TextAlignmentOptions.Left);
+            var art = SkillParts.WeaponOf(c.delivery);
+            string note = !met ? " <color=#f66>(requirements!)</color>"
+                : art.HasValue ? $" <size=80%><color={(art.Value == Weapons.Equipped ? "#8f8" : "#fa6")}>({Weapons.Name(art.Value)} art)</color></size>" : "";
+            var name = UIFactory.Text("Name", row.transform, c.name + note, 18, met ? Palette.Text : Palette.MutedText, TextAlignmentOptions.Left);
             name.rectTransform.Stretch();
             name.rectTransform.offsetMin = new Vector2(58, 0);
             name.rectTransform.offsetMax = new Vector2(-210, 0);

@@ -192,6 +192,8 @@ namespace TWF
                 ring.color = skill != null ? skill.color : new Color(1, 1, 1, 0.15f);
                 background.color = skill != null ? new Color(skill.color.r * 0.25f, skill.color.g * 0.25f, skill.color.b * 0.25f, 0.9f) : new Color(0, 0, 0, 0.35f);
             }
+            // Blocked skills (wrong weapon, missing attributes) are dimmed.
+            if (icon != null && skill != null) icon.color = hero.BlockedReason(slot) == null ? Color.white : new Color(1f, 1f, 1f, 0.3f);
             rankText.text = skill != null ? ToRoman(hero.RankIn(slot)) : "";
 
             float left = hero.CooldownLeft(slot);
@@ -209,6 +211,9 @@ namespace TWF
         public void OnPointerDown(PointerEventData e)
         {
             if (HeroController.Instance == null || HeroController.Instance.SkillIn(slot) == null) return;
+            // A blocked skill says why instead of silently doing nothing.
+            var why = HeroController.Instance.BlockedReason(slot);
+            if (why != null) { GameUI.Instance?.Toast(why, new Color(1f, 0.55f, 0.4f), 2.5f); return; }
             pressed = true;
             aiming = false;
             aim = Vector2.zero;

@@ -90,6 +90,7 @@ namespace TWF
             // Debuff modifiers ride along on every hit.
             if (Has(ModPart.Weaken)) hit.weaken = Mathf.Max(hit.weaken, 0.3f + 0.05f * (Tier(ModPart.Weaken) - 1));
             if (Has(ModPart.Expose)) hit.expose = 0.25f + 0.05f * (Tier(ModPart.Expose) - 1);
+            if (Has(ModPart.Pop)) hit.pop = 0.35f + 0.08f * (Tier(ModPart.Pop) - 1);
             // Buff modifiers trigger when you cast.
             var buff = new CraftedBuff
             {
@@ -242,6 +243,7 @@ namespace TWF
         public float expose;          // enemies hit take this much more damage
         public float debuffDuration = 4f;
         public int elements;                                           // Elements.Mask
+        public float pop;                                              // > 0: each hit pops a small burst for this share of the damage
         public List<StatusSpec> extraStatuses = new List<StatusSpec>(); // from extra elements
 
         // Heals and debuffs, applied to every enemy hit.
@@ -260,6 +262,7 @@ namespace TWF
         {
             if (target == null) return;
             Afflict(ctx, target);
+            Pop(ctx, target);
             if (chain > 0) Chain(ctx, target, chain);
             if (lingering)
                 AreaEffect.Spawn(ctx.caster, target.transform.position, new AreaSpec
@@ -268,6 +271,18 @@ namespace TWF
                     status = ctx.Scale(status), color = color, elements = elements,
                 });
         }
+
+        // Pop: a smaller echo bursts from whatever was hit. The pop itself doesn't pop again.
+        public void Pop(SkillContext ctx, Combatant target)
+        {
+            if (pop <= 0f || target == null || ctx.caster == null) return;
+            AreaEffect.Spawn(ctx.caster, target.transform.position, new AreaSpec
+            {
+                radius = 0.75f * Mathf.Sqrt(ctx.Area), delay = 0.08f, damageMult = pop * ctx.power, status = ctx.Scale(status), color = color, elements = elements,
+            });
+        }
+
+        public void ChainFrom(SkillContext ctx, Combatant target) { if (chain > 0 && target != null) Chain(ctx, target, chain); }
 
         // Jumps from target to target, drawing a quick arc.
         void Chain(SkillContext ctx, Combatant from, int jumps)
@@ -394,7 +409,7 @@ namespace TWF
             {
                 radius = r, delay = delay, ticks = ticks, interval = interval, damageMult = mult * ctx.power,
                 status = ctx.Scale(hit.status), color = hit.color, knockback = hit.knockback, followOwner = followCaster, elements = hit.elements,
-                onHit = t => { hit.Afflict(c, t); if (hit.chain > 0) hit.OnHit(c, t); },
+                onHit = t => { hit.Afflict(c, t); hit.Pop(c, t); if (hit.chain > 0) hit.ChainFrom(c, t); },
             });
         }
 
@@ -562,6 +577,7 @@ namespace TWF
                 {
                     Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, 0f, -1f, hit.elements);
                     hit.Afflict(ctx, t);
+                    hit.Pop(ctx, t);
                 }
                 yield return new WaitForSeconds(interval);
             }

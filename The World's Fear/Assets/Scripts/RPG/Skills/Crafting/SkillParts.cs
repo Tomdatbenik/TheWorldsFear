@@ -14,7 +14,7 @@ namespace TWF
         Forward, Single, Pierce, Explosion, Nova, Wave, Blink, Dash, Self, Aura, Hex,
         Whirlwind, AxeThrow, Quake, KnifeFan, SpearThrow, Barrage, BoltVolley, Meteor, Missiles, Flurry,
     }
-    public enum ModPart { Speed, Split, Chain, Echo, Wide, Lingering, Swift, Homing, Heavy, Empower, Haste, Barrier, Mend, Weaken, Expose }
+    public enum ModPart { Speed, Split, Chain, Echo, Wide, Lingering, Swift, Homing, Heavy, Empower, Haste, Barrier, Mend, Weaken, Expose, Pop }
 
     // A collected part ("glyph"). Tiers I-III make it stronger but need more attributes.
     [Serializable]
@@ -74,7 +74,7 @@ namespace TWF
     {
         public static string Roman(int t) => t >= 3 ? "III" : t == 2 ? "II" : "I";
 
-        public static int Count(PartKind k) => k == PartKind.Element ? 8 : k == PartKind.Delivery ? 21 : 15;
+        public static int Count(PartKind k) => k == PartKind.Element ? 8 : k == PartKind.Delivery ? 21 : 16;
 
         public const int FirstWeaponArt = (int)DeliveryPart.Whirlwind;
 
@@ -149,6 +149,7 @@ namespace TWF
                         case ModPart.Mend: return "Buff: casting heals you for 8% of your life.";
                         case ModPart.Weaken: return "Debuff: enemies hit deal 30% less damage for 4 s.";
                         case ModPart.Expose: return "Debuff: enemies hit take 25% more damage for 4 s.";
+                        case ModPart.Pop: return "Every hit pops: a smaller burst bursts from the target, hitting enemies around it.";
                         default: return "Much more damage, longer cooldown.";
                     }
             }
@@ -210,6 +211,7 @@ namespace TWF
                         case ModPart.Mend: return new[] { R(Attribute.Vitality, 4), R(Attribute.Magic, 2) };
                         case ModPart.Weaken: return new[] { R(Attribute.Magic, 4), R(Attribute.Strength, 2) };
                         case ModPart.Expose: return new[] { R(Attribute.Dexterity, 6) };
+                        case ModPart.Pop: return new[] { R(Attribute.Magic, 3), R(Attribute.Dexterity, 3) };
                         default: return new[] { R(Attribute.Strength, 8) };
                     }
             }
@@ -316,6 +318,7 @@ namespace TWF
                         case ModPart.Mend: return "heal";
                         case ModPart.Weaken: return "down";
                         case ModPart.Expose: return "crack";
+                        case ModPart.Pop: return "nova";
                         default: return "skull";
                     }
             }
@@ -349,7 +352,7 @@ namespace TWF
             { ModPart.Wide, "Expanse" }, { ModPart.Lingering, "Lingering" }, { ModPart.Swift, "Swiftness" },
             { ModPart.Homing, "Seeking" }, { ModPart.Heavy, "Ruin" },
             { ModPart.Empower, "Might" }, { ModPart.Haste, "Wind" }, { ModPart.Barrier, "Warding" }, { ModPart.Mend, "Mending" },
-            { ModPart.Weaken, "Frailty" }, { ModPart.Expose, "Ruin's Mark" },
+            { ModPart.Weaken, "Frailty" }, { ModPart.Expose, "Ruin's Mark" }, { ModPart.Pop, "Bursting" },
         };
 
         public static string NameFor(ElementPart e, DeliveryPart d, List<ModPart> mods) => NameFor(new List<ElementPart> { e }, d, mods);

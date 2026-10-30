@@ -159,11 +159,11 @@ namespace TWF
         {
             switch (a)
             {
-                case Attribute.Strength: return "+1.5 damage, +1% damage";
+                case Attribute.Strength: return "+1 damage, +0.6% damage";
                 case Attribute.Vitality: return "+12 life, +0.15 life regen";
                 case Attribute.Dexterity: return "+1.5% attack speed, +0.4% crit";
                 case Attribute.Swiftness: return "+1% move speed, +1% projectile speed";
-                default: return "+0.4% cooldown reduction, +0.5% area, +1% skill power";
+                default: return "+0.4% cooldown reduction, +0.5% area, +0.6% skill power";
             }
         }
 
@@ -185,8 +185,8 @@ namespace TWF
             switch (a)
             {
                 case Attribute.Strength:
-                    yield return new StatModifier(StatType.Damage, ModKind.Flat, 1.5f * points, source);
-                    yield return new StatModifier(StatType.Damage, ModKind.Percent, 0.01f * points, source);
+                    yield return new StatModifier(StatType.Damage, ModKind.Flat, 1f * points, source);
+                    yield return new StatModifier(StatType.Damage, ModKind.Percent, 0.006f * points, source);
                     break;
                 case Attribute.Vitality:
                     yield return new StatModifier(StatType.MaxHP, ModKind.Flat, 12f * points, source);
@@ -203,7 +203,7 @@ namespace TWF
                 case Attribute.Magic:
                     yield return new StatModifier(StatType.CooldownReduction, ModKind.Flat, 0.004f * points, source);
                     yield return new StatModifier(StatType.AreaSize, ModKind.Flat, 0.005f * points, source);
-                    yield return new StatModifier(StatType.SkillPower, ModKind.Flat, 0.01f * points, source);
+                    yield return new StatModifier(StatType.SkillPower, ModKind.Flat, 0.006f * points, source);
                     break;
             }
         }

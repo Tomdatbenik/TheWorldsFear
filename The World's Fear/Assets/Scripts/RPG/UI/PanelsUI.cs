@@ -472,8 +472,13 @@ namespace TWF
             ((RectTransform)equipButton.transform).Place(new Vector2(0, 0), new Vector2(22, 110), new Vector2(260, 76));
             sellButton = UIFactory.Button("Sell", detail.transform, "Sell", OnSell, new Color(0.45f, 0.3f, 0.1f, 1f));
             ((RectTransform)sellButton.transform).Place(new Vector2(1, 0), new Vector2(-22, 110), new Vector2(260, 76));
-            sellJunkButton = UIFactory.Button("SellJunk", detail.transform, "Sell all white & blue", OnSellJunk, null, 26);
-            ((RectTransform)sellJunkButton.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 20), new Vector2(560, 70));
+            // Bulk selling: junk, everything up to rare, or the whole bag.
+            sellJunkButton = UIFactory.Button("SellJunk", detail.transform, "Sell white & blue", () => SellUpTo(Rarity.Magic, false), null, 22);
+            ((RectTransform)sellJunkButton.transform).Place(new Vector2(0, 0), new Vector2(22, 20), new Vector2(190, 70));
+            var sellRare = UIFactory.Button("SellRare", detail.transform, "Sell up to rare", () => SellUpTo(Rarity.Rare, true), null, 22);
+            ((RectTransform)sellRare.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 20), new Vector2(190, 70));
+            var sellAll = UIFactory.Button("SellAll", detail.transform, "Sell all", () => SellUpTo(Rarity.Mythic, true), new Color(0.45f, 0.18f, 0.12f, 1f), 22);
+            ((RectTransform)sellAll.transform).Place(new Vector2(1, 0), new Vector2(-22, 20), new Vector2(190, 70));
         }
 
         public override void Refresh()
@@ -620,12 +625,23 @@ namespace TWF
             else sell();
         }
 
-        void OnSellJunk()
+        // Sells every bag item up to a rarity (equipped gear is never touched). Bigger sales ask first.
+        void SellUpTo(Rarity max, bool confirm)
         {
-            foreach (var item in Profile.Data.inventory.ToArray())
-                if (item.rarity <= Rarity.Magic) Profile.SellItem(item);
-            selected = null;
-            Refresh();
+            var items = Profile.Data.inventory.FindAll(i => i.rarity <= max);
+            if (items.Count == 0) { GameUI.Instance?.Toast("Nothing to sell", Palette.MutedText); return; }
+            int gold = 0;
+            foreach (var i in items) gold += i.SellValue;
+            System.Action sell = () =>
+            {
+                foreach (var item in items) Profile.SellItem(item);
+                Sound.Play(Sfx.Coin, Vector3.zero, 0.5f);
+                GameUI.Instance?.Toast($"Sold {items.Count} items for {gold} gold", Palette.Gold);
+                selected = null;
+                Refresh();
+            };
+            if (confirm) ConfirmDialog.Show($"Sell {items.Count} items for {gold} gold?\n<size=70%>Equipped gear is kept.</size>", "Sell", sell);
+            else sell();
         }
     }
 

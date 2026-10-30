@@ -495,6 +495,18 @@ namespace TWF
         public bool CanCast(int slot) =>
             slotSkills[slot] != null && cooldowns[slot] <= 0f && !Combatant.IsDead && !Combatant.IsStunned && RequirementsMet(slot);
 
+        // Why a skill button can't be used right now (null when it can).
+        public string BlockedReason(int slot)
+        {
+            if (slot == WeaponSlot || SkillIn(slot) == null) return null;
+            var c = Crafting.Find(slot >= FirstSocketSlot ? socketIds[slot - FirstSocketSlot] : Profile.Data.equippedSkills[slot]);
+            if (c == null) return null;
+            var needs = SkillParts.WeaponOf(c.delivery);
+            if (needs.HasValue && needs.Value != Weapons.Equipped) return $"{c.name} needs {Weapons.Name(needs.Value)} in hand";
+            if (!SkillParts.RequirementsMet(c)) return $"{c.name}: your attributes no longer meet its requirements";
+            return null;
+        }
+
         // A crafted skill whose attribute requirements are no longer met can't be used.
         public bool RequirementsMet(int slot)
         {

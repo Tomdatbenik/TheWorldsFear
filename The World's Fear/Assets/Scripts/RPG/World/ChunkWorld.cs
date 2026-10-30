@@ -526,6 +526,16 @@ namespace TWF
                 wp.order = Mathf.RoundToInt(((Vector2)wpCell).magnitude);
                 WorldManager.Instance?.RegisterWaypoint(wp);
             }
+            if (WorldGen.HasChest(c.x, c.y, out var chestCell, out int waves))
+            {
+                ClearAround(chestCell, 4);
+                var go = new GameObject("ChallengeChest");
+                go.transform.SetParent(chunk.root.transform, false);
+                go.transform.position = (Vector2)chestCell + Vector2.one * 0.5f;
+                var chest = go.AddComponent<ChallengeChest>();
+                chest.waves = waves;
+                chest.key = $"{chestCell.x}_{chestCell.y}";
+            }
             if (WorldGen.HasBossGate(c.x, c.y, out var bossCell))
             {
                 ClearAround(bossCell, 3);

@@ -157,8 +157,9 @@ namespace TWF
         }
 
         // Base stats for a monster of a given level, before species and rank multipliers.
-        public static float BaseHP(int level) => 40f + 18f * level * (1f + level * 0.04f);
-        public static float BaseDamage(int level) => 4f + 1.7f * level;
+        // Monsters get much tougher with level so deep areas stay a threat to geared heroes.
+        public static float BaseHP(int level) => 50f + 40f * level * (1f + level * 0.12f);
+        public static float BaseDamage(int level) => 5f + 2.2f * level * (1f + level * 0.02f);
         // Armor grows faster than linearly, so deep areas shrug off under-geared heroes.
         public static float BaseArmor(int level) => 4f + level * 3f + level * level * 0.05f;
 
