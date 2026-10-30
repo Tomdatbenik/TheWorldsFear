@@ -73,6 +73,8 @@ namespace TWF
         public List<RolledAffix> affixes = new List<RolledAffix>();
         public string legendaryPower;
         public int weaponType; // WeaponType, for weapons
+        public int reforgedAffix = -1;   // once one affix is reforged, only that one can be reforged again
+        public int reforgeCount;
 
         public IEnumerable<StatModifier> Modifiers(object source)
         {
@@ -80,7 +82,9 @@ namespace TWF
             foreach (var a in affixes) yield return new StatModifier(a.stat, a.kind, a.value, source);
         }
 
-        public int SellValue => Mathf.RoundToInt((5 + itemLevel * 2) * (1 + (int)rarity * (int)rarity * 1.5f));
+        // A gentle rarity curve: selling loot is pocket money, not the main source of wealth.
+        static readonly float[] rarityValue = { 1f, 1.6f, 3f, 6f, 10f };
+        public int SellValue => Mathf.RoundToInt((4 + itemLevel * 1.2f) * rarityValue[Mathf.Clamp((int)rarity, 0, rarityValue.Length - 1)]);
 
         // Rough item score for "better/worse" arrows.
         public float Score()

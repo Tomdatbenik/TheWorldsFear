@@ -353,7 +353,7 @@ namespace TWF
                 s2.homing = false;
                 Projectile.Fire(Combatant, (Vector2)transform.position + d2 * 0.4f, d2, s2);
             }
-            Swing(dir, 50f);
+            Shoot(dir, w.type == WeaponType.Bow || w.type == WeaponType.Crossbow);
             Sound.Play(Sfx.Swing, transform.position, 0.3f);
         }
 
@@ -387,6 +387,36 @@ namespace TWF
             if (weapon == null) return;
             if (swingRoutine != null) StopCoroutine(swingRoutine);
             swingRoutine = StartCoroutine(SwingRoutine(dir, arc));
+        }
+
+        // Ranged weapons don't swing: bows are held out toward the target and drawn back, then released;
+        // staves and wands thrust forward.
+        void Shoot(Vector2 dir, bool bow)
+        {
+            if (weapon == null) return;
+            if (swingRoutine != null) StopCoroutine(swingRoutine);
+            swingRoutine = StartCoroutine(ShootRoutine(dir, bow));
+        }
+
+        IEnumerator ShootRoutine(Vector2 dir, bool bow)
+        {
+            weapon.gameObject.SetActive(true);
+            Vector2 onScreen = View.ToScreen(dir);
+            float screenAngle = Mathf.Atan2(onScreen.y, onScreen.x) * Mathf.Rad2Deg;
+            // A bow is held across the line of fire with its belly toward the target; a staff points along it.
+            weapon.rotation = View.Rotation * Quaternion.Euler(0, 0, bow ? screenAngle : screenAngle - 90f);
+            const float duration = 0.22f;
+            for (float t = 0f; t < duration; t += Time.deltaTime)
+            {
+                float k = t / duration;
+                float reach = bow
+                    ? (k < 0.45f ? Mathf.Lerp(0.6f, 0.45f, k / 0.45f) : Mathf.Lerp(0.45f, 0.62f, (k - 0.45f) / 0.55f))   // draw, then release
+                    : 0.45f + Mathf.Sin(k * Mathf.PI) * 0.35f;                                                            // thrust
+                weapon.position = (Vector3)((Vector2)transform.position + dir * reach) + View.Up * 0.7f;
+                yield return null;
+            }
+            weapon.gameObject.SetActive(false);
+            swingRoutine = null;
         }
 
         IEnumerator SwingRoutine(Vector2 dir, float arc)

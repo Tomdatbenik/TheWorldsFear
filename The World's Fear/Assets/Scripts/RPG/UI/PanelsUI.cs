@@ -17,6 +17,7 @@ namespace TWF
             Panels.Register(PanelKind.Craft, CraftPanel.Create(ui.Root));
             Panels.Register(PanelKind.Weaponmaster, WeaponmasterPanel.Create(ui.Root));
             Panels.Register(PanelKind.Cartographer, CartographerPanel.Create(ui.Root));
+            Panels.Register(PanelKind.Reforge, ReforgePanel.Create(ui.Root));
         }
 
         // Dimmed full-screen backdrop with a framed window, title and close button.
@@ -59,6 +60,15 @@ namespace TWF
         readonly TextMeshProUGUI[] slotLabels = new TextMeshProUGUI[4];
         SkillTreeNode selected;
         RectTransform treeArea;
+        // Two tabs: the passive board and attribute points.
+        RectTransform passivesPage, attributesPage;
+        Button passivesTab, attributesTab;
+        bool showAttributes;
+        TextMeshProUGUI attrHeader, attrHelp;
+        readonly TextMeshProUGUI[] attrLabels = new TextMeshProUGUI[5];
+        readonly Button[] attrPlus = new Button[5];
+        readonly Button[] attrPlus5 = new Button[5];
+        Button attrReset;
         HeroClassDefinition builtFor;
 
         public static SkillTreePanel Create(Transform root)
@@ -68,8 +78,19 @@ namespace TWF
             return p;
         }
 
-        void Build(RectTransform content)
+        void Build(RectTransform root)
         {
+            passivesTab = UIFactory.Button("PassivesTab", root, "Passives", () => { showAttributes = false; Refresh(); }, null, 28);
+            ((RectTransform)passivesTab.transform).Place(new Vector2(0, 1), new Vector2(0, 0), new Vector2(260, 60));
+            attributesTab = UIFactory.Button("AttributesTab", root, "Attributes", () => { showAttributes = true; Refresh(); }, null, 28);
+            ((RectTransform)attributesTab.transform).Place(new Vector2(0, 1), new Vector2(276, 0), new Vector2(260, 60));
+            passivesPage = UIFactory.Rect("PassivesPage", root).Stretch();
+            passivesPage.offsetMax = new Vector2(0, -72);
+            attributesPage = UIFactory.Rect("AttributesPage", root).Stretch();
+            attributesPage.offsetMax = new Vector2(0, -72);
+            BuildAttributes(attributesPage);
+            var content = passivesPage;
+
             treeArea = UIFactory.Rect("Tree", content);
             treeArea.anchorMin = new Vector2(0, 0);
             treeArea.anchorMax = new Vector2(0.6f, 1);
@@ -182,8 +203,80 @@ namespace TWF
             }
         }
 
+        void BuildAttributes(RectTransform page)
+        {
+            var left = UIFactory.Panel("Attributes", page, new Color(0.12f, 0.1f, 0.12f, 0.95f));
+            left.rectTransform.anchorMin = new Vector2(0, 0);
+            left.rectTransform.anchorMax = new Vector2(0.62f, 1);
+            left.rectTransform.offsetMin = left.rectTransform.offsetMax = Vector2.zero;
+            attrHeader = UIFactory.Text("Header", left.transform, "", 34, Palette.Gold, TextAlignmentOptions.Left);
+            attrHeader.rectTransform.Place(new Vector2(0, 1), new Vector2(28, -16), new Vector2(900, 50));
+            for (int i = 0; i < Attributes.Count; i++)
+            {
+                var a = (Attribute)i;
+                var row = UIFactory.Rect("Attr" + a, left.transform);
+                row.anchorMin = new Vector2(0, 1);
+                row.anchorMax = new Vector2(1, 1);
+                row.pivot = new Vector2(0.5f, 1);
+                row.sizeDelta = new Vector2(-56, 96);
+                row.anchoredPosition = new Vector2(0, -84 - i * 104);
+                var label = UIFactory.Text("Label", row, "", 32, Attributes.Color(a), TextAlignmentOptions.Left);
+                label.rectTransform.Stretch();
+                label.rectTransform.offsetMax = new Vector2(-200, 0);
+                label.enableAutoSizing = true;
+                label.fontSizeMin = 18;
+                label.fontSizeMax = 32;
+                attrLabels[i] = label;
+                attrPlus[i] = UIFactory.Button("Plus", row, "+1", () => { Profile.AddAttribute(a); Refresh(); }, new Color(0.2f, 0.4f, 0.15f, 1f), 30);
+                ((RectTransform)attrPlus[i].transform).Place(new Vector2(1, 0.5f), new Vector2(-100, 0), new Vector2(90, 76));
+                attrPlus5[i] = UIFactory.Button("Plus5", row, "+5", () => { for (int k = 0; k < 5; k++) Profile.AddAttribute(a); Refresh(); }, new Color(0.2f, 0.35f, 0.15f, 1f), 30);
+                ((RectTransform)attrPlus5[i].transform).Place(new Vector2(1, 0.5f), new Vector2(0, 0), new Vector2(90, 76));
+            }
+            attrReset = UIFactory.Button("Reset", left.transform, "", () =>
+            {
+                ConfirmDialog.Show($"Reset attribute points?\n<size=70%>Costs {Profile.AttributeResetCost} gold.</size>", "Reset", () => { Profile.ResetAttributes(); Refresh(); });
+            }, null, 26);
+            ((RectTransform)attrReset.transform).Place(new Vector2(0, 0), new Vector2(28, 24), new Vector2(360, 70));
+
+            var right = UIFactory.Panel("Help", page, new Color(0.12f, 0.1f, 0.12f, 0.95f));
+            right.rectTransform.anchorMin = new Vector2(0.64f, 0);
+            right.rectTransform.anchorMax = new Vector2(1, 1);
+            right.rectTransform.offsetMin = right.rectTransform.offsetMax = Vector2.zero;
+            attrHelp = UIFactory.Text("Text", right.transform, "", 26, Palette.Text, TextAlignmentOptions.TopLeft);
+            attrHelp.rectTransform.Stretch(24);
+            attrHelp.enableAutoSizing = true;
+            attrHelp.fontSizeMin = 16;
+            attrHelp.fontSizeMax = 26;
+        }
+
+        void RefreshAttributes()
+        {
+            var d = Profile.Data;
+            attrHeader.text = $"Attribute points: <b>{d.attributePoints}</b>  <size=70%><color=#aaa>+3 every level</color></size>";
+            for (int i = 0; i < Attributes.Count; i++)
+            {
+                attrLabels[i].text = $"{(Attribute)i}  <b>{d.attributes[i]}</b>\n<size=60%><color=#bbb>{Attributes.Describe((Attribute)i)}</color></size>";
+                attrPlus[i].interactable = d.attributePoints > 0;
+                attrPlus5[i].interactable = d.attributePoints >= 5;
+            }
+            attrReset.GetComponentInChildren<TextMeshProUGUI>().text = $"Reset ({Profile.AttributeResetCost} gold)";
+            attrHelp.text = "<b>Attributes</b>\n\n<color=#ccc>Every level gives 3 attribute points.\n\n" +
+                            "Attributes also unlock skill parts at the Arcane Forge: for example Blink needs 10 Magic, " +
+                            "Dash needs 8 Swiftness and Heavy needs 8 Strength.\n\n" +
+                            "A crafted skill whose parts you no longer meet greys out on its button.</color>";
+        }
+
         public override void Refresh()
         {
+            passivesPage.gameObject.SetActive(!showAttributes);
+            attributesPage.gameObject.SetActive(showAttributes);
+            passivesTab.GetComponent<Image>().color = !showAttributes ? new Color(0.45f, 0.35f, 0.12f) : new Color(0.18f, 0.15f, 0.15f);
+            attributesTab.GetComponent<Image>().color = showAttributes ? new Color(0.45f, 0.35f, 0.12f) : new Color(0.18f, 0.15f, 0.15f);
+            var ap = Profile.Data.attributePoints;
+            attributesTab.GetComponentInChildren<TextMeshProUGUI>().text = ap > 0 ? $"Attributes <color=#ffd040>({ap})</color>" : "Attributes";
+            passivesTab.GetComponentInChildren<TextMeshProUGUI>().text = Profile.Data.skillPoints > 0 ? $"Passives <color=#ffd040>({Profile.Data.skillPoints})</color>" : "Passives";
+            RefreshAttributes();
+
             if (builtFor != Profile.Class || views.Count == 0) BuildTree();
             var tree = Profile.Class.skillTree;
             if (tree == null) return;
@@ -289,10 +382,7 @@ namespace TWF
     public class InventoryPanel : GamePanel
     {
         RectTransform equipArea, bagArea;
-        TextMeshProUGUI statsText, detailText, goldText, attrHeader;
-        readonly TextMeshProUGUI[] attrLabels = new TextMeshProUGUI[5];
-        readonly Button[] attrPlus = new Button[5];
-        Button attrReset;
+        TextMeshProUGUI statsText, detailText, goldText;
         Button equipButton, sellButton, sellJunkButton;
         ItemInstance selected;
         readonly Dictionary<ItemSlot, RectTransform> slotRects = new Dictionary<ItemSlot, RectTransform>();
@@ -310,35 +400,15 @@ namespace TWF
             left.rectTransform.anchorMin = new Vector2(0, 0);
             left.rectTransform.anchorMax = new Vector2(0.3f, 1);
             left.rectTransform.offsetMin = left.rectTransform.offsetMax = Vector2.zero;
-            // Attributes with + buttons on top, derived stats below.
-            attrHeader = UIFactory.Text("AttrHeader", left.transform, "", 28, Palette.Gold, TextAlignmentOptions.Left);
-            attrHeader.rectTransform.Place(new Vector2(0, 1), new Vector2(22, -14), new Vector2(520, 40));
-            for (int i = 0; i < Attributes.Count; i++)
-            {
-                var a = (Attribute)i;
-                var row = UIFactory.Rect("Attr" + a, left.transform).Place(new Vector2(0, 1), new Vector2(18, -60 - i * 58), new Vector2(540, 54));
-                var label = UIFactory.Text("Label", row, "", 26, Attributes.Color(a), TextAlignmentOptions.Left);
-                label.rectTransform.Stretch();
-                label.rectTransform.offsetMax = new Vector2(-70, 0);
-                attrLabels[i] = label;
-                var plus = UIFactory.Button("Plus", row, "+", () => { Profile.AddAttribute(a); Refresh(); }, new Color(0.2f, 0.4f, 0.15f, 1f), 34);
-                ((RectTransform)plus.transform).Place(new Vector2(1, 0.5f), new Vector2(0, 0), new Vector2(60, 50));
-                attrPlus[i] = plus;
-            }
-            attrReset = UIFactory.Button("Reset", left.transform, "", () =>
-            {
-                ConfirmDialog.Show($"Reset attribute points?\n<size=70%>Costs {Profile.AttributeResetCost} gold.</size>", "Reset", () => { Profile.ResetAttributes(); Refresh(); });
-            }, null, 22);
-            ((RectTransform)attrReset.transform).Place(new Vector2(0, 1), new Vector2(18, -356), new Vector2(300, 50));
+            // Derived stats (attributes have their own tab in the Passives menu).
             statsText = UIFactory.Text("Stats", left.transform, "", 22, Palette.Text, TextAlignmentOptions.TopLeft);
             statsText.rectTransform.Stretch(22);
-            statsText.rectTransform.offsetMax = new Vector2(-22, -420);
             statsText.enableAutoSizing = true;
-            statsText.fontSizeMin = 13;
-            statsText.fontSizeMax = 22;
+            statsText.fontSizeMin = 14;
+            statsText.fontSizeMax = 26;
 
             equipArea = UIFactory.Rect("Equipment", content);
-            equipArea.anchorMin = new Vector2(0.31f, 0.42f);
+            equipArea.anchorMin = new Vector2(0.31f, 0.47f);
             equipArea.anchorMax = new Vector2(0.62f, 1f);
             equipArea.offsetMin = equipArea.offsetMax = Vector2.zero;
             // Paper-doll layout.
@@ -352,16 +422,27 @@ namespace TWF
             {
                 var r = UIFactory.Rect(kv.Key.ToString(), equipArea);
                 r.anchorMin = r.anchorMax = kv.Value;
-                r.sizeDelta = new Vector2(140, 140);
+                r.sizeDelta = new Vector2(120, 120);
                 slotRects[kv.Key] = r;
             }
 
-            bagArea = UIFactory.Rect("Bag", content);
-            bagArea.anchorMin = new Vector2(0.31f, 0f);
-            bagArea.anchorMax = new Vector2(0.62f, 0.4f);
-            bagArea.offsetMin = bagArea.offsetMax = Vector2.zero;
+            // The bag scrolls, so it never spills out of the window on short screens.
+            var bagView = UIFactory.Rect("BagView", content);
+            bagView.anchorMin = new Vector2(0.31f, 0f);
+            bagView.anchorMax = new Vector2(0.62f, 0.45f);
+            bagView.offsetMin = bagView.offsetMax = Vector2.zero;
+            bagView.gameObject.AddComponent<RectMask2D>();
+            var bagScroll = bagView.gameObject.AddComponent<ScrollRect>();
+            bagScroll.horizontal = false;
+            bagArea = UIFactory.Rect("Bag", bagView);
+            bagArea.anchorMin = new Vector2(0, 1);
+            bagArea.anchorMax = new Vector2(1, 1);
+            bagArea.pivot = new Vector2(0.5f, 1);
+            bagArea.sizeDelta = Vector2.zero;
+            bagArea.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            bagScroll.content = bagArea;
             var grid = bagArea.gameObject.AddComponent<GridLayoutGroup>();
-            grid.cellSize = new Vector2(92, 92);
+            grid.cellSize = new Vector2(88, 88);
             grid.spacing = new Vector2(8, 8);
             grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             grid.constraintCount = 6;
@@ -374,6 +455,9 @@ namespace TWF
             detailText = UIFactory.Text("Text", detail.transform, "", 28, Palette.Text, TextAlignmentOptions.TopLeft);
             detailText.rectTransform.Stretch(22);
             detailText.rectTransform.offsetMin = new Vector2(22, 260);
+            detailText.enableAutoSizing = true;   // long item tooltips shrink instead of running into the buttons
+            detailText.fontSizeMin = 16;
+            detailText.fontSizeMax = 28;
             goldText = UIFactory.Text("Gold", detail.transform, "", 30, Palette.Gold, TextAlignmentOptions.Left);
             goldText.rectTransform.Place(new Vector2(0, 0), new Vector2(22, 200), new Vector2(500, 44));
 
@@ -408,13 +492,6 @@ namespace TWF
             {
                 var s = hero.Combatant.Stats;
                 var d = Profile.Data;
-                attrHeader.text = $"Attributes  <size=80%><color=#fff>{d.attributePoints} point{(d.attributePoints == 1 ? "" : "s")} to spend</color></size>";
-                for (int i = 0; i < Attributes.Count; i++)
-                {
-                    attrLabels[i].text = $"{(Attribute)i}  <b>{d.attributes[i]}</b>  <size=70%><color=#aaa>{Attributes.Describe((Attribute)i)}</color></size>";
-                    attrPlus[i].interactable = d.attributePoints > 0;
-                }
-                attrReset.GetComponentInChildren<TextMeshProUGUI>().text = $"Reset ({Profile.AttributeResetCost} gold)";
                 var sb = new System.Text.StringBuilder();
                 sb.Append($"<b>Level {d.level}</b>  <color=#aaa>· {Weapons.Name(Weapons.Equipped)}</color>\n");
                 foreach (StatType st in Enum.GetValues(typeof(StatType)))
@@ -466,7 +543,8 @@ namespace TWF
             if (selected == null)
             {
                 detailText.text = "<color=#aaa>Tap an item to see its stats.\n\nMonsters drop gear: <color=#fff>white</color> common, " +
-                                  "<color=#6f8cff>blue</color> magic, <color=#ffe64d>yellow</color> rare and <color=#ff8c1a>orange</color> legendary items with special powers.</color>";
+                                  "<color=#6f8cff>blue</color> magic, <color=#ffe64d>yellow</color> rare, <color=#ff8c1a>orange</color> legendary and <color=#ff4d80>pink</color> mythic items with special powers.\n\n" +
+                                  "Attribute points are spent in the Passives menu.</color>";
                 equipButton.gameObject.SetActive(false);
                 sellButton.gameObject.SetActive(false);
             }

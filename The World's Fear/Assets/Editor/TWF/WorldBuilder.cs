@@ -93,6 +93,15 @@ namespace TWF.EditorTools
             cartographer.buttonLabel = "Maps";
             cartographer.panel = PanelKind.Cartographer;
             cartographer.outfit = Outfit.Mage;
+            // The mystic reforges item properties, outside the inn.
+            var mystic = new GameObject("Mystic").AddComponent<Merchant>();
+            mystic.transform.SetParent(hubRoot.transform, false);
+            mystic.transform.position = new Vector2(-8.4f, 7.4f);
+            mystic.displayName = "Mystic";
+            mystic.subtitle = "Reforge items";
+            mystic.buttonLabel = "Reforge";
+            mystic.panel = PanelKind.Reforge;
+            mystic.outfit = Outfit.Ranger;
             forge.displayName = "Arcane Forge";
             forge.subtitle = "Craft skills";
             forge.buttonLabel = "Forge";

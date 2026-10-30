@@ -64,6 +64,7 @@ namespace TWF
         public static event Action<int> LeveledUp;
         public static event Action SkillsChanged;
         public static event Action ItemsChanged;
+        public static void NotifyItems() { ItemsChanged?.Invoke(); Changed?.Invoke(); }
 
         public static string SavePath => Path.Combine(Application.persistentDataPath, "save.json");
         public static bool HasSave => File.Exists(SavePath);
@@ -315,7 +316,7 @@ namespace TWF
 
         public static int PotionPrice => 20 + Data.level * 6;
         public static int RefreshPrice => 25 + Data.level * 10;
-        public static int BuyPrice(ItemInstance item) => item.SellValue * 4;
+        public static int BuyPrice(ItemInstance item) => item.SellValue * 5;
 
         // The merchant restocks whenever you've gained a level since your last visit.
         public static List<ItemInstance> ShopStock()

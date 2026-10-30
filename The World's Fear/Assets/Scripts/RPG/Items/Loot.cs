@@ -13,11 +13,11 @@ namespace TWF
             int level = monster.level;
             var rank = monster.rank;
 
-            float goldChance = rank == MonsterRank.Normal ? 0.45f : 1f;
+            float goldChance = rank == MonsterRank.Normal ? 0.3f : 1f;
             if (rng.NextDouble() < goldChance)
             {
-                float mult = rank == MonsterRank.Elite ? 3f : rank == MonsterRank.Rare ? 6f : rank == MonsterRank.Boss ? 40f : 1f;
-                int amount = Mathf.Max(1, Mathf.RoundToInt(level * (2f + (float)rng.NextDouble() * 3f) * mult));
+                float mult = rank == MonsterRank.Elite ? 3f : rank == MonsterRank.Rare ? 6f : rank == MonsterRank.Boss ? 25f : 1f;
+                int amount = Mathf.Max(1, Mathf.RoundToInt(level * (1f + (float)rng.NextDouble() * 1.5f) * mult));
                 Pickup.SpawnGold(at + Random.insideUnitCircle * 0.5f, amount);
             }
 
