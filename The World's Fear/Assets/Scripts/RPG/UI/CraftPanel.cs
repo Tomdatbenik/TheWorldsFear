@@ -28,10 +28,28 @@ namespace TWF
 
         void Build(RectTransform content)
         {
-            var left = UIFactory.Rect("Parts", content);
-            left.anchorMin = new Vector2(0, 0.3f);
-            left.anchorMax = new Vector2(0.58f, 1);
-            left.offsetMin = left.offsetMax = Vector2.zero;
+            // The three part sections stack and size to their contents, scrolling if they don't fit.
+            var view = UIFactory.Rect("Parts", content);
+            view.anchorMin = new Vector2(0, 0.3f);
+            view.anchorMax = new Vector2(0.58f, 1);
+            view.offsetMin = view.offsetMax = Vector2.zero;
+            view.offsetMin = new Vector2(0, 8);
+            view.gameObject.AddComponent<RectMask2D>();
+            var scroll = view.gameObject.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            var left = UIFactory.Rect("List", view);
+            left.anchorMin = new Vector2(0, 1);
+            left.anchorMax = new Vector2(1, 1);
+            left.pivot = new Vector2(0.5f, 1);
+            left.sizeDelta = Vector2.zero;
+            var v = left.gameObject.AddComponent<VerticalLayoutGroup>();
+            v.spacing = 6;
+            v.childControlHeight = true;
+            v.childForceExpandHeight = false;
+            v.childControlWidth = true;
+            v.childForceExpandWidth = true;
+            left.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            scroll.content = left;
             elementRow = Section(left, "1. Element", 0);
             deliveryRow = Section(left, "2. Delivery", 1);
             modRow = Section(left, "3. Modifiers", 2);
@@ -80,22 +98,16 @@ namespace TWF
 
         RectTransform Section(RectTransform parent, string title, int index)
         {
-            // Elements and deliveries fit on one row; modifiers get the most room.
-            float[] edges = { 1f, 0.72f, 0.44f, 0f };
-            float y0 = edges[index + 1], y1 = edges[index];
             var r = UIFactory.Rect(title, parent);
-            r.anchorMin = new Vector2(0, y0);
-            r.anchorMax = new Vector2(1, y1);
-            r.offsetMin = r.offsetMax = Vector2.zero;
+            r.gameObject.AddComponent<LayoutElement>().preferredHeight = 130;
             var t = UIFactory.Text("Title", r, title, 28, Palette.Gold, TextAlignmentOptions.Left);
             t.rectTransform.Place(new Vector2(0, 1), new Vector2(6, 0), new Vector2(600, 36));
             var row = UIFactory.Rect("Row", r);
             row.Stretch();
             row.offsetMax = new Vector2(0, -40);
-            // Up to two rows of parts per section (15 modifiers need both).
             var g = row.gameObject.AddComponent<GridLayoutGroup>();
-            g.cellSize = new Vector2(80, 80);
-            g.spacing = new Vector2(6, 6);
+            g.cellSize = new Vector2(74, 74);
+            g.spacing = new Vector2(5, 5);
             g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
             g.constraintCount = 11;
             return row;
@@ -110,9 +122,9 @@ namespace TWF
             foreach (Transform c in stockRow) Destroy(c.gameObject);
 
             // Only parts you've found are shown; the rest are left for you to discover.
-            Row(elementRow, PartKind.Element, i => elements.Contains((ElementPart)i));
-            Row(deliveryRow, PartKind.Delivery, i => delivery.HasValue && (int)delivery.Value == i);
-            Row(modRow, PartKind.Modifier, i => mods.Contains((ModPart)i));
+            Fit(elementRow, Row(elementRow, PartKind.Element, i => elements.Contains((ElementPart)i)));
+            Fit(deliveryRow, Row(deliveryRow, PartKind.Delivery, i => delivery.HasValue && (int)delivery.Value == i));
+            Fit(modRow, Row(modRow, PartKind.Modifier, i => mods.Contains((ModPart)i)));
 
             foreach (var c in Profile.Data.craftedSkills) CraftedRow(c);
 
@@ -123,22 +135,32 @@ namespace TWF
             UpdatePreview();
         }
 
-        void Row(RectTransform row, PartKind kind, System.Func<int, bool> isSelected)
+        // A section is as tall as its title plus however many rows of parts it holds.
+        static void Fit(RectTransform row, int tiles)
         {
-            int hidden = 0;
+            int rows = Mathf.Max(1, Mathf.CeilToInt(tiles / 11f));
+            row.parent.GetComponent<LayoutElement>().preferredHeight = 44 + rows * 79;
+        }
+
+        int Row(RectTransform row, PartKind kind, System.Func<int, bool> isSelected)
+        {
+            int hidden = 0, shown = 0;
             for (int i = 0; i < SkillParts.Count(kind); i++)
             {
                 bool weaponArt = kind == PartKind.Delivery && i >= SkillParts.FirstWeaponArt;
                 if (weaponArt && !BossUnlocks.WeaponArts) continue;   // not even a hint until unlocked
                 if (Crafting.Owned(kind, i) == null) { hidden++; continue; }
                 PartButton(row, kind, i, isSelected(i));
+                shown++;
             }
             if (hidden > 0)
             {
                 var q = UIFactory.Image("Undiscovered", row, GameAssets.RoundedRect, new Color(0.06f, 0.06f, 0.07f), false);
                 var t = UIFactory.Text("Count", q.transform, $"?\n<size=60%>{hidden} more</size>", 26, Palette.MutedText);
                 t.rectTransform.Stretch();
+                shown++;
             }
+            return shown;
         }
 
         void PartButton(RectTransform row, PartKind kind, int id, bool selected)
