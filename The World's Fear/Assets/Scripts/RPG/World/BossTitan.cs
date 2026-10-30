@@ -851,25 +851,35 @@ namespace TWF
         }
 
         // The risk spot: a big glowing circle. Standing in it hurts, but doubles your damage.
+        GameObject riskSpot;
+
         IEnumerator RiskSpot()
         {
             busy = true;
-            Vector2 at = ClampArena((Vector2)transform.position * 0.3f + Random.insideUnitCircle * 6f, 3f);
+            // Right beside the boss, on the hero's side, and it moves with the boss: the reward is
+            // only worth it because you have to fight in its reach.
+            Vector2 side = Hero != null ? (HeroPos - (Vector2)transform.position).normalized : Vector2.down;
+            if (side.sqrMagnitude < 0.01f) side = Vector2.down;
+            Vector2 offset = side * 2.6f;
+            Vector2 at = ClampArena((Vector2)transform.position + offset, 1.5f);
             var go = new GameObject("RiskSpot");
+            riskSpot = go;
             go.transform.position = Ground.Decal(at);
             var r = go.AddComponent<SpriteRenderer>();
             RenderAssets.MakeUnlit(r);
             r.color = new Color(1f, 1f, 1f, 0.85f);
             var frames = db.bossRiskSpot;
-            float size = 5f;
+            float size = 4f;
             if (frames != null && frames.Length > 0) go.transform.localScale = Vector3.one * size / frames[0].bounds.size.x;
             PointLights.Attach(go.transform, new Color(1f, 0.85f, 0.4f), 6f, 2f, new Vector3(0, 0, -1f), true);
             GameUI.Instance?.Toast("A risk spot appeared: stand in it for double damage!", Palette.Gold, 2f);
             float t = 0f, nextTick = 0f;
             busy = false; // the boss keeps attacking meanwhile
-            while (t < 6f)
+            while (t < 6f && !dead)
             {
                 t += Time.deltaTime;
+                at = ClampArena((Vector2)transform.position + offset, 1.5f);
+                go.transform.position = Ground.Decal(at);
                 if (frames != null && frames.Length > 0) r.sprite = frames[Mathf.FloorToInt(t * 10f) % frames.Length];
                 var hero = Hero;
                 if (hero != null && Vector2.Distance(hero.transform.position, at) < size * 0.45f && t >= nextTick)
@@ -1175,6 +1185,7 @@ namespace TWF
         {
             dead = true;
             StopAllCoroutines();
+            if (riskSpot != null) Destroy(riskSpot);
             visual.localPosition = Vector3.zero;
             // The body no longer blocks anything, so the loot it drops can be picked up.
             foreach (var col in GetComponentsInChildren<Collider2D>()) col.enabled = false;
