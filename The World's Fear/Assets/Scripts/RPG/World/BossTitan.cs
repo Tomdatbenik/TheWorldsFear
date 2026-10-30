@@ -1345,9 +1345,9 @@ namespace TWF
             go.transform.position = at;
             var p = go.AddComponent<ExitPortal>();
             p.scene = scene;
-            var glow = GameAssets.CreateWorldSprite("glow", GameAssets.SoftCircle, go.transform, new Color(0.5f, 0.8f, 1f, 0.7f), SortOrder.Ground + 6, 3f);
+            var glow = GameAssets.CreateWorldSprite("glow", GameAssets.PixelGlow, go.transform, new Color(0.5f, 0.8f, 1f, 0.7f), SortOrder.Ground + 6, 3f);
             glow.transform.localPosition = new Vector3(0, 0, Ground.DecalZ);
-            GameAssets.CreateWorldSprite("ring", GameAssets.Ring, go.transform, new Color(0.6f, 0.9f, 1f, 0.9f), SortOrder.Ground + 7, 3f)
+            GameAssets.CreateWorldSprite("ring", GameAssets.PixelRing, go.transform, new Color(0.6f, 0.9f, 1f, 0.9f), SortOrder.Ground + 7, 3f)
                 .transform.localPosition = new Vector3(0, 0, Ground.DecalZ * 2f);
             PointLights.Attach(go.transform, new Color(0.5f, 0.8f, 1f), 7f, 3f, new Vector3(0, 0, -1.5f), true);
         }

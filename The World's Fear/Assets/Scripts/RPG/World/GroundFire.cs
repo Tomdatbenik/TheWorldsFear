@@ -21,7 +21,7 @@ namespace TWF
             var gf = Spawn(owner, at, null, radius, duration > 0f ? duration : Random.Range(8f, 11f));
             gf.status = status;
             gf.poolColor = new Color(color.r, color.g, color.b, 0.55f);
-            gf.pool = GameAssets.CreateWorldSprite("Pool", GameAssets.SoftCircle, gf.transform, gf.poolColor, SortOrder.Ground + 5, radius * 2.3f);
+            gf.pool = GameAssets.CreateWorldSprite("Pool", GameAssets.PixelDisc, gf.transform, gf.poolColor, SortOrder.Ground + 5, radius * 2.3f);
             gf.pool.transform.localPosition = new Vector3(0, 0, Ground.DecalZ);
             if (gf.glow != null) { gf.glow.color = color; gf.glow.range = radius * 2.5f; }
             return gf;

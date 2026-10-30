@@ -384,7 +384,7 @@ namespace TWF
     {
         RectTransform equipArea, bagArea;
         TextMeshProUGUI statsText, detailText, goldText;
-        Button equipButton, sellButton, sellJunkButton;
+        Button equipButton, sellButton, sellJunkButton, socketButton, socketModeButton;
         ItemInstance selected;
         readonly Dictionary<ItemSlot, RectTransform> slotRects = new Dictionary<ItemSlot, RectTransform>();
 
@@ -459,8 +459,14 @@ namespace TWF
             detailText.enableAutoSizing = true;   // long item tooltips shrink instead of running into the buttons
             detailText.fontSizeMin = 16;
             detailText.fontSizeMax = 28;
-            goldText = UIFactory.Text("Gold", detail.transform, "", 30, Palette.Gold, TextAlignmentOptions.Left);
-            goldText.rectTransform.Place(new Vector2(0, 0), new Vector2(22, 200), new Vector2(500, 44));
+            goldText = UIFactory.Text("Gold", detail.transform, "", 26, Palette.Gold, TextAlignmentOptions.Right);
+            goldText.rectTransform.Place(new Vector2(1, 1), new Vector2(-22, -14), new Vector2(400, 40));
+            detailText.rectTransform.offsetMax = new Vector2(-22, -60);
+            // Unique armor: choose the socketed skill and whether it auto-casts.
+            socketButton = UIFactory.Button("Socket", detail.transform, "Socket skill", OnSocket, new Color(0.45f, 0.18f, 0.38f, 1f), 24);
+            ((RectTransform)socketButton.transform).Place(new Vector2(0, 0), new Vector2(22, 196), new Vector2(330, 60));
+            socketModeButton = UIFactory.Button("SocketMode", detail.transform, "Extra button", OnSocketMode, new Color(0.25f, 0.2f, 0.3f, 1f), 22);
+            ((RectTransform)socketModeButton.transform).Place(new Vector2(1, 0), new Vector2(-22, 196), new Vector2(230, 60));
 
             equipButton = UIFactory.Button("Equip", detail.transform, "Equip", OnEquip, new Color(0.2f, 0.4f, 0.15f, 1f));
             ((RectTransform)equipButton.transform).Place(new Vector2(0, 0), new Vector2(22, 110), new Vector2(260, 76));
@@ -548,6 +554,8 @@ namespace TWF
                                   "Attribute points are spent in the Passives menu.</color>";
                 equipButton.gameObject.SetActive(false);
                 sellButton.gameObject.SetActive(false);
+                socketButton.gameObject.SetActive(false);
+                socketModeButton.gameObject.SetActive(false);
             }
             else
             {
@@ -557,7 +565,37 @@ namespace TWF
                 equipButton.gameObject.SetActive(true);
                 equipButton.GetComponentInChildren<TextMeshProUGUI>().text = equipped ? "Unequip" : "Equip";
                 sellButton.gameObject.SetActive(!equipped);
+                socketButton.gameObject.SetActive(selected.socket);
+                socketModeButton.gameObject.SetActive(selected.socket && !string.IsNullOrEmpty(selected.socketSkill));
+                if (selected.socket)
+                {
+                    var sk = Crafting.Find(selected.socketSkill);
+                    socketButton.GetComponentInChildren<TextMeshProUGUI>().text = sk != null ? $"Socket: {sk.name}" : "Socket a skill";
+                    socketModeButton.GetComponentInChildren<TextMeshProUGUI>().text = selected.socketAuto ? "Auto-cast" : "Extra button";
+                }
             }
+        }
+
+        // Cycles the socket through your crafted skills (and empty).
+        void OnSocket()
+        {
+            if (selected == null || !selected.socket) return;
+            var skills = Profile.Data.craftedSkills;
+            if (skills.Count == 0) { GameUI.Instance?.Toast("Craft a skill at the Arcane Forge first", Palette.Gold); return; }
+            int i = skills.FindIndex(c => "craft:" + c.uid == selected.socketSkill);
+            selected.socketSkill = i + 1 < skills.Count ? "craft:" + skills[i + 1].uid : null;
+            Profile.NotifyItems();
+            Profile.Save();
+            Refresh();
+        }
+
+        void OnSocketMode()
+        {
+            if (selected == null || !selected.socket) return;
+            selected.socketAuto = !selected.socketAuto;
+            Profile.NotifyItems();
+            Profile.Save();
+            Refresh();
         }
 
         void OnEquip()

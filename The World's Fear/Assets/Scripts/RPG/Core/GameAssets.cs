@@ -40,6 +40,42 @@ namespace TWF
             return new Color(1, 1, 1, Mathf.Clamp01(w / 2f - d));
         }, 32);
 
+        // ---------- Pixel-art effect shapes (point filtered, dithered instead of smooth alpha) ----------
+
+        static readonly int[] bayer = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+        static float Dither(int x, int y) => (bayer[(y & 3) * 4 + (x & 3)] + 0.5f) / 16f;
+
+        // A filled disc: solid rim, dithered see-through inside (telegraph circles, pools).
+        public static Sprite PixelDisc => Make("pxdisc", 32, 32, (x, y, w, h) =>
+        {
+            float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(w / 2f, h / 2f));
+            if (d > w / 2f) return Color.clear;
+            if (d > w / 2f - 1.5f) return Color.white;
+            return Dither(x, y) < 0.35f ? Color.white : Color.clear;
+        }, 32, FilterMode.Point);
+
+        // A stepped two-pixel ring.
+        public static Sprite PixelRing => Make("pxring", 32, 32, (x, y, w, h) =>
+        {
+            float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(w / 2f, h / 2f));
+            return d <= w / 2f && d > w / 2f - 2f ? Color.white : Color.clear;
+        }, 32, FilterMode.Point);
+
+        // A glow that fades out in dithered steps.
+        public static Sprite PixelGlow => Make("pxglow", 24, 24, (x, y, w, h) =>
+        {
+            float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(w / 2f, h / 2f)) / (w / 2f);
+            float a = Mathf.Clamp01(1f - d);
+            return a * a > Dither(x, y) * 0.9f ? Color.white : Color.clear;
+        }, 24, FilterMode.Point);
+
+        // A small chunky dot for projectiles and slash trails.
+        public static Sprite PixelDot => Make("pxdot", 8, 8, (x, y, w, h) =>
+        {
+            bool corner = (x == 0 || x == w - 1) && (y == 0 || y == h - 1);
+            return corner ? Color.clear : Color.white;
+        }, 8, FilterMode.Point);
+
         // 9-sliced rounded rectangle for UI panels and buttons.
         public static Sprite RoundedRect
         {

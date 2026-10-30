@@ -12,7 +12,7 @@ namespace TWF
         public static bool AttackButtonHeld;
         public static bool Blocked; // menus open
 
-        static readonly KeyCode[] skillKeys = { KeyCode.Q, KeyCode.E, KeyCode.F, KeyCode.R, KeyCode.G };
+        static readonly KeyCode[] skillKeys = { KeyCode.Q, KeyCode.E, KeyCode.F, KeyCode.R, KeyCode.G, KeyCode.T, KeyCode.Y };
 
         public static Vector2 Move
         {
@@ -170,6 +170,14 @@ namespace TWF
             var hero = HeroController.Instance;
             if (hero == null) return;
             var skill = hero.SkillIn(slot);
+            // Socket buttons only show while a unique armor piece fills them.
+            if (slot >= HeroController.FirstSocketSlot)
+            {
+                var group = GetComponent<CanvasGroup>();
+                if (group == null) group = gameObject.AddComponent<CanvasGroup>();
+                group.alpha = skill != null ? 1f : 0f;
+                group.blocksRaycasts = skill != null;
+            }
             if (skill != shownSkill)
             {
                 shownSkill = skill;

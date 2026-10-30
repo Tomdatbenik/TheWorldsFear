@@ -11,8 +11,14 @@ namespace TWF
     {
         public static HeroController Instance { get; private set; }
 
-        public const int SlotCount = 5;          // 4 crafted skills + the weapon skill
+        public const int SlotCount = 7;          // 4 crafted skills + the weapon skill + 2 from unique armor sockets
         public const int WeaponSlot = 4;
+        public const int FirstSocketSlot = 5;
+
+        // Socketed skills set to auto-cast, each with its own cooldown.
+        readonly List<SkillDefinition> autoSkills = new List<SkillDefinition>();
+        readonly List<float> autoCooldowns = new List<float>();
+        readonly string[] socketIds = new string[2];
         public const int UltimateSlot = 3;
 
         [Tooltip("How far the hero walks on its own to reach a target while attack is held.")]
@@ -112,6 +118,7 @@ namespace TWF
 
             Profile.SkillsChanged += OnSkillsChanged;
             Profile.ItemsChanged += RebuildStats;
+            Profile.ItemsChanged += RebuildSkills;   // unique armor sockets add skills
             Profile.LeveledUp += OnLevelUp;
             Combatant.Damaged += OnDamaged;
             Combatant.Died += OnDied;
@@ -196,9 +203,25 @@ namespace TWF
 
             // Active skills are all crafted.
             Crafting.ClearCache();
+            // Unique armor sockets: up to two extra buttons, the rest auto-cast.
+            socketIds[0] = socketIds[1] = null;
+            autoSkills.Clear();
+            autoCooldowns.Clear();
+            int buttons = 0;
+            foreach (var item in Profile.Data.equipment)
+            {
+                if (item == null || !item.socket || string.IsNullOrEmpty(item.socketSkill)) continue;
+                var sk = Crafting.Get(item.socketSkill);
+                if (sk == null) continue;
+                if (item.socketAuto || buttons >= 2) { autoSkills.Add(sk); autoCooldowns.Add(1f); }
+                else socketIds[buttons++] = item.socketSkill;
+            }
+
             for (int i = 0; i < SlotCount; i++)
             {
-                var skill = i == WeaponSlot ? WeaponSkills.Current() : Crafting.Get(Profile.Data.equippedSkills[i]);
+                var skill = i == WeaponSlot ? WeaponSkills.Current()
+                    : i >= FirstSocketSlot ? Crafting.Get(socketIds[i - FirstSocketSlot])
+                    : Crafting.Get(Profile.Data.equippedSkills[i]);
                 if (slotSkills[i] != skill) cooldowns[i] = 0f;
                 slotSkills[i] = skill;
                 slotRanks[i] = skill != null ? 1 : 0;
@@ -261,6 +284,7 @@ namespace TWF
             float dt = Time.deltaTime;
             for (int i = 0; i < SlotCount; i++)
                 if (cooldowns[i] > 0f) cooldowns[i] = Mathf.Max(0f, cooldowns[i] - dt);
+            UpdateAutoCasts(dt);
             // The weapon skill follows whatever weapon is in your hands.
             var weaponSkill = WeaponSkills.Current();
             if (slotSkills[WeaponSlot] != weaponSkill)
@@ -474,13 +498,41 @@ namespace TWF
         // A crafted skill whose attribute requirements are no longer met can't be used.
         public bool RequirementsMet(int slot)
         {
-            if (slot >= Profile.Data.equippedSkills.Length) return true;
-            var c = Crafting.Find(Profile.Data.equippedSkills[slot]);
+            if (slot == WeaponSlot) return true;
+            var c = Crafting.Find(slot >= FirstSocketSlot ? socketIds[slot - FirstSocketSlot] : Profile.Data.equippedSkills[slot]);
             if (c == null) return true;
             // Weapon arts need their weapon in your hands.
             var needs = SkillParts.WeaponOf(c.delivery);
             if (needs.HasValue && needs.Value != Weapons.Equipped) return false;
             return SkillParts.RequirementsMet(c);
+        }
+
+        // Auto-cast socketed skills fire by themselves when ready: buffs and auras whenever enemies are
+        // around, attacks when an enemy is in range. Auto-casting takes 50% longer to recharge.
+        void UpdateAutoCasts(float dt)
+        {
+            if (Combatant.IsDead || Combatant.IsStunned || Panels.AnyOpen) return;
+            for (int i = 0; i < autoSkills.Count; i++)
+            {
+                if (autoCooldowns[i] > 0f) { autoCooldowns[i] -= dt; continue; }
+                var skill = autoSkills[i];
+                float range = skill.targeting == Targeting.Self ? 7f : SkillRange(skill) + 1f;
+                var target = Combat.NearestHostile(Team.Player, transform.position, range);
+                if (target == null) continue;
+                Vector2 to = (Vector2)target.transform.position - (Vector2)transform.position;
+                Cast(skill, 1, to.normalized, (Vector2)transform.position + Vector2.ClampMagnitude(to, SkillRange(skill)));
+                autoCooldowns[i] = skill.Cooldown(1, Combatant.Stats.Get(StatType.CooldownReduction)) * 1.5f;
+            }
+        }
+
+        void Cast(SkillDefinition skill, int rank, Vector2 dir, Vector2 point)
+        {
+            var ctx = new SkillContext
+            {
+                caster = Combatant, runner = this, body = body, origin = transform.position, direction = dir.normalized,
+                point = point, rank = rank, power = skill.Power(rank) * (1f + Combatant.Stats.Get(StatType.SkillPower)),
+            };
+            skill.Cast(ctx);
         }
 
         // aim: offset from the hero, magnitude 0..1 of the skill's range. aimed=false = quick cast at the auto-target.

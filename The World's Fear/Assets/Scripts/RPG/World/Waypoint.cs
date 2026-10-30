@@ -18,7 +18,7 @@ namespace TWF
         {
             var baseSr = GameAssets.CreateWorldSprite("Base", GameAssets.Diamond, transform, new Color(0.35f, 0.55f, 0.9f, 0.9f), SortOrder.Ground + 5, 1.8f);
             baseSr.transform.localScale = new Vector3(baseSr.transform.localScale.x, baseSr.transform.localScale.y * 0.5f, 1f);
-            glow = GameAssets.CreateWorldSprite("Glow", GameAssets.SoftCircle, transform, new Color(0.5f, 0.8f, 1f, 0.5f), SortOrder.Ground + 6, 2.4f);
+            glow = GameAssets.CreateWorldSprite("Glow", GameAssets.PixelGlow, transform, new Color(0.5f, 0.8f, 1f, 0.5f), SortOrder.Ground + 6, 2.4f);
             baseSr.transform.localPosition = new Vector3(0, 0, Ground.DecalZ);
             glow.transform.localPosition = new Vector3(0, 0, Ground.DecalZ * 2f);
             PointLights.Attach(transform, new Color(0.5f, 0.8f, 1f), 6f, 2.5f, new Vector3(0, 0, -1.5f), true);

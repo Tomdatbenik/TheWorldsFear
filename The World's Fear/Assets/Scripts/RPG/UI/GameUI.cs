@@ -176,8 +176,10 @@ namespace TWF
             // Positions relative to the attack button, MOBA style arc.
             Vector2 atkCenter = new Vector2(-125, 125);
             // Slot 4 is the weapon skill, out on the left of the arc.
-            Vector2[] offsets = { new Vector2(-235, -10), new Vector2(-195, 150), new Vector2(-50, 245), new Vector2(-340, 280), new Vector2(-400, 70) };
-            float[] sizes = { 135, 135, 135, 155, 120 };
+            // Slots 5 and 6 come from unique armor sockets and only appear when filled.
+            Vector2[] offsets = { new Vector2(-235, -10), new Vector2(-195, 150), new Vector2(-50, 245), new Vector2(-340, 280), new Vector2(-400, 70),
+                                  new Vector2(-510, 200), new Vector2(-470, 370) };
+            float[] sizes = { 135, 135, 135, 155, 120, 110, 110 };
             for (int i = 0; i < HeroController.SlotCount; i++)
                 MakeSkillButton(cluster, i, atkCenter + offsets[i], sizes[i], cancel.rectTransform);
 

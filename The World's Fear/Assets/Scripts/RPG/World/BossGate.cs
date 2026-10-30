@@ -12,8 +12,8 @@ namespace TWF
 
         void Start()
         {
-            GameAssets.CreateWorldSprite("Portal", GameAssets.SoftCircle, transform, new Color(0.9f, 0.2f, 0.1f, 0.7f), SortOrder.Ground + 6, 3f);
-            GameAssets.CreateWorldSprite("Ring", GameAssets.Ring, transform, new Color(1f, 0.5f, 0.2f, 0.9f), SortOrder.Ground + 7, 3f);
+            GameAssets.CreateWorldSprite("Portal", GameAssets.PixelGlow, transform, new Color(0.9f, 0.2f, 0.1f, 0.7f), SortOrder.Ground + 6, 3f);
+            GameAssets.CreateWorldSprite("Ring", GameAssets.PixelRing, transform, new Color(1f, 0.5f, 0.2f, 0.9f), SortOrder.Ground + 7, 3f);
             var label = new GameObject("Label").AddComponent<TextMeshPro>();
             label.transform.SetParent(Billboard.Create(transform), false);
             label.transform.localPosition = new Vector3(0, 2.4f, 0);

@@ -74,6 +74,10 @@ namespace TWF
         public string legendaryPower;
         public int weaponType; // WeaponType, for weapons
         public int element = (int)ElementPart.Physical;   // weapons: the element of basic attacks
+        // Unique armor: a socket that holds one crafted skill, cast from an extra button or automatically.
+        public bool socket;
+        public string socketSkill;   // "craft:<uid>"
+        public bool socketAuto;
         public int reforgedAffix = -1;   // once one affix is reforged, only that one can be reforged again
         public int reforgeCount;
 

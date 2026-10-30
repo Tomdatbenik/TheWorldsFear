@@ -53,13 +53,13 @@ namespace TWF
             p.pierceLeft = spec.pierce;
             p.homingTarget = homingTarget;
 
-            var sprite = spec.sprite != null ? spec.sprite : GameAssets.Circle;
+            var sprite = spec.sprite != null ? spec.sprite : GameAssets.PixelDot;
             var sr = GameAssets.CreateWorldSprite("visual", sprite, go.transform, spec.color, SortOrder.Projectiles, spec.size);
             if (spec.sprite == null)
             {
-                var glow = GameAssets.CreateWorldSprite("glow", GameAssets.SoftCircle, go.transform,
+                var glow = GameAssets.CreateWorldSprite("glow", GameAssets.PixelGlow, go.transform,
                     new Color(spec.color.r, spec.color.g, spec.color.b, 0.45f), SortOrder.Projectiles - 1, spec.size * 2.4f);
-                var core = GameAssets.CreateWorldSprite("core", GameAssets.Circle, go.transform,
+                var core = GameAssets.CreateWorldSprite("core", GameAssets.PixelDot, go.transform,
                     new Color(1f, 1f, 1f, 0.9f), SortOrder.Projectiles + 1, spec.size * 0.45f);
             }
             // Fly at chest height (the ground is z = 0 and up is -z).
@@ -186,8 +186,8 @@ namespace TWF
             a.owner = owner;
             a.team = owner != null ? owner.team : Team.Enemy;
             var c = spec.color;
-            a.ringSr = GameAssets.CreateWorldSprite("ring", GameAssets.Ring, go.transform, new Color(c.r, c.g, c.b, 0.8f), SortOrder.Telegraph + 1, spec.radius * 2f);
-            a.fillSr = GameAssets.CreateWorldSprite("fill", GameAssets.SoftCircle, go.transform, new Color(c.r, c.g, c.b, 0.25f), SortOrder.Telegraph, spec.radius * 2f);
+            a.ringSr = GameAssets.CreateWorldSprite("ring", GameAssets.PixelRing, go.transform, new Color(c.r, c.g, c.b, 0.8f), SortOrder.Telegraph + 1, spec.radius * 2f);
+            a.fillSr = GameAssets.CreateWorldSprite("fill", GameAssets.PixelDisc, go.transform, new Color(c.r, c.g, c.b, 0.45f), SortOrder.Telegraph, spec.radius * 2f);
             a.StartCoroutine(a.Run());
             return a;
         }
@@ -274,7 +274,8 @@ namespace TWF
         {
             for (int i = 0; i < count; i++)
             {
-                var sr = GameAssets.CreateWorldSprite("spark", GameAssets.Pixel, null, color, SortOrder.Effects, Random.Range(0.08f, 0.16f));
+                // Square sparks snapped to whole art pixels (1/16 of a unit).
+                var sr = GameAssets.CreateWorldSprite("spark", GameAssets.Pixel, null, color, SortOrder.Effects, Random.Range(1, 3) / 16f);
                 sr.transform.position = new Vector3(pos.x, pos.y, -0.5f);
                 sr.transform.rotation = View.Rotation;
                 var v = sr.gameObject.AddComponent<VFX>();
@@ -289,7 +290,7 @@ namespace TWF
 
         public static void Ring(Vector3 pos, Color color, float radius, float duration)
         {
-            var sr = GameAssets.CreateWorldSprite("ring", GameAssets.Ring, null, color, SortOrder.Effects, radius * 2f);
+            var sr = GameAssets.CreateWorldSprite("ring", GameAssets.PixelRing, null, color, SortOrder.Effects, radius * 2f);
             sr.transform.position = new Vector3(pos.x, pos.y, Ground.DecalZ * 2f);
             var v = sr.gameObject.AddComponent<VFX>();
             v.sr = sr;
@@ -307,7 +308,7 @@ namespace TWF
             {
                 float a = (baseAngle - arcDeg / 2f + arcDeg * i / segments) * Mathf.Deg2Rad;
                 var p = pos + new Vector3(Mathf.Cos(a), Mathf.Sin(a)) * radius * 0.85f + Vector3.back * 0.4f;
-                var sr = GameAssets.CreateWorldSprite("slash", GameAssets.SoftCircle, null, color, SortOrder.Effects, radius * 0.45f);
+                var sr = GameAssets.CreateWorldSprite("slash", GameAssets.PixelDot, null, color, SortOrder.Effects, radius * 0.22f);
                 sr.transform.position = p;
                 var v = sr.gameObject.AddComponent<VFX>();
                 v.sr = sr;

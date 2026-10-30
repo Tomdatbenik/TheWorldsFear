@@ -116,6 +116,14 @@ namespace TWF
                 if (!def.isPrefix && firstSuffix == null) firstSuffix = def;
             }
 
+            // Unique armor carries a skill socket: some rare and legendary pieces, every mythic one.
+            bool armor = slot == ItemSlot.Helm || slot == ItemSlot.Chest || slot == ItemSlot.Gloves || slot == ItemSlot.Boots;
+            if (armor)
+            {
+                double socketChance = rarity == Rarity.Mythic ? 1.0 : rarity == Rarity.Legendary ? 0.3 : rarity == Rarity.Rare ? 0.08 : 0.0;
+                item.socket = rng.NextDouble() < socketChance;
+            }
+
             switch (rarity)
             {
                 case Rarity.Common:
@@ -167,6 +175,11 @@ namespace TWF
             string kind = item.slot == ItemSlot.Weapon ? Weapons.Name((WeaponType)item.weaponType) : item.slot.ToString();
             sb.Append($"<size=80%><color=#999>{item.rarity} {kind} · Item level {item.itemLevel}</color></size>\n");
             sb.Append($"<color=#fff>{StatInfo.Format(item.implicitStat, ModKind.Flat, item.implicitValue)}</color>\n");
+            if (item.socket)
+            {
+                var sk = Crafting.Find(item.socketSkill);
+                sb.Append($"<color=#ff70c0>Unique · skill socket:</color> {(sk != null ? sk.name + (item.socketAuto ? " <size=80%>(auto-cast)</size>" : " <size=80%>(extra button)</size>") : "<color=#aaa>empty</color>")}\n");
+            }
             if (item.slot == ItemSlot.Weapon && item.element != (int)ElementPart.Physical)
                 sb.Append($"Element: {Elements.Tag((ElementPart)item.element)}  <size=80%><color=#aaa>(basic attacks)</color></size>\n");
             foreach (var a in item.affixes) sb.Append($"<color=#8cf>{a.Describe()}</color>\n");
