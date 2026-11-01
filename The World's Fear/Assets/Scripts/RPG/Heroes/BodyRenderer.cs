@@ -332,7 +332,7 @@ namespace TWF
 
         static Rig MakeRig(bool female, Pose pose)
         {
-            var k = new Rig { female = female, side = pose.facing == Facing.Side, back = pose.facing == Facing.Back, cx = W / 2f };
+            var k = new Rig { female = female, side = pose.facing == Facing.Side, back = pose.facing == Facing.Back, cx = W / (2f * S) };   // design units: the centre of the 64-wide grid
             float b = -pose.bob, s = pose.step;
             // Breathing: the chest, shoulders, arms and head rise a pixel at the top of each breath.
             float br = pose.breath == 1 || pose.breath == 2 ? 1f : 0f;
