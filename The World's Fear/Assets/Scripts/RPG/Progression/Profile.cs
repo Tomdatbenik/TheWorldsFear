@@ -302,18 +302,31 @@ namespace TWF
 
         public static ItemInstance Equipped(ItemSlot slot) => Data.equipment.Find(i => i.slot == slot);
 
-        public static void EquipItem(ItemInstance item)
+        public static bool IsTwoHanded(ItemInstance item) =>
+            item != null && item.slot == ItemSlot.Weapon && Weapons.Get((WeaponType)item.weaponType).twoHanded;
+
+        // False when the bag can't take what this pushes out: a two-handed weapon also frees the
+        // off hand, and an off-hand item frees the hands from a two-handed weapon.
+        public static bool EquipItem(ItemInstance item)
         {
-            if (!Data.inventory.Remove(item)) return;
+            if (!Data.inventory.Contains(item)) return false;
             var old = Equipped(item.slot);
-            if (old != null)
+            ItemInstance bumped = null;
+            if (IsTwoHanded(item)) bumped = Equipped(ItemSlot.OffHand);
+            else if (item.slot == ItemSlot.OffHand && IsTwoHanded(Equipped(ItemSlot.Weapon))) bumped = Equipped(ItemSlot.Weapon);
+            int free = InventorySize - (Data.inventory.Count - 1);
+            if ((old != null ? 1 : 0) + (bumped != null ? 1 : 0) > free) return false;
+            Data.inventory.Remove(item);
+            foreach (var o in new[] { old, bumped })
             {
-                Data.equipment.Remove(old);
-                Data.inventory.Add(old);
+                if (o == null) continue;
+                Data.equipment.Remove(o);
+                Data.inventory.Add(o);
             }
             Data.equipment.Add(item);
             ItemsChanged?.Invoke();
             Changed?.Invoke();
+            return true;
         }
 
         public static void UnequipItem(ItemInstance item)
