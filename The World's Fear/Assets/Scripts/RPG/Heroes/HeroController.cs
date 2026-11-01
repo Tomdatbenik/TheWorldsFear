@@ -136,24 +136,11 @@ namespace TWF
 
         // ---------- Stats and loadout ----------
 
-        // The hero's sprite shows the helm, chest armor, gloves and boots being worn.
+        // The hero's sprite: their chosen look wearing their helm, chest armor, gloves and boots.
         void DressInGear()
         {
             if (!animator) return;
-            var g = new CharacterSpriteGenerator.Gear { helm = -1, chest = -1, gloves = -1, boots = -1 };
-            foreach (var item in Profile.Data.equipment)
-            {
-                if (item == null) continue;
-                int r = (int)item.rarity;
-                switch (item.slot)
-                {
-                    case ItemSlot.Helm: g.helm = r; break;
-                    case ItemSlot.Chest: g.chest = r; break;
-                    case ItemSlot.Gloves: g.gloves = r; break;
-                    case ItemSlot.Boots: g.boots = r; break;
-                }
-            }
-            animator.SetSprites(CharacterSpriteGenerator.GetGeared(g));
+            animator.SetSprites(PaperDoll.Get(PaperDoll.ForHero(Profile.Data.appearance, Profile.Data.equipment)));
         }
 
         public void RebuildStats()

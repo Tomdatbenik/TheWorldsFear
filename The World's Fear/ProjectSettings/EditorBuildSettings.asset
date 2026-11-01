@@ -14,4 +14,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/BossArena.unity
     guid: c3c232ff114be43249c03a950009f625
+  - enabled: 1
+    path: Assets/Scenes/CharacterCreator.unity
+    guid: bcd150c3694574c4f98d3549c0192208
   m_configObjects: {}

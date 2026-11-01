@@ -21,6 +21,17 @@ namespace TWF
         static readonly string[] legendaryAdj = { "Ancient", "Fabled", "Forgotten", "Eternal", "Cursed", "Storied" };
         static readonly string[] mythicAdj = { "Godforged", "Worldbreaker's", "Starfallen", "Primordial", "Apocalyptic", "Divine" };
 
+        // Which of the four base items of its slot this is (0 = simplest), for how it looks when worn.
+        public static int BaseTier(ItemInstance item)
+        {
+            if (baseNames.TryGetValue(item.slot, out var names))
+            {
+                int i = System.Array.IndexOf(names, item.baseName);
+                if (i >= 0) return i;
+            }
+            return Mathf.Clamp((int)item.rarity, 0, 3);
+        }
+
         public static ItemSlot RandomSlot(System.Random rng)
         {
             // Weapons and jewelry a little rarer than armor.

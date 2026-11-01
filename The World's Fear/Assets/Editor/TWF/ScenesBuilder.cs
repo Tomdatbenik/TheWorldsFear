@@ -17,6 +17,7 @@ namespace TWF.EditorTools
             WorldBuilder.Build();
             BuildTitle();
             BuildBossArena();
+            BuildCreator();
             ConfigureProject();
         }
 
@@ -33,6 +34,21 @@ namespace TWF.EditorTools
             var title = new GameObject("Title").AddComponent<TitleScreen>();
             title.background = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/Sprites/StartScreen.png");
             EditorSceneManager.SaveScene(scene, "Assets/Scenes/Title.unity");
+        }
+
+        // Character creation (and the test bench for character art); all built at runtime.
+        [MenuItem("TWF/Build Character Creator")]
+        public static void BuildCreator()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var cam = new GameObject("Main Camera").AddComponent<Camera>();
+            cam.tag = "MainCamera";
+            cam.orthographic = true;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = Color.black;
+            cam.transform.position = new Vector3(0, 0, -10);
+            new GameObject("Creator").AddComponent<CharacterCreator>();
+            EditorSceneManager.SaveScene(scene, "Assets/Scenes/CharacterCreator.unity");
         }
 
         // The 2.5D boss arena: everything is generated at runtime by BossArenaSetup.
@@ -61,6 +77,7 @@ namespace TWF.EditorTools
                 new EditorBuildSettingsScene("Assets/Scenes/Title.unity", true),
                 new EditorBuildSettingsScene("Assets/Scenes/World.unity", true),
                 new EditorBuildSettingsScene("Assets/Scenes/BossArena.unity", true),
+                new EditorBuildSettingsScene("Assets/Scenes/CharacterCreator.unity", true),
             };
             EditorBuildSettings.scenes = scenes.ToArray();
 

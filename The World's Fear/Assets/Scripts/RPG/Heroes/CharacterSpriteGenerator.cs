@@ -154,7 +154,10 @@ namespace TWF
             return set;
         }
 
-        public static CharacterSprites Get(Outfit outfit)
+        // Everyone is drawn with the tall layered paper doll now; the old chibi drawing below is kept for reference.
+        public static CharacterSprites Get(Outfit outfit) => PaperDoll.Get(PaperDoll.ForOutfit(outfit));
+
+        static CharacterSprites GetChibi(Outfit outfit)
         {
             if (cache.TryGetValue(outfit, out var set) && set.idle[0] != null && set.idle[0][0] != null) return set;
             set = Build(LookFor(outfit), outfit.ToString(), outfit);

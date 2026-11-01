@@ -1206,8 +1206,8 @@ namespace TWF
                 () => ConfirmDialog.Show("Start a new hero?\n<size=70%>This hero's journey ends here.</size>", "New hero", () =>
                 {
                     Profile.DeleteSave();
-                    TitleScreen.OpenNewHero = true;
-                    UnityEngine.SceneManagement.SceneManager.LoadScene("Title");
+                    CharacterCreator.Pending = null;
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("CharacterCreator");
                 }));
         }
 

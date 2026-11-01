@@ -63,8 +63,9 @@ namespace TWF
             }
             UIFactory.Button("NewGame", mainMenu, "New Hero", () =>
             {
-                if (Profile.HasSave) ConfirmDialog.Show("Start a new hero?\n<size=70%>Your current hero will be lost.</size>", "New hero", ShowClasses);
-                else ShowClasses();
+                // New heroes start in the character creator, which comes back here for the weapon pick.
+                if (Profile.HasSave) ConfirmDialog.Show("Start a new hero?\n<size=70%>Your current hero will be lost.</size>", "New hero", () => SceneManager.LoadScene("CharacterCreator"));
+                else SceneManager.LoadScene("CharacterCreator");
             }, null, 46);
         }
 
@@ -167,7 +168,8 @@ namespace TWF
         void StartNew()
         {
             Profile.DeleteSave();
-            Profile.NewGame(pickedWeapon);
+            Profile.NewGame(pickedWeapon, CharacterCreator.Pending);
+            CharacterCreator.Pending = null;
             Profile.Save();
             SceneManager.LoadScene(worldScene);
         }

@@ -51,7 +51,8 @@ namespace TWF
         public List<string> codexPowers = new List<string>();
         public List<int> codexWeapons = new List<int>();
         public int[] lootByRarity = new int[5];
-        public List<string> openedChests = new List<string>();   // the four guardians unseal the World's Fear
+        public List<string> openedChests = new List<string>();
+        public Appearance appearance = new Appearance();   // the four guardians unseal the World's Fear
         public List<string> defeatedGates = new List<string>();
         public bool hasReturn;          // come back to this spot after a boss fight
         public float returnX, returnY;
@@ -101,10 +102,10 @@ namespace TWF
         public static HeroClassDefinition Class => GameDatabase.Instance.FindClass(Data.classId) ?? GameDatabase.Instance.classes[0];
 
         // A new hero: no classes, the starting weapon decides the basic attack.
-        public static void NewGame(WeaponType starterWeapon)
+        public static void NewGame(WeaponType starterWeapon, Appearance look = null)
         {
             RunOver = false;
-            data = new SaveData { classId = "adventurer" };
+            data = new SaveData { classId = "adventurer", appearance = look ?? new Appearance() };
             ranks = null;
             exploredSet = null;
             data.skillPoints = 1;
@@ -139,6 +140,7 @@ namespace TWF
                 data.codexPowers ??= new List<string>();
                 data.codexWeapons ??= new List<int>();
                 data.openedChests ??= new List<string>();
+                data.appearance ??= new Appearance();
                 if (data.lootByRarity == null || data.lootByRarity.Length < 5) data.lootByRarity = new int[5];
                 ranks = null;
                 return true;

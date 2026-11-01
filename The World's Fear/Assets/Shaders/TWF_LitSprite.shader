@@ -13,6 +13,10 @@ Shader "TWF/LitSprite"
         _Ambient ("Ambient Boost", Range(0,2)) = 1
         _FlatGround ("Ground (no self shading)", Float) = 0
         _MeshNormals ("Use Mesh Normals (cliffs)", Float) = 0
+        _NormalMap ("Normal Map (pixel art)", 2D) = "bump" {}
+        _UseNormalMap ("Use Normal Map", Float) = 0
+        _Bands ("Light Bands", Range(2,8)) = 4
+        _ShadowTint ("Shadow Tint", Color) = (0.42,0.36,0.62,1)
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
     }
 
@@ -26,6 +30,8 @@ Shader "TWF/LitSprite"
 
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
+        TEXTURE2D(_NormalMap);
+        SAMPLER(sampler_NormalMap);
 
         // Set by ZoneLighting for the whole scene.
         half4 _TWF_Ambient;
@@ -39,6 +45,9 @@ Shader "TWF/LitSprite"
             half _Ambient;
             half _FlatGround;
             half _MeshNormals;
+            half _UseNormalMap;
+            half _Bands;
+            half4 _ShadowTint;
         CBUFFER_END
 
         // Sway the top of the sprite; the base (uv.y = 0) stays put.
@@ -87,6 +96,9 @@ Shader "TWF/LitSprite"
                 float3 positionWS : TEXCOORD1;
                 float fog : TEXCOORD2;
                 float3 normalWS : TEXCOORD3;
+                float3 tangentWS : TEXCOORD4;
+                float3 bitangentWS : TEXCOORD5;
+                float3 faceWS : TEXCOORD6;
             };
 
             Varyings vert(Attributes v)
@@ -101,6 +113,10 @@ Shader "TWF/LitSprite"
                 o.color = v.color * _Color;
                 o.fog = ComputeFogFactor(o.positionCS.z);
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
+                // The sprite's own axes in the world, for normal-mapped pixel art: right, up, toward the viewer.
+                o.tangentWS = normalize(TransformObjectToWorldDir(float3(1, 0, 0)));
+                o.bitangentWS = normalize(TransformObjectToWorldDir(float3(0, 1, 0)));
+                o.faceWS = normalize(TransformObjectToWorldDir(float3(0, 0, -1)));
                 return o;
             }
 
@@ -115,6 +131,41 @@ Shader "TWF/LitSprite"
                 float3 n = _MeshNormals > 0.5 ? normalize(i.normalWS) : up;
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 Light mainLight = GetMainLight(shadowCoord);
+
+                // Normal-mapped pixel art: each pixel is lit from its own surface direction and the
+                // result snaps to a few bands, with cool tinted shadows, like hand-shaded sprites.
+                if (_UseNormalMap > 0.5)
+                {
+                    half3 nm = SAMPLE_TEXTURE2D(_NormalMap, sampler_NormalMap, i.uv).xyz * 2 - 1;
+                    float3 pn = normalize(i.tangentWS * nm.x + i.bitangentWS * nm.y + i.faceWS * nm.z);
+                    half key = saturate(dot(pn, mainLight.direction)) * mainLight.shadowAttenuation;
+                    half band = floor(key * _Bands + 0.5) / _Bands;
+                    half3 lit = lerp(_ShadowTint.rgb * 0.55, mainLight.color * 1.15, band);
+                    half3 pointLit = 0;
+                    #if defined(_ADDITIONAL_LIGHTS)
+                    uint pc = GetAdditionalLightsCount();
+                    #if USE_CLUSTER_LIGHT_LOOP
+                    InputData pid = (InputData)0;
+                    pid.positionWS = i.positionWS;
+                    pid.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(i.positionCS);
+                    LIGHT_LOOP_BEGIN(pc)
+                        Light pl = GetAdditionalLight(lightIndex, i.positionWS);
+                        half pk = saturate(dot(pn, pl.direction) * 0.8 + 0.2) * pl.distanceAttenuation;
+                        pointLit += pl.color * floor(pk * _Bands + 0.5) / _Bands;
+                    LIGHT_LOOP_END
+                    #else
+                    for (uint pj = 0; pj < pc; pj++)
+                    {
+                        Light pl = GetAdditionalLight(pj, i.positionWS);
+                        half pk = saturate(dot(pn, pl.direction) * 0.8 + 0.2) * pl.distanceAttenuation;
+                        pointLit += pl.color * floor(pk * _Bands + 0.5) / _Bands;
+                    }
+                    #endif
+                    #endif
+                    half3 nmColor = tex.rgb * (lit + _TWF_Ambient.rgb * _Ambient * 0.6 + pointLit) + tex.rgb * _Emission;
+                    return half4(MixFog(nmColor, i.fog), 1);
+                }
+
                 half ndl = saturate(dot(n, mainLight.direction) * 0.5 + 0.5);
                 half3 light = mainLight.color * ndl * mainLight.shadowAttenuation;
 

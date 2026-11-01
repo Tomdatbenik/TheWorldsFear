@@ -35,8 +35,8 @@ namespace TWF
                 ConfirmDialog.Show("Start a new hero?\n<size=70%>Your current hero will be lost.</size>", "New hero", () =>
                 {
                     Panels.CloseAll();
-                    TitleScreen.OpenNewHero = true;
-                    SceneManager.LoadScene("Title");
+                    CharacterCreator.Pending = null;
+                    SceneManager.LoadScene("CharacterCreator");
                 }), new Color(0.4f, 0.15f, 0.1f, 1f), 32);
         }
 
