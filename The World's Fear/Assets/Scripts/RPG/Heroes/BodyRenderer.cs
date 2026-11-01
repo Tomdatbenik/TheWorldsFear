@@ -35,6 +35,8 @@ namespace TWF
             public Color color;
             public float roundness = 4f;   // how far in (px) the surface keeps curving
             public Func<int, int, Color, Color> pattern;   // surface detail painted into the albedo
+            public string slot;   // equipment slot this part belongs to (chest, legs, boots...); null = body
+            public string group;  // which bones carry it: arm_L, leg_near, torso, head... (null = by distance)
             public Part(Color c) { color = c; }
 
             public void Fill(int x, int y) { if (x >= 0 && y >= 0 && x < W && y < H) mask[x, y] = true; }
@@ -119,7 +121,12 @@ namespace TWF
             public readonly Color[,] albedo = new Color[W, H];   // flat material color, for dynamic lighting
             public readonly Vector3[,] normal = new Vector3[W, H];
             public readonly int[,] part = new int[W, H];
+            public List<Part> parts;   // part[x, y] - 1 indexes this
         }
+
+        static Part Tag(Part p, string slot) { p.slot = slot; return p; }
+        static Part Group(Part p, string group) { p.group = group; return p; }
+        static string LimbSide(Rig k, int i) => k.side ? (i == 0 ? "_far" : "_near") : (i == 0 ? "_L" : "_R");
 
         // Albedo + normal map pair for dynamically lit sprites.
         public struct Maps
@@ -130,7 +137,7 @@ namespace TWF
         // Draws parts in order (later on top), shading each from its own shape.
         public static Result Render(List<Part> parts)
         {
-            var res = new Result();
+            var res = new Result { parts = parts };
             for (int i = 0; i < parts.Count; i++) Shade(res, parts[i], i + 1);
             return res;
         }
@@ -269,6 +276,7 @@ namespace TWF
             public WeaponType? backWeapon;      // stowed across the back
             public WeaponType? hipWeapon;       // sheathed at the hip
             public Color cloth = new Color(0.32f, 0.44f, 0.58f), pants = new Color(0.36f, 0.28f, 0.22f), capeColor = new Color(0.55f, 0.16f, 0.16f);
+            public bool bareChest;   // art pipeline: draw no chest garment, to render other items alone
             public Color metal = new Color(0.72f, 0.75f, 0.8f), trim = new Color(0.9f, 0.75f, 0.35f), leather = new Color(0.42f, 0.28f, 0.17f);
 
             public string Key => $"{chest}{trousers}{skirt}{cape}{helm}{gloves}{boots}{weapon}{offHand}{offWeapon}{backWeapon}{hipWeapon}{cloth}{pants}{capeColor}{metal}";
@@ -390,8 +398,8 @@ namespace TWF
                     k.wr[i] = new Vector2(k.sh[i].x + a * 4f, k.crotch + 1 + br * 0.5f);
                 }
                 k.torso = female
-                    ? new[] { (k.crotch - 1, 5.6f, 3.8f), (k.crotch + 3, 5.8f, 4.2f), (k.waist, 3f, 3.2f), (k.chest - 3, 3.6f, 4.4f), (k.chest, 3.8f, 6f), (k.chest + 3, 4f, 4.2f), (k.shoulder, 3.8f, 3.6f), (k.shoulder + 1.5f, 2.2f, 2.2f) }
-                    : new[] { (k.crotch - 1, 4.8f, 4f), (k.crotch + 3, 5f, 4.2f), (k.waist, 4f, 4.2f), (k.chest, 4.6f, 5.6f), (k.shoulder, 4.6f, 4.4f), (k.shoulder + 1.5f, 2.6f, 2.6f) };
+                    ? new[] { (k.crotch - 1, 6.2f, 4.2f), (k.crotch + 3, 6.4f, 4.6f), (k.waist, 3.8f, 3.8f), (k.chest - 3, 4.2f, 4.8f), (k.chest, 4.4f, 6.4f), (k.chest + 3, 4.6f, 4.6f), (k.shoulder, 4.3f, 4f), (k.shoulder + 1.5f, 2.4f, 2.4f) }
+                    : new[] { (k.crotch - 1, 5.6f, 4.8f), (k.crotch + 3, 5.8f, 5f), (k.waist, 5f, 5.2f), (k.chest, 5.6f, 6.6f), (k.shoulder, 5.4f, 5.2f), (k.shoulder + 1.5f, 3f, 3f) };   // ~0.6 of the front width, like a real chest
             }
             return k;
         }
@@ -406,7 +414,8 @@ namespace TWF
         // Legs, arms, torso and head as single sculpted pieces.
         static Part Leg(Rig k, int i, Color c, float grow = 0f, float fromT = 0f, float toT = 1f, bool foot = true)
         {
-            var p = new Part(c) { roundness = 3.5f };
+            var p = new Part(c) { roundness = 3.5f }; p.group = "leg" + LimbSide(k, i);
+            if (k.side) grow += 0.5f;   // in profile a leg shows its depth, a little more than its width
             var hipKnee = (k.hip[i], k.kn[i]);
             if (fromT < 0.5f) p.Muscle(Vector2.Lerp(k.hip[i], k.kn[i], fromT * 2f), toT < 0.5f ? Vector2.Lerp(k.hip[i], k.kn[i], toT * 2f) : k.kn[i], (k.female ? 4.6f : 4.4f) + grow, (k.female ? 3.7f : 3.8f) + grow, 2.2f + grow, 0.25f);
             if (toT > 0.5f) p.Muscle(fromT > 0.5f ? Vector2.Lerp(k.kn[i], k.an[i], (fromT - 0.5f) * 2f) : k.kn[i], Vector2.Lerp(k.kn[i], k.an[i], (toT - 0.5f) * 2f), 2.2f + grow, (k.female ? 2.7f : 3f) + grow, 1.4f + grow, 0.28f);
@@ -422,7 +431,7 @@ namespace TWF
 
         static Part Arm(Rig k, int i, Color c, float grow = 0f, float toT = 1f, bool hand = true)
         {
-            var p = new Part(c) { roundness = 3f };
+            var p = new Part(c) { roundness = 3f }; p.group = "arm" + LimbSide(k, i);
             float g = grow;
             p.Ellipse(k.sh[i].x, k.sh[i].y - 0.8f, (k.female ? 2.1f : 2.7f) + g, (k.female ? 2.2f : 2.6f) + g);
             p.Muscle(k.sh[i], toT < 0.5f ? Vector2.Lerp(k.sh[i], k.el[i], toT * 2f) : k.el[i], (k.female ? 2.1f : 2.7f) + g, (k.female ? 2.2f : 2.9f) + g, (k.female ? 1.6f : 2.1f) + g, 0.3f);
@@ -433,6 +442,8 @@ namespace TWF
 
         public static Color[,] Figure(Appearance look, Gear gear, Pose pose) => Finish(BuildFigure(look, gear, pose));
         public static Maps FigureMaps(Appearance look, Gear gear, Pose pose) => FinishMaps(BuildFigure(look, gear, pose));
+        // The raw render, with the part id of every pixel (for the art pipeline's masks and bone cut).
+        public static Result FigureResult(Appearance look, Gear gear, Pose pose) => BuildFigure(look, gear, pose);
 
         // The bare mannequin (kept for the art bake).
         public static Color[,] Mannequin(bool female, Color skin, Pose pose) => Figure(Bare(female, skin), null, pose);
@@ -451,63 +462,73 @@ namespace TWF
             var skin = Appearance.SkinTones[Mathf.Clamp(look.skin, 0, Appearance.SkinTones.Length - 1)];
             var k = MakeRig(female, pose);
             Part Add(Part p) { parts.Add(p); return p; }
+            // Equipment parts carry their slot; untagged ones take the slot of the call.
+            void Wear(IEnumerable<Part> ps, string slot)
+            {
+                foreach (var p in ps)
+                {
+                    if (p.slot == null) p.slot = slot;
+                    if (p.group == null) p.group = slot == "helm" ? "head" : slot == "chest" || slot == "legs" || slot == "cape" ? "torso" : null;
+                    if (!(g.bareChest && p.slot == "chest")) Add(p);
+                }
+            }
             var far = Mul(skin, 0.88f);
             // Behind everything: cape, the back weapon (seen from the front and side), and anything held
             // when we see the character from behind.
-            if (g != null && g.cape && !k.back) Add(Cape(k, g, true));
-            if (g != null && !k.back) { foreach (var p in BackSlot(k, g)) Add(p); foreach (var p in QuiverSlot(k, g)) Add(p); }
-            if (g != null && k.back) { foreach (var p in MainHand(k, g)) Add(p); foreach (var p in OffHandSlot(k, g)) Add(p); }
+            if (g != null && g.cape && !k.back) Add(Group(Tag(Cape(k, g, true), "cape"), "torso"));
+            if (g != null && !k.back) { Wear(BackSlot(k, g), "weapon"); Wear(QuiverSlot(k, g), "weapon"); }
+            if (g != null && k.back) { Wear(MainHand(k, g), "weapon"); Wear(OffHandSlot(k, g), "weapon"); }
             // Far limbs in profile (the off hand is the far one).
             if (k.side)
             {
-                if (g != null) foreach (var p in OffHandSlot(k, g)) Add(p);
+                if (g != null) Wear(OffHandSlot(k, g), "weapon");
                 Add(Arm(k, 0, far));
-                if (g != null) foreach (var p in Sleeve(k, 0, g)) Add(p);
+                if (g != null) Wear(Sleeve(k, 0, g), "chest");
                 Add(Leg(k, 0, far));
-                if (g != null) foreach (var p in LegWear(k, 0, g, true)) Add(p);
+                if (g != null) Wear(LegWear(k, 0, g, true), "legs");
             }
             // Legs and their clothing.
             for (int i = k.side ? 1 : 0; i < 2; i++)
             {
                 Add(Leg(k, i, skin));
-                if (g != null) foreach (var p in LegWear(k, i, g, false)) Add(p);
+                if (g != null) Wear(LegWear(k, i, g, false), "legs");
             }
             // Long hair hangs behind the shoulders, seen from the front and side.
-            if (!k.back && !(g != null && (g.helm == HelmStyle.GreatHelm || g.helm == HelmStyle.Hood))) foreach (var p in HairBack(k, look)) Add(p);
+            if (!k.back && !(g != null && (g.helm == HelmStyle.GreatHelm || g.helm == HelmStyle.Hood))) foreach (var p in HairBack(k, look)) Add(Tag(p, "hair"));
             // Torso, chest bust in front, and what's worn on it.
-            Add(new Part(skin) { roundness = 7f }.Contour(k.cx, k.torso));
+            Add(Group(new Part(skin) { roundness = 7f }.Contour(k.cx, k.torso), "torso"));
             if (female && pose.facing == Facing.Front)
             {
-                Add(new Part(skin) { roundness = 2.5f }.Ellipse(k.cx - 3.2f, k.chest - 0.8f, 3.1f, 2.7f));
-                Add(new Part(skin) { roundness = 2.5f }.Ellipse(k.cx + 3.2f, k.chest - 0.8f, 3.1f, 2.7f));
+                Add(Group(new Part(skin) { roundness = 2.5f }.Ellipse(k.cx - 3.2f, k.chest - 0.8f, 3.1f, 2.7f), "torso"));
+                Add(Group(new Part(skin) { roundness = 2.5f }.Ellipse(k.cx + 3.2f, k.chest - 0.8f, 3.1f, 2.7f), "torso"));
             }
-            if (g != null) foreach (var p in Chest(k, g, pose)) Add(p);
+            if (g != null) Wear(Chest(k, g, pose), "chest");
             // Arms over the torso.
             for (int i = k.side ? 1 : 0; i < 2; i++)
             {
                 Add(Arm(k, i, skin));
-                if (g != null) foreach (var p in Sleeve(k, i, g)) Add(p);
+                if (g != null) Wear(Sleeve(k, i, g), "chest");
             }
             // Hair behind the head: from behind it lies over the back; otherwise it was drawn before the torso.
             bool hairShown = !(g != null && (g.helm == HelmStyle.GreatHelm || g.helm == HelmStyle.Hood));
-            if (hairShown && k.back) foreach (var p in HairBack(k, look)) Add(p);
+            if (hairShown && k.back) foreach (var p in HairBack(k, look)) Add(Tag(p, "hair"));
             // Neck and head.
-            Add(new Part(skin) { roundness = 2f }.Limb(new Vector2(k.cx, k.neck - 2), new Vector2(k.cx + (k.side ? 0.5f : 0f), k.chin + 2), female ? 1.8f : 2.4f, female ? 1.7f : 2.2f));
-            var head = Add(new Part(skin) { roundness = 4f });
+            Add(Group(new Part(skin) { roundness = 2f }, "neck").Limb(new Vector2(k.cx, k.neck - 2), new Vector2(k.cx + (k.side ? 0.5f : 0f), k.chin + 2), female ? 1.8f : 2.4f, female ? 1.7f : 2.2f));
+            var head = Add(Group(new Part(skin) { roundness = 4f }, "head"));
             head.Ellipse(k.hcx, k.hcy + 0.5f, k.hw, k.hh - 0.5f);
             head.Contour(k.hcx, new (float, float, float)[] { (k.chin, female ? 1.5f : 2.2f, female ? 1.5f : 2.2f), (k.chin + 3, k.hw - 1f, k.hw - 1f), (k.hcy, k.hw, k.hw) });
             if (k.side) head.Ellipse(k.hcx + k.hw - 0.3f, k.chin + 4f, 1.1f, 1.2f);
             if (!k.side) { head.Ellipse(k.hcx - k.hw, k.chin + 5f, 1f, 1.6f); head.Ellipse(k.hcx + k.hw, k.chin + 5f, 1f, 1.6f); }
             else head.Ellipse(k.hcx - 1f, k.chin + 5f, 1.2f, 1.7f);
-            if (!(g != null && (g.helm == HelmStyle.GreatHelm || g.helm == HelmStyle.Hood))) foreach (var p in HairFront(k, look)) Add(p);
-            if (g != null && g.helm != HelmStyle.None) foreach (var p in Helm(k, g)) Add(p);
-            if (g != null && g.cape && k.back) Add(Cape(k, g, false));
-            if (g != null && k.back) { foreach (var p in BackSlot(k, g)) Add(p); foreach (var p in QuiverSlot(k, g)) Add(p); }
-            if (g != null) foreach (var p in HipSlot(k, g)) Add(p);
+            if (!(g != null && (g.helm == HelmStyle.GreatHelm || g.helm == HelmStyle.Hood))) foreach (var p in HairFront(k, look)) Add(Tag(p, "hair"));
+            if (g != null && g.helm != HelmStyle.None) Wear(Helm(k, g), "helm");
+            if (g != null && g.cape && k.back) Add(Group(Tag(Cape(k, g, false), "cape"), "torso"));
+            if (g != null && k.back) { Wear(BackSlot(k, g), "weapon"); Wear(QuiverSlot(k, g), "weapon"); }
+            if (g != null) Wear(HipSlot(k, g), "weapon");
             if (g != null && !k.back)
             {
-                foreach (var p in MainHand(k, g)) Add(p);
-                if (!k.side) foreach (var p in OffHandSlot(k, g)) Add(p);
+                Wear(MainHand(k, g), "weapon");
+                if (!k.side) Wear(OffHandSlot(k, g), "weapon");
             }
 
             var res = Render(parts);
@@ -611,20 +632,20 @@ namespace TWF
             switch (g.boots)
             {
                 case BootStyle.Shoes:
-                    yield return Leg(k, i, Mul(g.leather * 0.8f, dim), 0.7f, 0.98f, 1f, true);
+                    yield return Tag(Leg(k, i, Mul(g.leather * 0.8f, dim), 0.7f, 0.98f, 1f, true), "boots");
                     break;
                 case BootStyle.Sandals:
-                    yield return Leg(k, i, Mul(g.leather, dim), 0.3f, 0.99f, 1f, true);
+                    yield return Tag(Leg(k, i, Mul(g.leather, dim), 0.3f, 0.99f, 1f, true), "boots");
                     break;
                 case BootStyle.Leather:
-                    yield return Pattern(Leg(k, i, Mul(g.leather, dim), 1f, 0.78f, 1f, true), (x, y, c) => y == Mathf.RoundToInt(Mathf.Lerp(k.kn[i].y, k.an[i].y, 0.56f)) ? Mul(c, 1.3f) : c);
+                    yield return Tag(Pattern(Leg(k, i, Mul(g.leather, dim), 1f, 0.78f, 1f, true), (x, y, c) => y == Mathf.RoundToInt(Mathf.Lerp(k.kn[i].y, k.an[i].y, 0.56f)) ? Mul(c, 1.3f) : c), "boots");
                     break;
                 case BootStyle.Greaves:
-                    yield return Leg(k, i, Mul(g.metal, dim), 1.2f, 0.5f, 1f, true);
-                    yield return new Part(Mul(g.metal, dim * 1.05f)) { roundness = 2.5f }.Ellipse(k.kn[i].x, k.kn[i].y, 3.4f, 3f);   // knee cop
+                    yield return Tag(Leg(k, i, Mul(g.metal, dim), 1.2f, 0.5f, 1f, true), "boots");
+                    yield return Tag(new Part(Mul(g.metal, dim * 1.05f)) { roundness = 2.5f }.Ellipse(k.kn[i].x, k.kn[i].y, 3.4f, 3f), "boots");   // knee cop
                     break;
                 case BootStyle.Striders:
-                    yield return Leg(k, i, Mul(Color.Lerp(g.leather, g.cloth, 0.3f), dim), 0.9f, k.female ? 0.35f : 0.62f, 1f, true);
+                    yield return Tag(Leg(k, i, Mul(Color.Lerp(g.leather, g.cloth, 0.3f), dim), 0.9f, k.female ? 0.35f : 0.62f, 1f, true), "boots");
                     break;
             }
         }
@@ -645,16 +666,16 @@ namespace TWF
             }
             switch (g.gloves)
             {
-                case GloveStyle.Wraps: yield return Pattern(ArmFrom(k, i, Color.Lerp(g.cloth, Color.white, 0.5f), 0.4f, 0.75f), (x, y, c) => y % 2 == 0 ? Mul(c, 0.85f) : c); break;
-                case GloveStyle.Leather: yield return ArmFrom(k, i, Mul(g.leather, dim), 0.45f, 0.8f); break;
-                case GloveStyle.Gauntlets: case GloveStyle.Talons: yield return ArmFrom(k, i, Mul(g.metal, dim), 0.8f, 0.6f); break;
+                case GloveStyle.Wraps: yield return Tag(Pattern(ArmFrom(k, i, Color.Lerp(g.cloth, Color.white, 0.5f), 0.4f, 0.75f), (x, y, c) => y % 2 == 0 ? Mul(c, 0.85f) : c), "gloves"); break;
+                case GloveStyle.Leather: yield return Tag(ArmFrom(k, i, Mul(g.leather, dim), 0.45f, 0.8f), "gloves"); break;
+                case GloveStyle.Gauntlets: case GloveStyle.Talons: yield return Tag(ArmFrom(k, i, Mul(g.metal, dim), 0.8f, 0.6f), "gloves"); break;
             }
         }
 
         // Forearm from partway down to the hand (gloves).
         static Part ArmFrom(Rig k, int i, Color c, float grow, float fromT)
         {
-            var p = new Part(c) { roundness = 2.5f };
+            var p = new Part(c) { roundness = 2.5f }; p.group = "arm" + LimbSide(k, i);
             var start = Vector2.Lerp(k.el[i], k.wr[i], (fromT - 0.5f) * 2f);
             p.Limb(start, k.wr[i], (k.female ? 1.7f : 2.2f) + grow, 1.4f + grow);
             p.Ellipse(k.wr[i].x, k.wr[i].y - 2.3f, 1.8f + grow, 2.6f + grow);
@@ -699,8 +720,8 @@ namespace TWF
                     break;
             }
             if (g.skirt && g.chest != ChestStyle.Robe)
-                yield return Pattern(new Part(Color.Lerp(g.cloth, g.capeColor, 0.5f)) { roundness = 5f }.Contour(k.cx, new (float, float, float)[] { (k.knee + 6, Width(k, k.crotch) + 6f, Width(k, k.crotch, true) + 6f), (k.crotch, Width(k, k.crotch) + 3f, Width(k, k.crotch, true) + 3f), (k.waist - 2, Width(k, k.waist - 2) + 1.2f, Width(k, k.waist - 2, true) + 1.2f) }),
-                    (x, y, c) => x % 4 == 0 ? Mul(c, 0.82f) : (y == Mathf.RoundToInt(k.knee + 6) ? g.trim : c));   // pleats, trimmed hem
+                yield return Tag(Pattern(new Part(Color.Lerp(g.cloth, g.capeColor, 0.5f)) { roundness = 5f }.Contour(k.cx, new (float, float, float)[] { (k.knee + 6, Width(k, k.crotch) + 6f, Width(k, k.crotch, true) + 6f), (k.crotch, Width(k, k.crotch) + 3f, Width(k, k.crotch, true) + 3f), (k.waist - 2, Width(k, k.waist - 2) + 1.2f, Width(k, k.waist - 2, true) + 1.2f) }),
+                    (x, y, c) => x % 4 == 0 ? Mul(c, 0.82f) : (y == Mathf.RoundToInt(k.knee + 6) ? g.trim : c)), "skirt");   // pleats, trimmed hem
         }
 
         // Torso half width (left side, or right with right=true) at a height.
