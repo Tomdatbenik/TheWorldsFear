@@ -26,6 +26,7 @@ namespace TWF
         public float projectileSize = 0.4f;
         public Color color = Color.white;
         public float implicitDamage = 1f; // weapon item damage scale
+        public bool twoHanded;       // both hands on the weapon: no off-hand item
         public string[] tierNames;
     }
 
@@ -37,7 +38,7 @@ namespace TWF
                 tierNames = new[] { "Rusty Blade", "Iron Sword", "Steel Broadsword", "Runed Greatsword" } } },
             { WeaponType.Axe, new WeaponProfile { type = WeaponType.Axe, range = 2.1f, arc = 200f, attacksPerSecond = 0.95f, damageMult = 1.15f, knockback = 0.7f, implicitDamage = 1.1f,
                 tierNames = new[] { "Hatchet", "Iron Axe", "Battle Axe", "Bloodreaver" } } },
-            { WeaponType.Hammer, new WeaponProfile { type = WeaponType.Hammer, range = 1.8f, arc = 360f, attacksPerSecond = 0.7f, damageMult = 1.6f, knockback = 1.2f, implicitDamage = 1.3f,
+            { WeaponType.Hammer, new WeaponProfile { type = WeaponType.Hammer, range = 1.8f, arc = 360f, attacksPerSecond = 0.7f, damageMult = 1.6f, knockback = 1.2f, implicitDamage = 1.3f, twoHanded = true,
                 status = StatusSpec.Stun(0.7f, 0.25f), tierNames = new[] { "Mallet", "War Hammer", "Maul", "Earthbreaker" } } },
             { WeaponType.Daggers, new WeaponProfile { type = WeaponType.Daggers, range = 1.5f, arc = 90f, attacksPerSecond = 2f, damageMult = 0.55f, hits = 2, critBonus = 0.1f, implicitDamage = 0.8f,
                 tierNames = new[] { "Shivs", "Twin Daggers", "Fang Blades", "Shadow Kris" } } },
