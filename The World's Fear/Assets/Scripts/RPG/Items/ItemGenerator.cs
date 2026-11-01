@@ -14,6 +14,17 @@ namespace TWF
             { ItemSlot.Boots, new[] { "Sandals", "Leather Boots", "Iron Greaves", "Wanderer's Striders" } },
             { ItemSlot.Ring, new[] { "Copper Ring", "Silver Band", "Gold Signet", "Obsidian Loop" } },
             { ItemSlot.Amulet, new[] { "Bone Charm", "Silver Pendant", "Jade Amulet", "Star Talisman" } },
+            { ItemSlot.OffHand, new[] { "Wooden Buckler", "Iron Kite Shield", "Steel Tower Shield", "Aegis of Dawn" } },
+        };
+
+        // Off-hand items by kind and tier.
+        static readonly Dictionary<OffHandKind, string[]> offHandNames = new Dictionary<OffHandKind, string[]>
+        {
+            { OffHandKind.Shield, new[] { "Wooden Buckler", "Iron Kite Shield", "Steel Tower Shield", "Aegis of Dawn" } },
+            { OffHandKind.Orb, new[] { "Glass Orb", "Seer's Orb", "Storm Orb", "Star Orb" } },
+            { OffHandKind.Tome, new[] { "Worn Tome", "Grimoire", "Codex of Ash", "Book of Ages" } },
+            { OffHandKind.Quiver, new[] { "Hide Quiver", "Hunter's Quiver", "Elven Quiver", "Endless Quiver" } },
+            { OffHandKind.ParryDagger, new[] { "Parrying Knife", "Main Gauche", "Twin Sai", "Fang Dagger" } },
         };
 
         static readonly string[] rareFirst = { "Grim", "Doom", "Storm", "Blood", "Shadow", "Ash", "Soul", "Bone", "Dread", "Wolf", "Raven", "Night", "Ember", "Frost" };
@@ -24,18 +35,17 @@ namespace TWF
         // Which of the four base items of its slot this is (0 = simplest), for how it looks when worn.
         public static int BaseTier(ItemInstance item)
         {
-            if (baseNames.TryGetValue(item.slot, out var names))
-            {
-                int i = System.Array.IndexOf(names, item.baseName);
-                if (i >= 0) return i;
-            }
+            var names = item.slot == ItemSlot.OffHand ? offHandNames[(OffHandKind)item.offHandKind] : baseNames.TryGetValue(item.slot, out var n) ? n : null;
+            if (names != null)
+                for (int i = 0; i < names.Length; i++)
+                    if (item.baseName != null && item.baseName.EndsWith(names[i])) return i;
             return Mathf.Clamp((int)item.rarity, 0, 3);
         }
 
         public static ItemSlot RandomSlot(System.Random rng)
         {
             // Weapons and jewelry a little rarer than armor.
-            int[] weights = { 14, 15, 15, 15, 15, 13, 13 };
+            int[] weights = { 14, 15, 15, 15, 15, 13, 13, 12 };
             int total = 0;
             foreach (var w in weights) total += w;
             int r = rng.Next(total);
@@ -87,6 +97,12 @@ namespace TWF
                 item.weaponType = (int)wt;
                 item.baseName = Weapons.Get(wt).tierNames[tier];
             }
+            else if (slot == ItemSlot.OffHand)
+            {
+                var kind = (OffHandKind)rng.Next(5);
+                item.offHandKind = (int)kind;
+                item.baseName = offHandNames[kind][tier];
+            }
             else item.baseName = baseNames[slot][tier];
             // Beyond the base tiers, gear gets grander titles.
             if (itemLevel > 32) item.baseName = (itemLevel > 80 ? "Mythic " : itemLevel > 55 ? "Exalted " : "Ancient ") + item.baseName;
@@ -110,12 +126,22 @@ namespace TWF
                 case ItemSlot.Boots: item.implicitStat = StatType.Armor; item.implicitValue = Mathf.Round((1f + itemLevel * 0.9f) * jitter); break;
                 case ItemSlot.Ring: item.implicitStat = StatType.MaxHP; item.implicitValue = Mathf.Round((5f + itemLevel * 3f) * jitter); break;
                 case ItemSlot.Amulet: item.implicitStat = StatType.Damage; item.implicitValue = Mathf.Round((1f + itemLevel * 0.8f) * jitter); break;
+                case ItemSlot.OffHand:
+                    switch ((OffHandKind)item.offHandKind)
+                    {
+                        case OffHandKind.Shield: item.implicitStat = StatType.Armor; item.implicitValue = Mathf.Round((3f + itemLevel * 1.6f) * jitter); break;
+                        case OffHandKind.Orb: item.implicitStat = StatType.SkillPower; item.implicitValue = Mathf.Round((0.04f + itemLevel * 0.004f) * jitter * 100f) / 100f; break;
+                        case OffHandKind.Tome: item.implicitStat = StatType.CooldownReduction; item.implicitValue = Mathf.Round(Mathf.Min(0.2f, 0.03f + itemLevel * 0.002f) * jitter * 100f) / 100f; break;
+                        case OffHandKind.Quiver: item.implicitStat = StatType.AttackSpeed; item.implicitValue = Mathf.Round((0.06f + itemLevel * 0.004f) * jitter * 100f) / 100f; break;
+                        default: item.implicitStat = StatType.CritChance; item.implicitValue = Mathf.Round(Mathf.Min(0.15f, 0.02f + itemLevel * 0.0012f) * jitter * 100f) / 100f; break;
+                    }
+                    break;
             }
 
             // Roll distinct affixes allowed on this slot.
             var pool = new List<AffixDefinition>();
             foreach (var a in GameDatabase.Instance.affixes)
-                if (a != null && (a.slots & RarityInfo.Mask(slot)) != 0) pool.Add(a);
+                if (a != null && ((a.slots & RarityInfo.Mask(slot)) != 0 || (slot == ItemSlot.OffHand && (a.slots & (SlotMask.Chest | SlotMask.Amulet)) != 0))) pool.Add(a);
             int count = RarityInfo.AffixCount(rarity, rng);
             AffixDefinition firstPrefix = null, firstSuffix = null;
             for (int i = 0; i < count && pool.Count > 0; i++)
@@ -147,7 +173,7 @@ namespace TWF
                     item.name = $"{rareFirst[rng.Next(rareFirst.Length)]} {rareSecond[rng.Next(rareSecond.Length)]}";
                     break;
                 case Rarity.Legendary:
-                    var powers = ItemPowers.All.FindAll(p => (p.slots & RarityInfo.Mask(slot)) != 0);
+                    var powers = ItemPowers.All.FindAll(p => (p.slots & RarityInfo.Mask(slot == ItemSlot.OffHand ? ItemSlot.Chest : slot)) != 0);
                     var power = powers.Count > 0 ? powers[rng.Next(powers.Count)] : ItemPowers.All[0];
                     item.legendaryPower = power.id;
                     item.name = $"{legendaryAdj[rng.Next(legendaryAdj.Length)]} {item.baseName} {power.name}";
@@ -155,7 +181,7 @@ namespace TWF
                     break;
                 case Rarity.Mythic:
                     // Mythic: a legendary power, five affixes rolled higher and a much stronger base.
-                    var mythPowers = ItemPowers.All.FindAll(p => (p.slots & RarityInfo.Mask(slot)) != 0);
+                    var mythPowers = ItemPowers.All.FindAll(p => (p.slots & RarityInfo.Mask(slot == ItemSlot.OffHand ? ItemSlot.Chest : slot)) != 0);
                     var mythPower = mythPowers.Count > 0 ? mythPowers[rng.Next(mythPowers.Count)] : ItemPowers.All[0];
                     item.legendaryPower = mythPower.id;
                     item.name = $"{mythicAdj[rng.Next(mythicAdj.Length)]} {item.baseName} {mythPower.name}";
@@ -183,7 +209,8 @@ namespace TWF
         {
             var sb = new System.Text.StringBuilder();
             sb.Append($"<color={Palette.Hex(RarityInfo.Color(item.rarity))}><b>{item.name}</b></color>\n");
-            string kind = item.slot == ItemSlot.Weapon ? Weapons.Name((WeaponType)item.weaponType) : item.slot.ToString();
+            string kind = item.slot == ItemSlot.Weapon ? Weapons.Name((WeaponType)item.weaponType)
+                : item.slot == ItemSlot.OffHand ? $"Off-hand {(OffHandKind)item.offHandKind}" : item.slot.ToString();
             sb.Append($"<size=80%><color=#999>{item.rarity} {kind} · Item level {item.itemLevel}</color></size>\n");
             sb.Append($"<color=#fff>{StatInfo.Format(item.implicitStat, ModKind.Flat, item.implicitValue)}</color>\n");
             if (item.socket)

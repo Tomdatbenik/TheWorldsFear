@@ -4,13 +4,16 @@ using UnityEngine;
 
 namespace TWF
 {
-    public enum ItemSlot { Weapon, Helm, Chest, Gloves, Boots, Ring, Amulet }
+    public enum ItemSlot { Weapon, Helm, Chest, Gloves, Boots, Ring, Amulet, OffHand }
+
+    // What an off-hand item is: each adds a different kind of power.
+    public enum OffHandKind { Shield, Orb, Tome, Quiver, ParryDagger }
 
     [Flags]
     public enum SlotMask
     {
         None = 0,
-        Weapon = 1 << 0, Helm = 1 << 1, Chest = 1 << 2, Gloves = 1 << 3, Boots = 1 << 4, Ring = 1 << 5, Amulet = 1 << 6,
+        Weapon = 1 << 0, Helm = 1 << 1, Chest = 1 << 2, Gloves = 1 << 3, Boots = 1 << 4, Ring = 1 << 5, Amulet = 1 << 6, OffHand = 1 << 7,
         Armor = Helm | Chest | Gloves | Boots,
         Jewelry = Ring | Amulet,
         All = Weapon | Armor | Jewelry,
@@ -73,6 +76,7 @@ namespace TWF
         public List<RolledAffix> affixes = new List<RolledAffix>();
         public string legendaryPower;
         public int weaponType; // WeaponType, for weapons
+        public int offHandKind; // OffHandKind, for off-hand items
         public int element = (int)ElementPart.Physical;   // weapons: the element of basic attacks
         // Unique armor: a socket that holds one crafted skill, cast from an extra button or automatically.
         public bool socket;

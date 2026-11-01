@@ -418,7 +418,7 @@ namespace TWF
             {
                 { ItemSlot.Helm, new Vector2(0.5f, 0.86f) }, { ItemSlot.Amulet, new Vector2(0.8f, 0.86f) },
                 { ItemSlot.Weapon, new Vector2(0.2f, 0.5f) }, { ItemSlot.Chest, new Vector2(0.5f, 0.5f) }, { ItemSlot.Ring, new Vector2(0.8f, 0.5f) },
-                { ItemSlot.Gloves, new Vector2(0.2f, 0.14f) }, { ItemSlot.Boots, new Vector2(0.5f, 0.14f) },
+                { ItemSlot.Gloves, new Vector2(0.2f, 0.14f) }, { ItemSlot.Boots, new Vector2(0.5f, 0.14f) }, { ItemSlot.OffHand, new Vector2(0.8f, 0.14f) },
             };
             foreach (var kv in layout)
             {

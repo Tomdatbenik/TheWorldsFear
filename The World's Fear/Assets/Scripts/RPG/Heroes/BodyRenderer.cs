@@ -250,12 +250,19 @@ namespace TWF
             public HelmStyle helm = HelmStyle.None;
             public GloveStyle gloves = GloveStyle.None;
             public BootStyle boots = BootStyle.Shoes;
-            public WeaponType? weapon;
+            // Weapon slots, each attached to a bone: main hand, off hand (weapon or shield), back, hip.
+            public WeaponType? weapon;          // main hand
+            public OffHand offHand = OffHand.None;
+            public WeaponType? offWeapon;       // when offHand == Weapon
+            public WeaponType? backWeapon;      // stowed across the back
+            public WeaponType? hipWeapon;       // sheathed at the hip
             public Color cloth = new Color(0.32f, 0.44f, 0.58f), pants = new Color(0.36f, 0.28f, 0.22f), capeColor = new Color(0.55f, 0.16f, 0.16f);
             public Color metal = new Color(0.72f, 0.75f, 0.8f), trim = new Color(0.9f, 0.75f, 0.35f), leather = new Color(0.42f, 0.28f, 0.17f);
 
-            public string Key => $"{chest}{trousers}{skirt}{cape}{helm}{gloves}{boots}{weapon}{cloth}{pants}{capeColor}{metal}";
+            public string Key => $"{chest}{trousers}{skirt}{cape}{helm}{gloves}{boots}{weapon}{offHand}{offWeapon}{backWeapon}{hipWeapon}{cloth}{pants}{capeColor}{metal}";
         }
+
+        public enum OffHand { None, Weapon, RoundShield, KiteShield, Orb, Tome, Quiver }
 
         // Every landmark and joint for one pose; the body and all gear are built from it.
         class Rig
@@ -412,14 +419,15 @@ namespace TWF
             var k = MakeRig(female, pose);
             Part Add(Part p) { parts.Add(p); return p; }
             var far = Mul(skin, 0.88f);
-            bool held = g != null && g.weapon.HasValue && g.weapon.Value != WeaponType.Fists;
-
-            // Behind everything: cape, and a weapon carried on the back when seen from behind.
+            // Behind everything: cape, the back weapon (seen from the front and side), and anything held
+            // when we see the character from behind.
             if (g != null && g.cape && !k.back) Add(Cape(k, g, true));
-            if (held && k.back) Add(Weapon(k, g));
-            // Far limbs in profile.
+            if (g != null && !k.back) { foreach (var p in BackSlot(k, g)) Add(p); foreach (var p in QuiverSlot(k, g)) Add(p); }
+            if (g != null && k.back) { foreach (var p in MainHand(k, g)) Add(p); foreach (var p in OffHandSlot(k, g)) Add(p); }
+            // Far limbs in profile (the off hand is the far one).
             if (k.side)
             {
+                if (g != null) foreach (var p in OffHandSlot(k, g)) Add(p);
                 Add(Arm(k, 0, far));
                 if (g != null) foreach (var p in Sleeve(k, 0, g)) Add(p);
                 Add(Leg(k, 0, far));
@@ -458,7 +466,13 @@ namespace TWF
             if (!(g != null && (g.helm == HelmStyle.GreatHelm || g.helm == HelmStyle.Hood))) foreach (var p in HairFront(k, look)) Add(p);
             if (g != null && g.helm != HelmStyle.None) foreach (var p in Helm(k, g)) Add(p);
             if (g != null && g.cape && k.back) Add(Cape(k, g, false));
-            if (held && !k.back) Add(Weapon(k, g));
+            if (g != null && k.back) { foreach (var p in BackSlot(k, g)) Add(p); foreach (var p in QuiverSlot(k, g)) Add(p); }
+            if (g != null) foreach (var p in HipSlot(k, g)) Add(p);
+            if (g != null && !k.back)
+            {
+                foreach (var p in MainHand(k, g)) Add(p);
+                if (!k.side) foreach (var p in OffHandSlot(k, g)) Add(p);
+            }
 
             var res = Render(parts);
             if (g == null || (g.helm != HelmStyle.GreatHelm)) Face(res, female, skin, pose, k.hcx, k.chin, k.hw);
@@ -717,58 +731,173 @@ namespace TWF
             return c;
         }
 
-        // The weapon in the near hand.
-        static Part Weapon(Rig k, Gear g)
+        // ---------- Weapon slots ----------
+
+        static readonly Color Wood = new Color(0.45f, 0.3f, 0.18f), Steel = new Color(0.82f, 0.85f, 0.9f), Grip = new Color(0.3f, 0.2f, 0.14f);
+
+        // Main hand: the near hand (in profile) or the character's right hand (viewer's left) from the front.
+        static IEnumerable<Part> MainHand(Rig k, Gear g)
         {
+            if (!g.weapon.HasValue || g.weapon.Value == WeaponType.Fists) yield break;
             int hand = k.side ? 1 : 0;
-            var h = k.wr[hand] + Vector2.down * 2f;
-            var wood = new Color(0.45f, 0.3f, 0.18f);
-            var steel = new Color(0.82f, 0.85f, 0.9f);
-            var p = new Part(steel) { roundness = 1.5f };
             Vector2 up = k.side ? new Vector2(0.35f, 1f).normalized : new Vector2(-0.25f, 1f).normalized;
-            switch (g.weapon.Value)
+            foreach (var p in WeaponParts(g.weapon.Value, k.wr[hand] + Vector2.down * 2f, up, g, 1f)) yield return p;
+        }
+
+        // Off hand: a second weapon or a shield on the forearm.
+        static IEnumerable<Part> OffHandSlot(Rig k, Gear g)
+        {
+            if (g.offHand == OffHand.None) yield break;
+            int hand = k.side ? 0 : 1;
+            float dim = k.side || k.back ? 0.82f : 1f;
+            if (g.offHand == OffHand.Quiver) yield break;   // worn on the back, see QuiverSlot
+            if (g.offHand == OffHand.Orb)
+            {
+                // A crystal orb floating just above the open hand.
+                var o = k.wr[hand] + new Vector2(k.side ? 1.5f : 0.5f, 1.5f);
+                yield return new Part(Mul(new Color(0.55f, 0.8f, 1f), dim)) { roundness = 2.5f, pattern = (x, y, c) => (x + y) % 5 == 0 ? Color.Lerp(c, Color.white, 0.4f) : c }.Ellipse(o.x, o.y, 2.6f, 2.6f);
+                yield break;
+            }
+            if (g.offHand == OffHand.Tome)
+            {
+                var t = k.wr[hand] + new Vector2(k.side ? 1.5f : 1f, -1.5f);
+                var cover = Mul(Color.Lerp(g.capeColor, g.leather, 0.4f), dim);
+                yield return new Part(cover) { roundness = 2f, pattern = (x, y, c) => Mathf.Abs(x + 0.5f - t.x) < 0.6f ? Mul(g.trim, dim) : c }.Contour(t.x, new (float, float, float)[] { (t.y - 3.5f, 2.6f, 2.6f), (t.y + 3.5f, 2.6f, 2.6f) });
+                yield break;
+            }
+            if (g.offHand == OffHand.Weapon)
+            {
+                if (!g.offWeapon.HasValue || g.offWeapon.Value == WeaponType.Fists) yield break;
+                Vector2 up = k.side ? new Vector2(0.3f, 1f).normalized : new Vector2(0.25f, 1f).normalized;
+                foreach (var p in WeaponParts(g.offWeapon.Value, k.wr[hand] + Vector2.down * 2f, up, g, dim)) yield return p;
+                yield break;
+            }
+            // Shield strapped to the forearm, its face toward the viewer.
+            var mid = Vector2.Lerp(k.el[hand], k.wr[hand], 0.55f) + (k.side ? new Vector2(2f, 0f) : new Vector2(1.5f, 0f));
+            var face = new Part(Mul(Color.Lerp(g.metal, g.capeColor, 0.55f), dim)) { roundness = 5f };
+            if (g.offHand == OffHand.RoundShield) face.Ellipse(mid.x, mid.y, k.side ? 3.5f : 6f, 6f);
+            else face.Contour(mid.x, new (float, float, float)[] { (mid.y - 9, 0.5f, 0.5f), (mid.y - 3, (k.side ? 2.6f : 4.6f), (k.side ? 2.6f : 4.6f)), (mid.y + 5, (k.side ? 3f : 5.2f), (k.side ? 3f : 5.2f)), (mid.y + 6, (k.side ? 2.6f : 4.8f), (k.side ? 2.6f : 4.8f)) });
+            face.pattern = (x, y, c) => Mathf.Abs(x + 0.5f - mid.x) < 0.6f || Mathf.Abs(y + 0.5f - mid.y) < 0.6f ? Mul(c, 1.15f) : c;   // painted cross
+            yield return face;
+            if (!k.back)
+            {
+                yield return new Part(Mul(g.trim, dim)) { roundness = 1.5f }.Ellipse(mid.x, mid.y, 1.6f, 1.6f);   // boss
+                // Rim.
+                var rim = new Part(Mul(g.metal, dim)) { roundness = 1f };
+                if (g.offHand == OffHand.RoundShield)
+                    for (int a = 0; a < 24; a++)
+                    {
+                        float t0 = a / 24f * Mathf.PI * 2, t1 = (a + 1) / 24f * Mathf.PI * 2;
+                        float rx = k.side ? 3.5f : 6f;
+                        rim.Limb(mid + new Vector2(Mathf.Cos(t0) * rx, Mathf.Sin(t0) * 6f), mid + new Vector2(Mathf.Cos(t1) * rx, Mathf.Sin(t1) * 6f), 0.55f, 0.55f);
+                    }
+                else rim.Limb(mid + new Vector2(0, 6), mid + new Vector2(0, -9), 0.5f, 0.5f);
+                yield return rim;
+            }
+        }
+
+        // A quiver of arrows on the back (off-hand item for archers).
+        static IEnumerable<Part> QuiverSlot(Rig k, Gear g)
+        {
+            if (g.offHand != OffHand.Quiver) yield break;
+            var bottom = new Vector2(k.cx + (k.side ? -4f : 4f), k.waist - 2f);
+            var up = k.side ? new Vector2(-0.25f, 1f).normalized : new Vector2(-0.3f, 1f).normalized;
+            float dim = k.back ? 1f : 0.82f;
+            for (int i = -1; i <= 1; i++)
+                yield return new Part(Mul(new Color(0.92f, 0.9f, 0.85f), dim)) { roundness = 0.5f }.Limb(bottom + up * 9f + new Vector2(i * 0.9f, 0), bottom + up * 13f + new Vector2(i * 1.1f, 0), 0.5f, 0.5f);   // fletching
+            yield return new Part(Mul(g.leather, dim)) { roundness = 2f, pattern = (x, y, c) => y % 4 == 0 ? Mul(c, 0.8f) : c }.Limb(bottom, bottom + up * 10f, 1.9f, 2.3f);
+        }
+
+        // Back: stowed diagonally across the back.
+        static IEnumerable<Part> BackSlot(Rig k, Gear g)
+        {
+            if (!g.backWeapon.HasValue || g.backWeapon.Value == WeaponType.Fists) yield break;
+            var start = new Vector2(k.cx + (k.side ? -3f : 5f), k.waist - 4f);
+            var up = k.side ? new Vector2(-0.35f, 1f).normalized : new Vector2(-0.55f, 1f).normalized;
+            float dim = k.back ? 1f : 0.82f;
+            foreach (var p in WeaponParts(g.backWeapon.Value, start, up, g, dim)) yield return p;
+            if (k.back) yield return new Part(Mul(g.leather, 0.9f)) { roundness = 1f }.Limb(new Vector2(k.cx - 6, k.shoulder - 1), new Vector2(k.cx + 6, k.waist - 2), 0.8f, 0.8f);   // strap
+        }
+
+        // Hip: sheathed at the character's left hip, hanging down and back.
+        static IEnumerable<Part> HipSlot(Rig k, Gear g)
+        {
+            if (!g.hipWeapon.HasValue || g.hipWeapon.Value == WeaponType.Fists) yield break;
+            float side = k.side ? -1f : k.back ? -1f : 1f;
+            var top = new Vector2(k.cx + side * (Width(k, k.waist - 3, side > 0) + 1.5f), k.waist - 3f);
+            var down = k.side ? new Vector2(-0.55f, -1f).normalized : new Vector2(side * 0.18f, -1f).normalized;
+            // A scabbard for blades; other weapons just hang.
+            var w = g.hipWeapon.Value;
+            if (w == WeaponType.Sword || w == WeaponType.Daggers)
+            {
+                float len = w == WeaponType.Sword ? 15f : 7f;
+                yield return new Part(g.leather) { roundness = 1.5f, pattern = (x, y, c) => y % 5 == 0 ? g.trim : c }.Limb(top, top + down * len, 1.1f, 0.8f);
+                yield return new Part(g.trim) { roundness = 1f }.Limb(top + new Vector2(-2f, 0.5f), top + new Vector2(2f, 0.5f), 0.6f, 0.6f);   // guard
+                yield return new Part(Grip) { roundness = 1f }.Limb(top, top - down * 3f, 0.6f, 0.6f);
+            }
+            else foreach (var p in WeaponParts(w, top + down * 2f, -down, g, 1f)) yield return p;
+        }
+
+        // A weapon held at h, pointing along up. Blades get a fuller, guards and pommels the trim color.
+        static IEnumerable<Part> WeaponParts(WeaponType w, Vector2 h, Vector2 up, Gear g, float dim)
+        {
+            var steel = Mul(Steel, dim);
+            var wood = Mul(Wood, dim);
+            var trim = Mul(g.trim, dim);
+            var side = new Vector2(up.y, -up.x);
+            Func<int, int, Color, Color> fuller = null;
+            switch (w)
             {
                 case WeaponType.Sword:
-                    p.Limb(h, h + up * 18f, 1.1f, 0.6f);                                           // blade
-                    p.Limb(h + new Vector2(-3, 0.5f), h + new Vector2(3, 0.5f), 0.7f, 0.7f);        // guard
-                    p.Limb(h, h - up * 3f, 0.7f, 0.7f);                                             // grip
+                    fuller = (x, y, c) => Mathf.Abs(Vector2.Dot(new Vector2(x + 0.5f, y + 0.5f) - h, side)) < 0.5f ? Mul(c, 1.2f) : c;
+                    yield return new Part(steel) { roundness = 1.5f, pattern = fuller }.Limb(h + up * 2f, h + up * 18f, 1.2f, 0.5f);
+                    yield return new Part(trim) { roundness = 1f }.Limb(h + up * 1.5f - side * 3.2f, h + up * 1.5f + side * 3.2f, 0.7f, 0.7f);
+                    yield return new Part(Mul(Grip, dim)) { roundness = 1f }.Limb(h + up * 1f, h - up * 2.5f, 0.7f, 0.7f);
+                    yield return new Part(trim) { roundness = 1f }.Ellipse(h.x - up.x * 3.2f, h.y - up.y * 3.2f, 1f, 1f);   // pommel
                     break;
                 case WeaponType.Axe:
-                    p.color = wood; p.Limb(h - up * 2f, h + up * 14f, 0.7f, 0.7f);
-                    p.Ellipse(h.x + up.x * 12f + (k.side ? 2.5f : -2.5f), h.y + up.y * 12f, 2.8f, 3.6f);
+                    yield return new Part(wood) { roundness = 1f }.Limb(h - up * 3f, h + up * 14f, 0.75f, 0.75f);
+                    var head = new Part(steel) { roundness = 2f };
+                    head.Limb(h + up * 12f, h + up * 12f + side * 3.5f, 1.5f, 3.4f);
+                    yield return head;
                     break;
                 case WeaponType.Hammer:
-                    p.color = wood; p.Limb(h - up * 2f, h + up * 13f, 0.7f, 0.7f);
-                    p.Ellipse(h.x + up.x * 13f, h.y + up.y * 13f, 3.6f, 2.4f);
+                    yield return new Part(wood) { roundness = 1f }.Limb(h - up * 3f, h + up * 13f, 0.75f, 0.75f);
+                    yield return new Part(steel) { roundness = 2f }.Limb(h + up * 13f - side * 3.5f, h + up * 13f + side * 3.5f, 2.3f, 2.3f);
                     break;
                 case WeaponType.Daggers:
-                    p.Limb(h, h + up * 8f, 0.9f, 0.4f);
+                    yield return new Part(steel) { roundness = 1f }.Limb(h + up * 1.5f, h + up * 8.5f, 0.9f, 0.3f);
+                    yield return new Part(trim) { roundness = 1f }.Limb(h + up - side * 1.8f, h + up + side * 1.8f, 0.5f, 0.5f);
                     break;
                 case WeaponType.Spear:
-                    p.color = wood; p.Limb(h - up * 10f, h + up * 22f, 0.6f, 0.6f);
-                    p.Limb(h + up * 22f, h + up * 26f, 1.2f, 0.2f);
+                    yield return new Part(wood) { roundness = 1f }.Limb(h - up * 10f, h + up * 22f, 0.6f, 0.6f);
+                    yield return new Part(steel) { roundness = 1f }.Limb(h + up * 21.5f, h + up * 26.5f, 1.3f, 0.2f);
                     break;
                 case WeaponType.Bow:
-                    p.color = wood;
+                {
+                    var bow = new Part(wood) { roundness = 1f };
                     for (int t = 0; t < 10; t++)
                     {
                         float a0 = Mathf.Lerp(-1.2f, 1.2f, t / 10f), a1 = Mathf.Lerp(-1.2f, 1.2f, (t + 1) / 10f);
-                        p.Limb(h + new Vector2(Mathf.Cos(a0) * 3f, Mathf.Sin(a0) * 12f), h + new Vector2(Mathf.Cos(a1) * 3f, Mathf.Sin(a1) * 12f), 0.6f, 0.6f);
+                        bow.Limb(h + side * (Mathf.Cos(a0) * 3f) + up * (Mathf.Sin(a0) * 12f), h + side * (Mathf.Cos(a1) * 3f) + up * (Mathf.Sin(a1) * 12f), 0.65f, 0.65f);
                     }
+                    yield return bow;
+                    yield return new Part(Mul(new Color(0.9f, 0.88f, 0.8f), dim)) { roundness = 0.5f }.Limb(h + side * 1.1f + up * 11f, h + side * 1.1f - up * 11f, 0.3f, 0.3f);   // string
                     break;
+                }
                 case WeaponType.Crossbow:
-                    p.color = wood; p.Limb(h, h + up * 8f, 1f, 1f);
-                    p.Limb(h + up * 7f + Vector2.left * 5f, h + up * 7f + Vector2.right * 5f, 0.7f, 0.7f);
+                    yield return new Part(wood) { roundness = 1f }.Limb(h - up * 1f, h + up * 8f, 1f, 1f);
+                    yield return new Part(steel) { roundness = 1f }.Limb(h + up * 7f - side * 5f, h + up * 7f + side * 5f, 0.7f, 0.7f);
                     break;
                 case WeaponType.Staff:
-                    p.color = wood; p.Limb(h - up * 12f, h + up * 22f, 0.7f, 0.8f);
-                    p.Ellipse(h.x + up.x * 23f, h.y + up.y * 23f, 1.8f, 1.8f);
+                    yield return new Part(wood) { roundness = 1f }.Limb(h - up * 12f, h + up * 21f, 0.7f, 0.8f);
+                    yield return new Part(Mul(new Color(0.55f, 0.85f, 1f), dim)) { roundness = 1.5f }.Ellipse(h.x + up.x * 23f, h.y + up.y * 23f, 1.9f, 1.9f);   // crystal
                     break;
                 case WeaponType.Wand:
-                    p.color = wood; p.Limb(h, h + up * 9f, 0.5f, 0.4f);
+                    yield return new Part(wood) { roundness = 1f }.Limb(h, h + up * 9f, 0.55f, 0.4f);
+                    yield return new Part(trim) { roundness = 1f }.Ellipse(h.x + up.x * 9.5f, h.y + up.y * 9.5f, 0.9f, 0.9f);
                     break;
             }
-            return p;
         }
 
         static Part Pattern(Part p, Func<int, int, Color, Color> f) { p.pattern = f; return p; }

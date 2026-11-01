@@ -110,7 +110,17 @@ namespace TWF
             panel.rectTransform.anchorMin = new Vector2(0.55f, 0.2f);
             panel.rectTransform.anchorMax = new Vector2(0.97f, 0.88f);
             panel.rectTransform.offsetMin = panel.rectTransform.offsetMax = Vector2.zero;
-            options = UIFactory.Rect("List", panel.transform).Stretch(28);
+            var optView = UIFactory.Rect("View", panel.transform).Stretch(20);
+            optView.gameObject.AddComponent<RectMask2D>();
+            var optScroll = optView.gameObject.AddComponent<ScrollRect>();
+            optScroll.horizontal = false;
+            options = UIFactory.Rect("List", optView);
+            options.anchorMin = new Vector2(0, 1);
+            options.anchorMax = new Vector2(1, 1);
+            options.pivot = new Vector2(0.5f, 1);
+            options.sizeDelta = Vector2.zero;
+            options.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            optScroll.content = options;
             var v = options.gameObject.AddComponent<VerticalLayoutGroup>();
             v.spacing = 4;
             v.childForceExpandHeight = false;
@@ -151,12 +161,31 @@ namespace TWF
             Option("Gloves", gear.gloves.ToString(), d => gear.gloves = (GloveStyle)Wrap((int)gear.gloves + d, 5));
             Option("Boots", gear.boots.ToString(), d => gear.boots = (BootStyle)Wrap((int)gear.boots + d, 5));
             Option("Cape", gear.cape ? "Yes" : "No", d => gear.cape = !gear.cape);
-            int wi = System.Array.IndexOf(WeaponChoices, gear.weapon);
-            Option("Weapon", gear.weapon.HasValue ? gear.weapon.Value.ToString() : "None", d => gear.weapon = WeaponChoices[Wrap(wi + d, WeaponChoices.Length)]);
+            Header("Weapon slots");
+            WeaponOption("Main hand", gear.weapon, w => gear.weapon = w);
+            Option("Off hand", gear.offHand == BodyRenderer.OffHand.Weapon ? (gear.offWeapon.HasValue ? gear.offWeapon.Value.ToString() : "Weapon") : gear.offHand.ToString(), d =>
+            {
+                // Cycle: none, shields, then each weapon.
+                var order = new List<(BodyRenderer.OffHand, WeaponType?)> { (BodyRenderer.OffHand.None, null), (BodyRenderer.OffHand.RoundShield, null), (BodyRenderer.OffHand.KiteShield, null),
+                    (BodyRenderer.OffHand.Orb, null), (BodyRenderer.OffHand.Tome, null), (BodyRenderer.OffHand.Quiver, null) };
+                foreach (var w in WeaponChoices) if (w.HasValue) order.Add((BodyRenderer.OffHand.Weapon, w));
+                int cur = order.FindIndex(o => o.Item1 == gear.offHand && (o.Item1 != BodyRenderer.OffHand.Weapon || o.Item2 == gear.offWeapon));
+                var next = order[Wrap(cur + d, order.Count)];
+                gear.offHand = next.Item1;
+                gear.offWeapon = next.Item2;
+            });
+            WeaponOption("Back", gear.backWeapon, w => gear.backWeapon = w);
+            WeaponOption("Hip", gear.hipWeapon, w => gear.hipWeapon = w);
             Option("Bones", showBones ? "Shown" : "Hidden", d => showBones = !showBones);
         }
 
         static int Wrap(int v, int n) => ((v % n) + n) % n;
+
+        void WeaponOption(string label, WeaponType? current, System.Action<WeaponType?> set)
+        {
+            int i = System.Array.IndexOf(WeaponChoices, current);
+            Option(label, current.HasValue ? current.Value.ToString() : "None", d => set(WeaponChoices[Wrap(i + d, WeaponChoices.Length)]));
+        }
 
         void Header(string text)
         {

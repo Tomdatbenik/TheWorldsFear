@@ -23,7 +23,7 @@ namespace TWF
             var pool = new List<AffixDefinition>();
             foreach (var a in GameDatabase.Instance.affixes)
             {
-                if (a == null || (a.slots & RarityInfo.Mask(item.slot)) == 0) continue;
+                if (a == null || ((a.slots & RarityInfo.Mask(item.slot)) == 0 && !(item.slot == ItemSlot.OffHand && (a.slots & (SlotMask.Chest | SlotMask.Amulet)) != 0))) continue;
                 // No duplicates of the item's other affixes.
                 bool taken = false;
                 for (int i = 0; i < item.affixes.Count; i++)
