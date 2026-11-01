@@ -10,7 +10,11 @@ namespace TWF
     // others leave a dark contact line on what's beneath. Clothes and armor will be drawn the same way.
     public static class BodyRenderer
     {
-        public const int W = 64, H = 96;
+        // Shapes are designed on a 64x96 grid and drawn at 1.5x (96x144 px, about 130 px tall),
+        // close to the resolution of the reference art, so faces and gear get room for detail.
+        public const float S = 1.5f;
+        public const int W = 96, H = 144;
+        public const float PPU = 72f;   // keeps the figure 2 world units tall
         static readonly Color Ink = new Color(0.09f, 0.06f, 0.08f);
 
         public enum Facing { Front, Back, Side }
@@ -38,6 +42,7 @@ namespace TWF
             // A limb that tapers from a (radius ra) to b (radius rb).
             public Part Limb(Vector2 a, Vector2 b, float ra, float rb)
             {
+                a *= S; b *= S; ra *= S; rb *= S;
                 var d = b - a;
                 float len = Mathf.Max(0.001f, d.magnitude);
                 d /= len;
@@ -67,6 +72,7 @@ namespace TWF
 
             public Part Ellipse(float cx, float cy, float rx, float ry)
             {
+                cx *= S; cy *= S; rx *= S; ry *= S;
                 for (int x = Mathf.FloorToInt(cx - rx); x <= Mathf.CeilToInt(cx + rx); x++)
                 for (int y = Mathf.FloorToInt(cy - ry); y <= Mathf.CeilToInt(cy + ry); y++)
                 {
@@ -79,6 +85,10 @@ namespace TWF
             // A shape given its left and right edges at key heights (smoothly interpolated).
             public Part Contour(float cx, (float y, float left, float right)[] keys)
             {
+                cx *= S;
+                var scaled = new (float y, float left, float right)[keys.Length];
+                for (int n = 0; n < keys.Length; n++) scaled[n] = (keys[n].y * S, keys[n].left * S, keys[n].right * S);
+                keys = scaled;
                 for (int k = 0; k < keys.Length - 1; k++)
                 {
                     var lo = keys[k];
@@ -153,8 +163,9 @@ namespace TWF
             float Hgt(int x, int y)
             {
                 float d = D(x, y);
-                float t = Mathf.Clamp01(d / p.roundness);
-                return Mathf.Sqrt(1f - (1f - t) * (1f - t)) * p.roundness;   // a rounded (circular) profile
+                float rr = p.roundness * S;
+                float t = Mathf.Clamp01(d / rr);
+                return Mathf.Sqrt(1f - (1f - t) * (1f - t)) * rr;   // a rounded (circular) profile
             }
 
             for (int x = 0; x < W; x++)
@@ -164,7 +175,8 @@ namespace TWF
                 var n = new Vector3(-(Hgt(x + 1, y) - Hgt(x - 1, y)) * 0.5f, -(Hgt(x, y + 1) - Hgt(x, y - 1)) * 0.5f, 1f).normalized;
                 float diffuse = Vector3.Dot(n, Light);
                 float light = Mathf.Lerp(0.62f, 1.24f, Mathf.Pow(Mathf.InverseLerp(0.05f, 0.95f, diffuse), 1.1f));
-                var baseCol = p.pattern != null ? p.pattern(x, y, p.color) : p.color;
+                // Patterns are written on the design grid.
+                var baseCol = p.pattern != null ? p.pattern(Mathf.FloorToInt(x / S), Mathf.FloorToInt(y / S), p.color) : p.color;
                 res.px[x, y] = Tone(baseCol, light);
                 res.albedo[x, y] = baseCol;
                 res.normal[x, y] = n;
@@ -178,8 +190,8 @@ namespace TWF
             int band = light < 0.8f ? 0 : light < 0.93f ? 1 : light < 1.05f ? 2 : light < 1.15f ? 3 : 4;
             switch (band)
             {
-                case 0: return Mul(Color.Lerp(c, new Color(0.32f, 0.22f, 0.42f), 0.3f), 0.66f);
-                case 1: return Mul(Color.Lerp(c, new Color(0.45f, 0.3f, 0.48f), 0.12f), 0.84f);
+                case 0: return Mul(Color.Lerp(c, new Color(0.3f, 0.16f, 0.42f), 0.34f), 0.6f);
+                case 1: return Mul(Color.Lerp(c, new Color(0.46f, 0.26f, 0.5f), 0.16f), 0.8f);
                 case 3: return Mul(Color.Lerp(c, new Color(1f, 0.9f, 0.72f), 0.1f), 1.08f);
                 case 4: return Color.Lerp(Mul(c, 1.12f), new Color(1f, 0.97f, 0.88f), 0.3f);
                 default: return Mul(c, 1f);
@@ -329,15 +341,19 @@ namespace TWF
             k.knee = female ? 26 : 27;
             k.hw = female ? 5.9f : 6.2f; k.hh = 7f; k.hcx = k.cx + (k.side ? 1f : 0f); k.hcy = k.chin + k.hh;
             float cx = k.cx;
+            bool standing = pose.step == 0 && pose.bob == 0 || pose.breath > 0;
             if (!k.side)
             {
+                // Standing still, the weight sits on one leg (contrapposto).
+                float tilt = standing ? 1f : 0f;
                 for (int i = 0; i < 2; i++)
                 {
                     int sg = i == 0 ? -1 : 1;
+                    bool weight = i == 1;   // the character's left leg (viewer's right) carries the weight
                     float lift = (sg == -1 ? s == 1 : s == -1) ? 3f : 0f;
-                    k.hip[i] = new Vector2(cx + sg * 4f, k.crotch + 2);
-                    k.kn[i] = new Vector2(cx + sg * 3.6f, k.knee + lift * 0.6f);
-                    k.an[i] = new Vector2(cx + sg * 3.4f, 9 + lift);
+                    k.hip[i] = new Vector2(cx + sg * 4f + tilt * 0.6f, k.crotch + 2 + (weight ? tilt * 0.8f : -tilt * 0.4f));
+                    k.kn[i] = new Vector2(cx + sg * 3.6f + (weight ? tilt * 0.8f : tilt * 1.6f), k.knee + lift * 0.6f + (weight ? 0 : -tilt * 0.6f));
+                    k.an[i] = new Vector2(cx + sg * 3.4f + (weight ? tilt * 0.4f : tilt * 0.6f), 9 + lift);
                     float sx = female ? 7.2f : 10.2f;
                     float sw = sg * s * 1.5f + (pose.breath == 2 ? sg * 0.4f : 0f);
                     k.sh[i] = new Vector2(cx + sg * sx, k.shoulder - 2.5f);
@@ -348,7 +364,18 @@ namespace TWF
                     ? new[] { (k.crotch - 1, 8.4f, 8.4f), (k.crotch + 3, 8.6f, 8.6f), (k.waist - 3, 5.8f, 5.8f), (k.waist, 5f, 5f), (k.chest - 3, 6.2f, 6.2f), (k.chest, 7.2f, 7.2f), (k.shoulder - 2, 7.6f, 7.6f), (k.shoulder, 6.6f, 6.6f), (k.shoulder + 1.5f, 3.6f, 3.6f) }
                     : new[] { (k.crotch - 1, 8f, 8f), (k.crotch + 3, 8.1f, 8.1f), (k.waist, 7.2f, 7.2f), (k.chest - 4, 8.6f, 8.6f), (k.chest, 10f, 10f), (k.shoulder - 2, 10.8f, 10.8f), (k.shoulder, 9.2f, 9.2f), (k.shoulder + 1.5f, 4.4f, 4.4f) };
             }
-            else
+            if (!k.side && standing)
+            {
+                var t = k.torso;
+                for (int n = 0; n < t.Length; n++)
+                {
+                    float y = t[n].y;
+                    float hipShift = y < k.waist ? 0.7f : 0f, shoulderShift = y > k.chest ? -0.4f : 0f;
+                    float d = hipShift + shoulderShift;
+                    t[n] = (y, t[n].l - d, t[n].r + d);
+                }
+            }
+            else if (k.side)
             {
                 // Profile facing right; index 0 = far (back) limb, 1 = near limb.
                 for (int i = 0; i < 2; i++)
@@ -510,8 +537,10 @@ namespace TWF
                 if (style == 0)   // long, down the back
                 {
                     var p = new Part(Mul(c, 0.9f)) { roundness = 4f, pattern = Strands(k) };
-                    if (k.side) p.Contour(k.hcx - 3f, new (float, float, float)[] { (k.chest - 4, 3f, 2f), (k.hcy, k.hw - 1f, 2f) });
-                    else p.Contour(k.hcx, new (float, float, float)[] { (k.chest - 4, k.hw - 0.5f, k.hw - 0.5f), (k.chin + 2, k.hw + 1.5f, k.hw + 1.5f), (k.hcy, k.hw + 1f, k.hw + 1f) });
+                    if (k.side) p.Contour(k.hcx - 3f, new (float, float, float)[] { (k.chest - 6, 3.4f, 1.6f), (k.chin, k.hw - 0.5f, 2.5f), (k.hcy, k.hw, 2.5f) });
+                    else p.Contour(k.hcx, new (float, float, float)[] { (k.chest - 6, k.hw - 1f, k.hw - 1f), (k.chest, k.hw + 1.2f, k.hw + 1.2f), (k.chin + 2, k.hw + 2.2f, k.hw + 2.2f), (k.hcy, k.hw + 1.6f, k.hw + 1.6f) });
+                    var wavy = p.pattern;
+                    p.pattern = (x, y, col) => (x + y / 2) % 4 == 0 ? Mul(col, 0.82f) : wavy(x, y, col);   // flowing strands
                     yield return p;
                 }
                 if (style == 2 && !(!k.side && !k.back))   // ponytail
@@ -536,14 +565,15 @@ namespace TWF
             // The cap of hair over the skull, stopping at a jagged fringe above the eyes.
             var cap = new Part(c) { roundness = 4f, pattern = Strands(k) };
             float lift = !a.Female && style == 3 ? 1.5f : 0f;   // buzz cut sits close
-            cap.Ellipse(k.hcx - (k.side ? 0.5f : 0f), k.hcy + 1.5f + lift, k.hw + 0.8f - lift * 0.5f, k.hh - 0.5f - lift);
+            cap.Ellipse(k.hcx - (k.side ? 0.7f : 0f), k.hcy + 1.8f + lift, k.hw + 1.3f - lift * 0.6f, k.hh + 0.2f - lift);
             float fringe = k.chin + 8.5f;
             for (int x = 0; x < W; x++)
             for (int y = 0; y < H; y++)
             {
                 if (!cap.mask[x, y] || k.back) continue;
-                bool face = k.side ? x >= k.hcx - 1.5f : Mathf.Abs(x + 0.5f - k.hcx) < k.hw - 1.2f;
-                if (face && y < fringe - ((x % 3 == 1) ? 1 : 0)) cap.mask[x, y] = false;
+                float dx = (x + 0.5f) / S, dy = (y + 0.5f) / S;
+                bool face = k.side ? dx >= k.hcx - 1.5f : Mathf.Abs(dx - k.hcx) < k.hw - 1.2f;
+                if (face && dy < fringe - ((Mathf.FloorToInt(dx) % 3 == 1) ? 0.7f : 0f)) cap.mask[x, y] = false;
             }
             yield return cap;
             if (a.Female)
@@ -725,7 +755,7 @@ namespace TWF
                     hood.Ellipse(k.hcx - (k.side ? 1f : 0f), k.hcy + 1f, k.hw + 2f, k.hh + 2f);
                     // Leave the face open.
                     for (int x = 0; x < W; x++) for (int y = 0; y < H; y++)
-                        if (hood.mask[x, y] && !k.back && y < k.chin + 8 && y > k.chin - 1 && (k.side ? x > k.hcx - 1 : Mathf.Abs(x + 0.5f - k.hcx) < k.hw - 1.5f)) hood.mask[x, y] = false;
+                        if (hood.mask[x, y] && !k.back && (y + 0.5f) / S < k.chin + 8 && (y + 0.5f) / S > k.chin - 1 && (k.side ? (x + 0.5f) / S > k.hcx - 1 : Mathf.Abs((x + 0.5f) / S - k.hcx) < k.hw - 1.5f)) hood.mask[x, y] = false;
                     yield return hood;
                     break;
                 case HelmStyle.Crown:
@@ -925,17 +955,19 @@ namespace TWF
         static Func<int, int, Color, Color> Folds(Rig k) => (x, y, c) =>
             y > k.waist - 3 && y < k.waist + 4 && (x + (y - (int)k.waist)) % 4 == 0 ? Mul(c, 0.82f) : c;
 
-        // The face, placed pixel by pixel: eyes with a lash line, iris and highlight; brows; a nose shadow
-        // on the side away from the light; a mouth. Drawn into the albedo so dynamic light still shades it.
+        // The face, placed pixel by pixel at full resolution: anime eyes (lash line, two-tone iris, highlight),
+        // arched brows, a nose shadow away from the light and a small mouth. Written into the albedo, so
+        // dynamic light still shades the face.
         static void Face(Result r, bool female, Color skin, Pose pose, float hcx, float chin, float hw, Color eye, Color hair)
         {
             if (pose.facing == Facing.Back) return;
-            var lash = new Color(0.12f, 0.08f, 0.1f);
-            var white = new Color(0.95f, 0.94f, 0.96f);
-            var lid = Mul(skin, 0.78f);
-            var brow = Color.Lerp(Mul(hair, 0.8f), lash, 0.3f);
-            var lip = female ? Color.Lerp(Mul(skin, 0.8f), new Color(0.85f, 0.35f, 0.4f), 0.45f) : Mul(skin, 0.7f);
-            int ey = Mathf.RoundToInt(chin + 5f);
+            var lash = new Color(0.14f, 0.08f, 0.1f);
+            var white = new Color(0.96f, 0.95f, 0.97f);
+            var irisDark = Color.Lerp(Mul(eye, 0.55f), lash, 0.2f);
+            var irisLight = Color.Lerp(eye, white, 0.15f);
+            var brow = Color.Lerp(Mul(hair, 0.75f), lash, 0.35f);
+            var lip = female ? Color.Lerp(Mul(skin, 0.82f), new Color(0.86f, 0.36f, 0.42f), 0.5f) : Mul(skin, 0.72f);
+            float cx = hcx * S, ey = chin * S + 7f;
             void P(float x, float y, Color c)
             {
                 int ix = Mathf.FloorToInt(x), iy = Mathf.FloorToInt(y);
@@ -945,43 +977,38 @@ namespace TWF
             {
                 for (int s = -1; s <= 1; s += 2)
                 {
-                    float ex = hcx + s * 2.4f;          // eye centre
-                    float outer = ex + s * 1.5f;
-                    // Lash line across the top, flicking out at the corner.
-                    for (int dx = -1; dx <= 1; dx++) P(ex + dx, ey + 1, lash);
-                    P(outer, ey + 1, female ? lash : lid);
-                    if (female) P(outer, ey + 2, lash);
-                    // Iris (two pixels) toward the nose, white toward the outside, highlight.
-                    P(ex - s * 0.5f, ey, eye);
-                    P(ex - s * 0.5f, ey - 1, Mul(eye, 0.6f));
-                    P(ex + s * 0.6f, ey, white);
-                    P(ex - s * 0.5f, ey, Color.Lerp(eye, white, 0.35f));
-                    P(ex + s * 0.6f, ey - 1, female ? lid : white);
-                    // Brow.
-                    P(ex - s * 0.4f, ey + 3, brow);
-                    P(ex + s * 0.7f, ey + (female ? 3 : 3), brow);
-                    if (!female) P(ex + s * 1.6f, ey + 3, brow);
+                    // Columns run from the nose outward: 0..3.
+                    float X(int col) => s < 0 ? cx - 2f - col : cx + 1f + col;
+                    for (int c = 0; c < 4; c++) P(X(c), ey + 2, lash);                      // upper lash
+                    if (female) { P(X(4), ey + 2, lash); P(X(4), ey + 1, lash); }          // flick at the outer corner
+                    P(X(0), ey + 1, irisDark); P(X(1), ey + 1, irisDark); P(X(2), ey + 1, irisDark); P(X(3), ey + 1, white);
+                    P(X(0), ey, irisLight); P(X(1), ey, white); P(X(2), ey, irisLight); P(X(3), ey, Mul(skin, 0.86f));
+                    P(X(1), ey + 1, Color.Lerp(white, irisDark, 0.2f));                      // catchlight
+                    // Brow: arched, thicker on men.
+                    P(X(0), ey + 4, brow); P(X(1), ey + 5, brow); P(X(2), ey + 5, brow); P(X(3), ey + 4, brow);
+                    if (!female) { P(X(1), ey + 4, brow); P(X(2), ey + 4, brow); }
                 }
-                // Nose: a shadow on the right of the bridge, nostril pixel.
-                P(hcx + 0.6f, ey - 1, Mul(skin, 0.82f));
-                P(hcx + 0.6f, ey - 2, Mul(skin, 0.74f));
-                // Mouth.
-                P(hcx - 0.5f, ey - 4, lip); P(hcx + 0.5f, ey - 4, lip);
-                if (female) P(hcx + 0.5f, ey - 5, Mul(skin, 0.9f));
-                // Cheek blush and jaw shadow.
-                if (female) { P(hcx - 3.5f, ey - 2, Color.Lerp(skin, new Color(1f, 0.6f, 0.6f), 0.25f)); P(hcx + 3.5f, ey - 2, Color.Lerp(skin, new Color(1f, 0.6f, 0.6f), 0.25f)); }
+                P(cx + 0.5f, ey - 1, Mul(skin, 0.85f));                                    // nose shadow
+                P(cx + 0.5f, ey - 2, Mul(skin, 0.78f));
+                P(cx - 0.5f, ey - 3, Mul(skin, 0.86f));
+                for (int c = -1; c <= 1; c++) P(cx + c, ey - 6, c == 0 ? Mul(lip, 0.85f) : lip);   // mouth
+                if (female)
+                {
+                    var blush = Color.Lerp(skin, new Color(1f, 0.55f, 0.55f), 0.22f);
+                    P(cx - 5, ey - 3, blush); P(cx - 4, ey - 3, blush); P(cx + 4, ey - 3, blush); P(cx + 5, ey - 3, blush);
+                }
             }
             else
             {
-                float ex = hcx + hw - 2.4f;
-                P(ex - 1, ey + 1, lash); P(ex, ey + 1, lash);
-                if (female) P(ex - 1.5f, ey + 2, lash);
-                P(ex, ey, eye); P(ex, ey - 1, Mul(eye, 0.6f));
-                P(ex - 1, ey, white);
-                P(ex - 0.5f, ey + 3, brow); P(ex + 0.5f, ey + 3, brow);
-                P(hcx + hw, ey - 1, Mul(skin, 0.86f));                 // nose tip
-                P(hcx + hw - 1.5f, ey - 4, lip);                       // mouth
-                P(hcx - 1f, ey - 1, Mul(skin, 0.8f));                  // ear shadow
+                float ex = (hcx + hw) * S - 4.5f;
+                for (int c = -1; c < 3; c++) P(ex + c, ey + 2, lash);
+                if (female) P(ex - 2, ey + 1, lash);
+                P(ex, ey + 1, irisDark); P(ex + 1, ey + 1, irisDark); P(ex - 1, ey + 1, white);
+                P(ex, ey, irisLight); P(ex + 1, ey, white); P(ex - 1, ey, Mul(skin, 0.86f));
+                P(ex - 1, ey + 4, brow); P(ex, ey + 5, brow); P(ex + 1, ey + 5, brow); P(ex + 2, ey + 4, brow);
+                P((hcx + hw) * S + 0.5f, ey - 2, Mul(skin, 0.86f));                    // nose tip
+                P((hcx + hw) * S - 2f, ey - 6, lip); P((hcx + hw) * S - 3f, ey - 6, lip);
+                P(hcx * S - 1.5f, ey - 1, Mul(skin, 0.8f));                              // ear
             }
         }
     }

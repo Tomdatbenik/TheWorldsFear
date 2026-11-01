@@ -65,8 +65,8 @@ namespace TWF
             stage.rectTransform.offsetMin = stage.rectTransform.offsetMax = Vector2.zero;
             var floor = UIFactory.Image("Floor", stage.transform, GameAssets.SoftCircle, new Color(0, 0, 0, 0.45f));
             floor.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(260, 60));
-            preview = UIFactory.Rect("Preview", stage.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(64 * 6, 96 * 6)).gameObject.AddComponent<RawImage>();
-            refImage = UIFactory.Rect("Reference", stage.transform).Place(new Vector2(0.75f, 0), new Vector2(0, 80), new Vector2(64 * 6, 96 * 6)).gameObject.AddComponent<RawImage>();
+            preview = UIFactory.Rect("Preview", stage.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(BodyRenderer.W * 4, BodyRenderer.H * 4)).gameObject.AddComponent<RawImage>();
+            refImage = UIFactory.Rect("Reference", stage.transform).Place(new Vector2(0.75f, 0), new Vector2(0, 80), new Vector2(BodyRenderer.W * 4, BodyRenderer.H * 4)).gameObject.AddComponent<RawImage>();
             refImage.rectTransform.pivot = new Vector2(0.5f, 0);
             refImage.gameObject.SetActive(false);
             BuildLightRig();
@@ -102,7 +102,7 @@ namespace TWF
                 turnaround[i] = UIFactory.Rect("Dir" + i, strip.transform).gameObject.AddComponent<RawImage>();
                 var rt = turnaround[i].rectTransform;
                 rt.anchorMin = rt.anchorMax = new Vector2((i + 0.5f) / 4f, 0.5f);
-                rt.sizeDelta = new Vector2(64 * 1.6f, 96 * 1.6f);
+                rt.sizeDelta = new Vector2(BodyRenderer.W * 1.07f, BodyRenderer.H * 1.07f);
             }
 
             // Options.
@@ -235,7 +235,7 @@ namespace TWF
             int f = walking ? frame : frame % 2;
             if (!dynamicLight) { preview.texture = Frame(facing, f); return; }
             var maps = MapFrame(facing, f);
-            previewSprite.sprite = Sprite.Create(maps.albedo, new Rect(0, 0, BodyRenderer.W, BodyRenderer.H), new Vector2(0.5f, 0f), 48f);
+            previewSprite.sprite = Sprite.Create(maps.albedo, new Rect(0, 0, BodyRenderer.W, BodyRenderer.H), new Vector2(0.5f, 0f), BodyRenderer.PPU);
             previewMat.SetTexture("_NormalMap", maps.normal);
             preview.texture = previewRT;
         }
@@ -256,10 +256,12 @@ namespace TWF
             {
                 bool joint = b.a == b.b;
                 var col = joint ? new Color(1f, 0.3f, 0.3f) : b.name.Contains("_L") || b.name.Contains("_far") ? new Color(0.3f, 0.8f, 1f) : b.name.Contains("_R") || b.name.Contains("_near") ? new Color(1f, 0.8f, 0.2f) : new Color(0.5f, 1f, 0.5f);
-                int n = Mathf.Max(1, Mathf.CeilToInt(Vector2.Distance(b.a, b.b)));
+                // Bones are in design units; the figure is drawn at BodyRenderer.S times that.
+                var a0 = b.a * BodyRenderer.S; var b0 = b.b * BodyRenderer.S;
+                int n = Mathf.Max(1, Mathf.CeilToInt(Vector2.Distance(a0, b0)));
                 for (int i = 0; i <= n; i++)
                 {
-                    var p = Vector2.Lerp(b.a, b.b, i / (float)n);
+                    var p = Vector2.Lerp(a0, b0, i / (float)n);
                     int x = Mathf.FloorToInt(p.x), y = Mathf.FloorToInt(p.y);
                     if (x >= 0 && y >= 0 && x < BodyRenderer.W && y < BodyRenderer.H) px[x, y] = col;
                 }
@@ -279,7 +281,7 @@ namespace TWF
             previewCam.orthographicSize = 1.02f;
             previewCam.clearFlags = CameraClearFlags.SolidColor;
             previewCam.backgroundColor = new Color(0, 0, 0, 0);
-            previewRT = new RenderTexture(64 * 6, 96 * 6, 16) { filterMode = FilterMode.Point };
+            previewRT = new RenderTexture(BodyRenderer.W * 4, BodyRenderer.H * 4, 16) { filterMode = FilterMode.Point };
             previewCam.targetTexture = previewRT;
             previewSprite = new GameObject("Hero").AddComponent<SpriteRenderer>();
             previewSprite.transform.SetParent(rig, false);
@@ -366,7 +368,7 @@ namespace TWF
             refImage.texture = tex;
             // Fit inside the right half at most the preview's height, so proportions can be compared.
             var stageRect = ((RectTransform)refImage.transform.parent).rect;
-            float maxW = stageRect.width * 0.46f, maxH = 96 * 6 - 40;
+            float maxW = stageRect.width * 0.46f, maxH = BodyRenderer.H * 4 - 40;
             float scale = Mathf.Min(maxW / tex.width, maxH / tex.height);
             refImage.rectTransform.sizeDelta = new Vector2(tex.width * scale, tex.height * scale);
         }
