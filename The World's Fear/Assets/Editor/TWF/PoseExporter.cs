@@ -80,7 +80,8 @@ namespace TWF.EditorTools
         static void ExportItem(string dir, string direction, Appearance look, BodyRenderer.Gear gear)
         {
             Directory.CreateDirectory(dir);
-            string slot = Path.GetFileName(dir).Split('_')[0];
+            string name = Path.GetFileName(dir);
+            string slot = name == "legs_Skirt" ? "skirt" : name.Split('_')[0];   // the renderer tags the skirt as its own slot
             var res = BodyRenderer.FigureResult(look, gear, PoseFor(direction, 0));
             var px = BodyRenderer.Finish(res);
             var color = new Texture2D(BodyRenderer.W, BodyRenderer.H, TextureFormat.RGBA32, false);
