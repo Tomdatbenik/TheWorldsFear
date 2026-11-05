@@ -79,8 +79,8 @@ namespace TWF
             if (!MobaInput.Blocked)
             {
                 // Rotation always lands on 45 degree steps so the world stays aligned.
-                if (Input.GetKeyDown(KeyCode.C)) targetYaw = Snap(targetYaw) + 45f;
-                if (Input.GetKeyDown(KeyCode.Z)) targetYaw = Snap(targetYaw) - 45f;
+                if (KeyBinds.Pressed(GameAction.CameraRight)) targetYaw = Snap(targetYaw) + 45f;
+                if (KeyBinds.Pressed(GameAction.CameraLeft)) targetYaw = Snap(targetYaw) - 45f;
                 distance = Mathf.Clamp(distance - Input.mouseScrollDelta.y, minDistance, maxDistance);
                 HandleTouchGestures();
             }

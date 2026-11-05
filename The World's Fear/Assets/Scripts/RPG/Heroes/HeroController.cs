@@ -295,7 +295,7 @@ namespace TWF
 
             moveInput = MobaInput.Move;
             HandleKeyboardSkills();
-            if (!MobaInput.Blocked && (Input.GetKeyDown(KeyCode.H) || Input.GetKeyDown(KeyCode.Alpha1))) UsePotion();
+            if (!MobaInput.Blocked && KeyBinds.Pressed(GameAction.Potion)) UsePotion();
 
             CurrentTarget = Combat.NearestHostile(Team.Player, transform.position, Weapon.range + 0.2f);
             if (MobaInput.AttackHeld)

@@ -20,6 +20,7 @@ namespace TWF
             Panels.Register(PanelKind.Reforge, ReforgePanel.Create(ui.Root));
             Panels.Register(PanelKind.Codex, CodexPanel.Create(ui.Root));
             Panels.Register(PanelKind.Settings, SettingsPanel.Create(ui.Root));
+            Panels.Register(PanelKind.KeyBinds, KeyBindsPanel.Create(ui.Root));
         }
 
         // Dimmed full-screen backdrop with a framed window, title and close button.
@@ -805,6 +806,8 @@ namespace TWF
 
     public static class ConfirmDialog
     {
+        public static bool IsOpen { get; private set; }
+
         public static void Show(string message, string confirmLabel, Action onConfirm)
         {
             var root = GameUI.Instance != null ? GameUI.Instance.Root : UIFactory.CreateCanvas("Dialog", 50).transform;
@@ -818,8 +821,10 @@ namespace TWF
             text.rectTransform.offsetMin = new Vector2(30, 130);
             float prevScale = Time.timeScale;
             Time.timeScale = 0f;
+            IsOpen = true;
             Action close = () =>
             {
+                IsOpen = false;
                 UnityEngine.Object.Destroy(dim.gameObject);
                 if (!Panels.AnyOpen) Time.timeScale = 1f;
             };

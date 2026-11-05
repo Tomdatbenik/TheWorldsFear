@@ -38,6 +38,7 @@ namespace TWF
         {
             Instance = this;
             WorldGen.HubRect = hubRect;
+            _ = Profile.Data; // loading the hero sets the world seed; playing this scene directly skips the title screen
             tiles = WorldTiles.Instance;
             art = ArtSet.Instance;
             // Note: Unity's fake-null objects break '??', so check explicitly.

@@ -26,8 +26,15 @@ namespace TWF
 
         public static void EnsureEventSystem()
         {
-            if (EventSystem.current != null || UnityEngine.Object.FindAnyObjectByType<EventSystem>() != null) return;
+            // No keyboard navigation: otherwise Space or WASD would press whichever button was clicked last.
+            var existing = UnityEngine.Object.FindAnyObjectByType<EventSystem>();
+            if (existing != null)
+            {
+                existing.sendNavigationEvents = false;
+                return;
+            }
             var es = new GameObject("EventSystem", typeof(EventSystem), typeof(StandaloneInputModule));
+            es.GetComponent<EventSystem>().sendNavigationEvents = false;
             UnityEngine.Object.DontDestroyOnLoad(es);
         }
 

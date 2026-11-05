@@ -5,14 +5,14 @@ using UnityEngine.UI;
 
 namespace TWF
 {
-    // Unified input: touch controls on mobile, WASD / Space / Q E F R / mouse in the editor.
+    // Unified input: touch controls on mobile, rebindable keys and the mouse on desktop and in the editor.
     public static class MobaInput
     {
         public static VirtualJoystick Joystick;
         public static bool AttackButtonHeld;
         public static bool Blocked; // menus open
 
-        static readonly KeyCode[] skillKeys = { KeyCode.Q, KeyCode.E, KeyCode.F, KeyCode.R, KeyCode.G, KeyCode.T, KeyCode.Y };
+        public static bool Desktop => !Application.isMobilePlatform;
 
         public static Vector2 Move
         {
@@ -21,30 +21,32 @@ namespace TWF
                 if (Blocked) return Vector2.zero;
                 // Input is relative to the camera: "up" walks away from the viewer.
                 if (Joystick != null && Joystick.Value.sqrMagnitude > 0.0025f) return View.ToWorld(Joystick.Value);
-                Vector2 k = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+                Vector2 k = new Vector2(Axis(GameAction.MoveLeft, GameAction.MoveRight), Axis(GameAction.MoveDown, GameAction.MoveUp));
                 return View.ToWorld(k.sqrMagnitude > 1f ? k.normalized : k);
             }
         }
+
+        static float Axis(GameAction negative, GameAction positive) => (KeyBinds.Held(positive) ? 1f : 0f) - (KeyBinds.Held(negative) ? 1f : 0f);
 
         public static bool AttackHeld
         {
             get
             {
                 if (Blocked) return false;
-                if (AttackButtonHeld || Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.J)) return true;
-                return !Application.isMobilePlatform && Input.GetMouseButton(0) &&
+                if (AttackButtonHeld || KeyBinds.Held(GameAction.Attack)) return true;
+                return Desktop && Input.GetMouseButton(0) &&
                        (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject());
             }
         }
 
-        public static bool KeyboardSkillPressed(int slot) => !Blocked && Input.GetKeyDown(skillKeys[slot]);
+        public static bool KeyboardSkillPressed(int slot) => !Blocked && KeyBinds.Pressed(GameAction.Skill1 + slot);
 
-        public static string KeyName(int slot) => skillKeys[slot].ToString();
+        public static string KeyName(int slot) => KeyBinds.Label(GameAction.Skill1 + slot);
 
         // Mouse aim as an offset in "range units" (magnitude 0..1), desktop only.
         public static Vector2? MouseAim(Vector2 heroPos, float range)
         {
-            if (Application.isMobilePlatform) return null;
+            if (!Desktop) return null;
             var ground = View.ScreenToGround(Input.mousePosition);
             if (!ground.HasValue) return null;
             return Vector2.ClampMagnitude((ground.Value - heroPos) / Mathf.Max(0.1f, range), 1f);

@@ -67,6 +67,7 @@ namespace TWF
                 if (Profile.HasSave) ConfirmDialog.Show("Start a new hero?\n<size=70%>Your current hero will be lost.</size>", "New hero", () => SceneManager.LoadScene("CharacterCreator"));
                 else SceneManager.LoadScene("CharacterCreator");
             }, null, 46);
+            if (MobaInput.Desktop) UIFactory.Button("Quit", mainMenu, "Quit", Application.Quit, null, 46);
         }
 
         void BuildClassSelect()
