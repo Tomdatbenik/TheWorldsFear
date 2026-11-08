@@ -3,7 +3,7 @@ using UnityEngine;
 namespace TWF
 {
     // 2.5D orbit camera: tilted perspective view that follows the hero and can rotate around them.
-    // Rotate with two fingers, the on-screen arrows, or Z / C on a keyboard. Pinch or scroll to zoom.
+    // Rotate with two fingers, the on-screen arrows, or Q / E on a keyboard. Pinch or scroll to zoom.
     public class CameraFollow : MonoBehaviour
     {
         static CameraFollow instance;

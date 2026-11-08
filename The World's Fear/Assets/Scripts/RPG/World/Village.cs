@@ -72,7 +72,8 @@ namespace TWF
                 TileBase[] set = grass;
                 if (dPlaza < plazaRadius) set = cobble;
                 else if (OnRoad(cx, cy)) set = dPlaza < plazaRadius + 9f ? cobble : path;
-                tm.SetTile(new Vector3Int(x, y, 0), set[h % (uint)set.Length]);
+                TileBase painted = set == grass ? EnvArt.GroundTile(Biome.Village, x, y) : set == path ? EnvArt.PathTile(Biome.Village, x, y) : null;
+                tm.SetTile(new Vector3Int(x, y, 0), painted ?? set[h % (uint)set.Length]);
             }
             blocked.Add(new Rect(plaza.x - plazaRadius, plaza.y - plazaRadius, plazaRadius * 2f, plazaRadius * 2f));
             blocked.Add(new Rect(0.5f, area.yMin, 4f, area.height));

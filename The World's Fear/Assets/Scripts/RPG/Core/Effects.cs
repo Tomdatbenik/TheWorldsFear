@@ -40,6 +40,16 @@ namespace TWF
         readonly HashSet<Combatant> hit = new HashSet<Combatant>();
         Combatant homingTarget;
 
+        // What guardians read to step into a shot's path.
+        public static readonly List<Projectile> Live = new List<Projectile>();
+        public Team OwnerTeam => team;
+        public Vector2 Direction => dir;
+        public float Speed => spec.speed;
+        public float RangeLeft => spec.range - travelled;
+
+        void OnEnable() => Live.Add(this);
+        void OnDisable() => Live.Remove(this);
+
         public static Projectile Fire(Combatant owner, Vector2 origin, Vector2 direction, ProjectileSpec spec, Combatant homingTarget = null)
         {
             var go = new GameObject("Projectile");
@@ -98,6 +108,14 @@ namespace TWF
             {
                 if (hit.Contains(c)) continue;
                 hit.Add(c);
+                // A guardian with its guard up takes the shot on its shield: a little damage, and the shot stops there.
+                var guard = team == Team.Player ? c.GetComponent<MonsterBrain>() : null;
+                if (guard != null && guard.TryBlockProjectile(dir))
+                {
+                    Combat.Hit(owner, c, spec.damageMult * MonsterBrain.BlockedDamage, default, false, 0f, spec.snapshotDamage, spec.elements);
+                    Destroy(gameObject);
+                    return;
+                }
                 if (spec.explodeRadius > 0f)
                 {
                     Explode();

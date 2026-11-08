@@ -13,7 +13,7 @@ namespace TWF
 
         static readonly KeyCode[] defaults =
         {
-            KeyCode.W, KeyCode.S, KeyCode.A, KeyCode.D, KeyCode.Space, KeyCode.H, KeyCode.E, KeyCode.Z, KeyCode.C,
+            KeyCode.W, KeyCode.S, KeyCode.A, KeyCode.D, KeyCode.Space, KeyCode.H, KeyCode.F, KeyCode.Q, KeyCode.E,
             KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3, KeyCode.Alpha4, KeyCode.Alpha5, KeyCode.Alpha6, KeyCode.Alpha7,
         };
 
@@ -31,9 +31,28 @@ namespace TWF
                 {
                     keys = new KeyCode[Actions.Length];
                     foreach (var a in Actions) keys[(int)a] = (KeyCode)PlayerPrefs.GetInt(PrefKey(a), (int)defaults[(int)a]);
+                    MoveOldCameraKeys();
                 }
                 return keys;
             }
+        }
+
+        // Once per install: the camera moved from Z / C to Q / E and Interact from E to F. A key the player chose themselves stays.
+        static void MoveOldCameraKeys()
+        {
+            const string done = "twf_keys_camera_qe";
+            if (PlayerPrefs.GetInt(done, 0) == 1) return;
+            void Move(GameAction a, KeyCode from, KeyCode to)
+            {
+                if (keys[(int)a] != from) return;
+                keys[(int)a] = to;
+                PlayerPrefs.SetInt(PrefKey(a), (int)to);
+            }
+            Move(GameAction.Interact, KeyCode.E, KeyCode.F);
+            Move(GameAction.CameraLeft, KeyCode.Z, KeyCode.Q);
+            Move(GameAction.CameraRight, KeyCode.C, KeyCode.E);
+            PlayerPrefs.SetInt(done, 1);
+            PlayerPrefs.Save();
         }
 
         static string PrefKey(GameAction a) => "twf_key_" + a;

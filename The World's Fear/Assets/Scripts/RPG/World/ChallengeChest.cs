@@ -152,6 +152,13 @@ namespace TWF
             int baseSeed = key.GetHashCode();
             for (int i = 0; i < mix.Length; i++)
             {
+                // A designed mob for this style if the biome has one, otherwise a generated creature.
+                var designed = MonsterGenerator.DesignedFor(biome, mix[i].arch, baseSeed + i);
+                if (designed != null)
+                {
+                    pool.Add(designed);
+                    continue;
+                }
                 var sp = MonsterGenerator.Create(baseSeed + i * 7919, biome, mix[i].arch);
                 sp.name = MonsterGenerator.MakeName(new System.Random(baseSeed + i), biome, mix[i].arch, sp.isSpider);
                 pool.Add(sp);

@@ -39,6 +39,17 @@ namespace TWF
             }
         }
 
+        // While the left mouse button attacks: the direction from the hero to the cursor. Null otherwise.
+        public static Vector2? MouseAttackDirection(Vector2 heroPos)
+        {
+            if (Blocked || !Desktop || !Input.GetMouseButton(0)) return null;
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return null;
+            var ground = View.ScreenToGround(Input.mousePosition);
+            if (!ground.HasValue) return null;
+            var to = ground.Value - heroPos;
+            return to.sqrMagnitude > 0.0001f ? to.normalized : (Vector2?)null;
+        }
+
         public static bool KeyboardSkillPressed(int slot) => !Blocked && KeyBinds.Pressed(GameAction.Skill1 + slot);
 
         public static string KeyName(int slot) => KeyBinds.Label(GameAction.Skill1 + slot);

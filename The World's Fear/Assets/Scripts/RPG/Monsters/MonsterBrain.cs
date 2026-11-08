@@ -39,6 +39,26 @@ namespace TWF
         bool busy;
         float strafeSeed;
 
+        // ---------- Guardian: stands in the line of fire ----------
+        public const float BlockedDamage = 0.25f;     // share of a shot's damage that gets through the guard
+        const float GuardArc = 110f;                  // degrees either side of where it faces
+        const float GuardReach = 0.45f;               // the raised guard makes it a wider target
+
+        readonly List<Combatant> wards = new List<Combatant>();
+        float wardTimer;
+        float guardUntil;
+        float baseRadius;
+        Vector2 guardDir = Vector2.down;
+        float speedMult = 1f;
+
+        public bool Guarding => Species.archetype == MonsterArchetype.Guardian && Time.time < guardUntil && !Combatant.IsDead && !Combatant.IsStunned;
+
+        // ---------- Skirmisher: darts in and out ----------
+        enum Dart { Circle, In, Out }
+        Dart dart = Dart.Circle;
+        float dartTimer;
+        int circleSign = 1;
+
         Combatant Hero => HeroController.Instance != null ? HeroController.Instance.Combatant : null;
 
         // ---------- Spawning ----------
@@ -69,7 +89,7 @@ namespace TWF
             var body = go.AddComponent<Rigidbody2D>();
             body.gravityScale = 0f;
             body.freezeRotation = true;
-            body.mass = species.archetype == MonsterArchetype.Brute ? 6f : 1f;
+            body.mass = species.archetype == MonsterArchetype.Brute || species.archetype == MonsterArchetype.Guardian ? 6f : 1f;
             body.interpolation = RigidbodyInterpolation2D.Interpolate;
             var col = go.AddComponent<CircleCollider2D>();
             float radius = species.look.pixelSize / 16f * 0.3f * scale;
@@ -81,6 +101,7 @@ namespace TWF
             c.level = level;
             c.rank = rank;
             c.radius = radius + 0.15f;
+            c.destroyOnDeath = species.mob == null;     // a designed mob plays its own death first
             c.height = species.look.pixelSize / 16f * scale * 0.75f;
             c.displayName = species.name;
             c.element = species.element;
@@ -103,6 +124,7 @@ namespace TWF
             brain.visual = visualGo.transform;
             brain.sr = sr;
             brain.baseScale = visualGo.transform.localScale;
+            brain.baseRadius = c.radius;
             if (affixes != null) brain.Affixes.AddRange(affixes);
             brain.ApplyAffixes();
 
@@ -177,6 +199,7 @@ namespace TWF
             if (info.source != null && info.source.team == Team.Player) Aggro();
             // Damage over time (burn, poison) ticks quietly; direct hits make a sound.
             if (!info.trueDamage && !info.silent) Sound.Play(Sfx.Hit, transform.position, 0.15f);
+            if (Species.mob != null && attackLeft <= 0f && !info.silent) hurtLeft = 0.2f;
         }
 
         void OnDied(Combatant killer)
@@ -194,6 +217,27 @@ namespace TWF
                 });
             }
             AnyDied?.Invoke(this, killer);
+            if (Species.mob != null) StartCoroutine(MobDeath());
+        }
+
+        // Plays the death frames, then fades out and removes the body.
+        IEnumerator MobDeath()
+        {
+            foreach (var col in GetComponentsInChildren<Collider2D>()) col.enabled = false;
+            var frames = Species.mob.sprites.Get("death", currentDir);
+            for (int i = 0; i < frames.Length; i++)
+            {
+                sr.sprite = frames[i];
+                yield return new WaitForSeconds(0.09f);
+            }
+            float t = 0f;
+            while (t < 0.5f)
+            {
+                t += Time.deltaTime;
+                sr.color = new Color(1f, 1f, 1f, 1f - t / 0.5f);
+                yield return null;
+            }
+            Destroy(gameObject);
         }
 
         public void Aggro()
@@ -259,7 +303,7 @@ namespace TWF
                 return;
             }
             if (busy) return;
-            float speed = Combatant.MoveSpeed * (state == State.Return ? 1.5f : state == State.Idle ? 0.4f : 1f);
+            float speed = Combatant.MoveSpeed * (state == State.Return ? 1.5f : state == State.Idle ? 0.4f : speedMult);
             body.linearVelocity = desired * speed;
         }
 
@@ -279,6 +323,19 @@ namespace TWF
         {
             Vector2 toHero = ((Vector2)hero.transform.position - pos).normalized;
             var sp = Species;
+            speedMult = 1f;
+            facing = toHero;
+
+            if (sp.archetype == MonsterArchetype.Guardian)
+            {
+                GuardianFight(hero, pos, dist, toHero);
+                return;
+            }
+            if (sp.archetype == MonsterArchetype.Skirmisher)
+            {
+                SkirmisherFight(hero, dist, toHero);
+                return;
+            }
 
             // Movement: ranged keep their distance, melee close in.
             if (sp.preferredDistance > 0f)
@@ -329,18 +386,182 @@ namespace TWF
             }
         }
 
+        // ---------- Roles ----------
+
+        // The allies a guardian shields: ranged pack members first, otherwise every other monster near it.
+        void RefreshWards(Vector2 pos)
+        {
+            wardTimer = 0.5f;
+            wards.Clear();
+            if (Pack != null)
+                foreach (var m in Pack)
+                    if (m != null && m != this && !m.Combatant.IsDead && m.Species.preferredDistance > 0f) wards.Add(m.Combatant);
+            if (wards.Count > 0) return;
+            foreach (var c in Combatant.All)
+            {
+                if (c == Combatant || c.IsDead || c.team != Team.Enemy) continue;
+                if (((Vector2)c.transform.position - pos).sqrMagnitude < 14f * 14f) wards.Add(c);
+            }
+        }
+
+        void GuardianFight(Combatant hero, Vector2 pos, float dist, Vector2 toHero)
+        {
+            wardTimer -= Time.deltaTime;
+            if (wardTimer <= 0f) RefreshWards(pos);
+            wards.RemoveAll(c => c == null || c.IsDead);
+
+            // A shot flying at something it shields: go and stand in its path.
+            if (FindShotToStop(pos, out Vector2 stopAt, out Vector2 from))
+            {
+                speedMult = 1.7f;
+                Vector2 to = stopAt - pos;
+                desired = to.magnitude > 0.2f ? to.normalized : Vector2.zero;
+                RaiseGuard(from);
+                if (attackTimer <= 0f && dist <= Species.attackRange + 1f) StartCoroutine(SlamAttack(hero));
+                return;
+            }
+
+            // Nothing in the air: keep between the hero and whoever is most exposed.
+            Combatant ward = null;
+            float best = float.MaxValue;
+            foreach (var w in wards)
+            {
+                float d = ((Vector2)w.transform.position - (Vector2)hero.transform.position).sqrMagnitude;
+                if (d < best) { best = d; ward = w; }
+            }
+            if (ward != null)
+            {
+                Vector2 w = ward.transform.position;
+                Vector2 side = ((Vector2)hero.transform.position - w).normalized;
+                Vector2 post = w + side * Mathf.Min(2.4f, Vector2.Distance(w, hero.transform.position) * 0.5f);
+                Vector2 to = post - pos;
+                desired = to.magnitude > 0.35f ? to.normalized : Vector2.zero;
+                if (dist < 7f) RaiseGuard(toHero);
+            }
+            else desired = dist > Species.attackRange * 0.85f ? toHero : Vector2.zero;
+
+            if (dist <= Species.attackRange + 1f && attackTimer <= 0f) StartCoroutine(SlamAttack(hero));
+        }
+
+        // The hero's shot that threatens this guardian's wards soonest, and a point on its path the guardian can reach.
+        bool FindShotToStop(Vector2 pos, out Vector2 stopAt, out Vector2 from)
+        {
+            stopAt = from = Vector2.zero;
+            float bestTime = float.MaxValue;
+            bool found = false;
+            float speed = Combatant.MoveSpeed * 1.7f;
+            foreach (var p in Projectile.Live)
+            {
+                if (p == null || p.OwnerTeam != Team.Player) continue;
+                Vector2 s = p.transform.position, d = p.Direction;
+                foreach (var w in wards)
+                {
+                    Vector2 toW = (Vector2)w.transform.position - s;
+                    float along = Vector2.Dot(toW, d);
+                    if (along <= 0.3f || along > p.RangeLeft + 0.6f) continue;
+                    if (Mathf.Abs(toW.x * d.y - toW.y * d.x) > w.radius + 0.8f) continue;
+                    float hitIn = along / Mathf.Max(0.1f, p.Speed);
+                    if (hitIn >= bestTime) continue;
+                    // The point of its path nearest the guardian, kept in front of the ward.
+                    float t = Mathf.Clamp(Vector2.Dot(pos - s, d), 0.2f, along - w.radius - 0.2f);
+                    Vector2 point = s + d * t;
+                    if (Vector2.Distance(pos, point) / speed > t / Mathf.Max(0.1f, p.Speed) + 0.25f) continue;   // can't make it
+                    bestTime = hitIn;
+                    stopAt = point;
+                    from = -d;
+                    found = true;
+                }
+            }
+            return found;
+        }
+
+        void RaiseGuard(Vector2 toward)
+        {
+            guardUntil = Time.time + 0.45f;
+            if (toward.sqrMagnitude > 0.001f) guardDir = toward.normalized;
+            Combatant.radius = baseRadius + GuardReach;
+            facing = guardDir;
+        }
+
+        // Called by a player's shot touching this monster, with the shot's flight direction.
+        public bool TryBlockProjectile(Vector2 shotDir)
+        {
+            if (!Guarding) return false;
+            if (Vector2.Angle(guardDir, -shotDir) > GuardArc) return false;
+            VFX.Ring(transform.position + View.Up * 0.5f, Palette.Shield, 0.8f, 0.18f);
+            Sound.Play(Sfx.Hit, transform.position, 0.3f);
+            ProjectilesBlocked++;
+            return true;
+        }
+
+        public static int ProjectilesBlocked;   // read by the play test
+
+        void SkirmisherFight(Combatant hero, float dist, Vector2 toHero)
+        {
+            var sp = Species;
+            dartTimer -= Time.deltaTime;
+            Vector2 around = new Vector2(-toHero.y, toHero.x) * circleSign;
+            switch (dart)
+            {
+                case Dart.Circle:
+                    speedMult = 1.1f;
+                    desired = (dist > 3.6f ? toHero : dist < 2.6f ? -toHero * 0.6f + around : around).normalized;
+                    if (dartTimer <= 0f && attackTimer <= 0f) dart = Dart.In;
+                    break;
+                case Dart.In:
+                    speedMult = 1.9f;
+                    desired = toHero;
+                    if (dist <= sp.attackRange) StartCoroutine(SkirmishStrike(hero));
+                    else if (dist > 7f) dart = Dart.Circle;
+                    break;
+                case Dart.Out:
+                    speedMult = 2.1f;
+                    desired = (-toHero * 0.8f + around * 0.5f).normalized;
+                    if (dartTimer <= 0f)
+                    {
+                        dart = Dart.Circle;
+                        dartTimer = UnityEngine.Random.Range(0.5f, 1.1f);
+                        circleSign = UnityEngine.Random.value < 0.5f ? 1 : -1;
+                    }
+                    break;
+            }
+        }
+
+        IEnumerator SkirmishStrike(Combatant hero)
+        {
+            attackTimer = Species.attackCooldown * CooldownScale;
+            yield return Windup(0.12f, new Color(1f, 0.6f, 0.5f));
+            if (!Combatant.IsDead && !Combatant.IsStunned && hero != null &&
+                Vector2.Distance(transform.position, hero.transform.position) <= Species.attackRange + 0.6f)
+            {
+                Vector2 dir = (hero.transform.position - transform.position).normalized;
+                StartCoroutine(Lunge(dir));
+                Combat.Hit(Combatant, hero, 1f, Species.onHitStatus, false, 0f, -1f, Elements.Mask(Species.element));
+            }
+            dart = Dart.Out;
+            dartTimer = 0.4f;
+            busy = false;
+        }
+
         // ---------- Attacks ----------
 
         IEnumerator Windup(float duration, Color tint)
         {
             busy = true;
             body.linearVelocity = Vector2.zero;
+            if (Species.mob != null && Species.mob.HasAnim("attack"))
+            {
+                // The strike frame of a designed mob lands when the windup ends.
+                attackFrameTime = Mathf.Max(0.04f, duration / 3f);
+                attackLeft = attackFrameTime * 6f;
+                playing = null;
+            }
             float t = 0f;
             while (t < duration)
             {
                 t += Time.deltaTime;
                 float k = t / duration;
-                visual.localScale = new Vector3(baseScale.x * (1f + k * 0.15f), baseScale.y * (1f - k * 0.15f), 1f);
+                if (Species.mob == null) visual.localScale = new Vector3(baseScale.x * (1f + k * 0.15f), baseScale.y * (1f - k * 0.15f), 1f);
                 sr.color = Color.Lerp(Color.white, tint, k * 0.6f);
                 yield return null;
                 if (Combatant.IsDead || Combatant.IsStunned) break;
@@ -517,8 +738,83 @@ namespace TWF
 
         // ---------- Animation ----------
 
+        // A designed mob: 8 directions of strips, picked like the hero's, played so its planted feet stay on the ground.
+        Vector2 facing = Vector2.down;
+        int currentDir = 6;
+        string playing;
+        int mobFrame;
+        float mobTime, attackLeft, attackFrameTime = 0.08f, hurtLeft;
+        const float MobIdleFrameTime = 0.16f, MobRunAbove = 3.3f;
+
+        void AnimateMob(float dt)
+        {
+            var d = Species.mob;
+            Vector2 vel = body.linearVelocity;
+            if (!Guarding) Combatant.radius = baseRadius;
+            bool moving = vel.sqrMagnitude > 0.04f;
+            Vector2 look = View.ToScreen(moving && attackLeft <= 0f && !Guarding ? vel : facing);
+            currentDir = Hero3DSet.DirectionOf(look);
+            sr.flipX = false;
+
+            string anim;
+            float frameTime;
+            bool hold = false;
+            float speed = vel.magnitude;
+            if (attackLeft > 0f)
+            {
+                attackLeft -= dt;
+                anim = "attack";
+                frameTime = attackFrameTime;
+            }
+            else if (Guarding && d.HasAnim("block"))
+            {
+                anim = "block";
+                frameTime = 0.07f;
+                hold = true;
+            }
+            else if (hurtLeft > 0f)
+            {
+                hurtLeft -= dt;
+                anim = "hurt";
+                frameTime = 0.07f;
+                hold = true;
+            }
+            else if (moving)
+            {
+                bool run = d.HasAnim("run") && speed > MobRunAbove && d.runPerFrame > 0f;
+                anim = run ? "run" : "walk";
+                float per = run ? d.runPerFrame : d.walkPerFrame;
+                frameTime = per > 0f ? Mathf.Clamp(per / speed, 0.03f, 0.2f) : 0.1f;
+            }
+            else
+            {
+                anim = "idle";
+                frameTime = MobIdleFrameTime;
+            }
+
+            if (anim != playing)
+            {
+                playing = anim;
+                mobFrame = 0;
+                mobTime = 0f;
+            }
+            mobTime += dt;
+            while (mobTime >= frameTime)
+            {
+                mobTime -= frameTime;
+                mobFrame++;
+            }
+            var set = d.sprites.Get(anim, currentDir);
+            if (set.Length > 0) sr.sprite = set[hold ? Mathf.Min(mobFrame, set.Length - 1) : mobFrame % set.Length];
+        }
+
         void Animate(float dt)
         {
+            if (Species.mob != null)
+            {
+                AnimateMob(dt);
+                return;
+            }
             // Show the monster's back when it moves away from the camera.
             Vector2 move = body.linearVelocity;
             Vector2 onScreen = View.ToScreen(move);

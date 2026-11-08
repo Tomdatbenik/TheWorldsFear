@@ -1,0 +1,53 @@
+{
+ "mobs": [
+  {
+   "id": "forest_spider",
+   "name": "Forest Spider",
+   "biome": "Forest",
+   "role": "Skirmisher",
+   "body": "spider",
+   "size": "medium",
+   "w": 136,
+   "h": 120,
+   "pivotY": 0.3,
+   "heightUnits": 0.7256944444444444,
+   "walkPerFrame": 0.07326722756410257,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  }
+ ]
+}

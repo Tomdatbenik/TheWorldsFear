@@ -140,6 +140,20 @@ namespace TWF
         void DressInGear()
         {
             if (!animator) return;
+            // The female hero is rendered from the 3D model; other looks are still drawn by the paper doll.
+            var hero3D = Hero3DSet.For(Profile.Data.appearance.Female);
+            animator.UseHero3D(hero3D, Hero3DSet.AttackFor(Weapon.type));
+            var pieces = new System.Collections.Generic.List<string>();
+            string held = null;
+            if (hero3D != null)
+            {
+                foreach (var slot in new[] { ItemSlot.Boots, ItemSlot.Chest, ItemSlot.Gloves, ItemSlot.Helm })
+                    foreach (var item in Profile.Data.equipment)
+                        if (item != null && item.slot == slot && Hero3DSet.PieceFor(item) != null) pieces.Add(Hero3DSet.PieceFor(item));
+                held = Hero3DSet.WeaponPiece(Weapon.type);
+                if (held != null) pieces.Add(held);
+            }
+            animator.SetGear3D(pieces, held != null);
             animator.SetSprites(PaperDoll.Get(PaperDoll.ForHero(Profile.Data.appearance, Profile.Data.equipment)));
         }
 
@@ -298,7 +312,12 @@ namespace TWF
             if (!MobaInput.Blocked && KeyBinds.Pressed(GameAction.Potion)) UsePotion();
 
             CurrentTarget = Combat.NearestHostile(Team.Player, transform.position, Weapon.range + 0.2f);
-            if (MobaInput.AttackHeld)
+            var mouseAim = MobaInput.MouseAttackDirection(transform.position);
+            if (mouseAim.HasValue)
+            {
+                TryBasicAttack(CurrentTarget, mouseAim.Value);   // toward the cursor, whether or not anything is there
+            }
+            else if (MobaInput.AttackHeld)
             {
                 var chase = CurrentTarget ?? Combat.NearestHostile(Team.Player, transform.position, acquireRange);
                 if (CurrentTarget != null) TryBasicAttack(CurrentTarget);
@@ -307,7 +326,8 @@ namespace TWF
                 if (CurrentTarget == null) CurrentTarget = chase;
             }
 
-            if (moveInput.sqrMagnitude > 0.01f && castLock <= 0f) Facing = moveInput.normalized;
+            if (mouseAim.HasValue && castLock <= 0f) Facing = mouseAim.Value;
+            else if (moveInput.sqrMagnitude > 0.01f && castLock <= 0f) Facing = moveInput.normalized;
             UpdateAnimator();
         }
 
@@ -327,18 +347,25 @@ namespace TWF
             if (animator == null) return;
             animator.Velocity = castLock > 0f || Combatant.IsDead ? Vector2.zero : moveInput;
             animator.Facing = Facing;
+            animator.MoveSpeed = Combatant.MoveSpeed;
             animator.Attacking = attackAnimTimer > 0f;
         }
 
         // ---------- Basic attack ----------
 
         // The equipped weapon decides how the basic attack works.
-        void TryBasicAttack(Combatant target)
+        void TryBasicAttack(Combatant target, Vector2? aim = null)
         {
             if (attackTimer > 0f || castLock > 0f || Combatant.IsStunned) return;
             var w = Weapon;
             attackTimer = 1f / (w.attacksPerSecond * Combatant.Stats.Get(StatType.AttackSpeed));
-            Vector2 dir = ((Vector2)(target.transform.position - transform.position)).normalized;
+            Vector2 dir = aim ?? ((Vector2)(target.transform.position - transform.position)).normalized;
+            if (aim.HasValue)
+            {
+                // A homing shot only locks on to something near the line of the aim.
+                target = null;
+                foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, dir, w.range + 2f, 50f)) { target = c; break; }
+            }
             Facing = dir;
             attackAnimTimer = 0.2f;
 
@@ -387,7 +414,7 @@ namespace TWF
                 if (w.arc >= 360f)
                 {
                     // Hammer: slam a circle at the target.
-                    Vector2 at = (Vector2)transform.position + dir * Mathf.Min(w.range * 0.7f, Vector2.Distance(transform.position, target.transform.position));
+                    Vector2 at = (Vector2)transform.position + dir * (target != null ? Mathf.Min(w.range * 0.7f, Vector2.Distance(transform.position, target.transform.position)) : w.range * 0.7f);
                     VFX.Ring(at, new Color(1f, 0.9f, 0.7f), w.range * 0.9f, 0.3f);
                     CameraFollow.Shake(0.08f);
                     foreach (var c in Combat.HostilesInRadius(Team.Player, at, w.range * 0.9f))
@@ -407,7 +434,7 @@ namespace TWF
 
         void Swing(Vector2 dir, float arc)
         {
-            if (weapon == null) return;
+            if (weapon == null || animator.HoldsRenderedWeapon) return;
             if (swingRoutine != null) StopCoroutine(swingRoutine);
             swingRoutine = StartCoroutine(SwingRoutine(dir, arc));
         }
@@ -416,7 +443,7 @@ namespace TWF
         // staves and wands thrust forward.
         void Shoot(Vector2 dir, bool bow)
         {
-            if (weapon == null) return;
+            if (weapon == null || animator.HoldsRenderedWeapon) return;
             if (swingRoutine != null) StopCoroutine(swingRoutine);
             swingRoutine = StartCoroutine(ShootRoutine(dir, bow));
         }

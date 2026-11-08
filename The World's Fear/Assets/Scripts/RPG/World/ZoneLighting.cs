@@ -119,7 +119,7 @@ namespace TWF
             switch ((Biome)index)
             {
                 case Biome.Village:
-                    return new Mood { sun = new Color(1f, 0.9f, 0.74f), sunIntensity = 0.85f, sunAngles = new Vector2(48, 225), ambient = new Color(0.36f, 0.36f, 0.4f), fog = new Color(0.58f, 0.65f, 0.7f), fogStart = 40, fogEnd = 95 };
+                    return new Mood { sun = new Color(1f, 0.93f, 0.8f), sunIntensity = 0.92f, sunAngles = new Vector2(48, 45), ambient = new Color(0.36f, 0.36f, 0.38f), fog = new Color(0.58f, 0.65f, 0.7f), fogStart = 40, fogEnd = 95 };
                 case Biome.Forest:
                     return new Mood { sun = new Color(1f, 0.88f, 0.62f), sunIntensity = 0.74f, sunAngles = new Vector2(55, 210), ambient = new Color(0.29f, 0.32f, 0.27f), fog = new Color(0.5f, 0.52f, 0.38f), fogStart = 28, fogEnd = 70 };
                 case Biome.Marsh:

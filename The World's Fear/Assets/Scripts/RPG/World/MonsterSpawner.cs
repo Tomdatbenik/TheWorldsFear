@@ -19,6 +19,14 @@ namespace TWF
             return list;
         }
 
+        static bool rollMix(System.Random rng) => rng.NextDouble() < 0.7;
+
+        static MonsterSpecies Pick(List<MonsterSpecies> species, System.Predicate<MonsterSpecies> match, System.Random rng)
+        {
+            var found = species.FindAll(match);
+            return found.Count > 0 ? found[rng.Next(found.Count)] : null;
+        }
+
         public static void SpawnPack(ZoneDefinition zone, Vector2 center, float depth, List<MonsterBrain> into, System.Random rng, int fixedLevel = 0)
         {
             var species = MonsterGenerator.SpeciesFor(zone);
@@ -53,6 +61,19 @@ namespace TWF
                 var second = rng.NextDouble() < 0.4 ? species[rng.Next(species.Count)] : main;
                 for (int i = 0; i < count; i++)
                     pack.Add(MonsterBrain.Spawn(i % 3 == 2 ? second : main, level, MonsterRank.Normal, Around(2.2f), null, zone));
+            }
+
+            // Mixed fights: a shooter pack often brings a guardian to stand in front of it, and a guardian brings someone to protect.
+            if (pack.Count > 0 && rollMix(rng) && species.Count > 1)
+            {
+                bool Ranged(MonsterSpecies s) => s.preferredDistance > 0f;
+                var partner = main.archetype == MonsterArchetype.Guardian ? Pick(species, Ranged, rng)
+                            : Ranged(main) ? Pick(species, s => s.archetype == MonsterArchetype.Guardian, rng) : null;
+                if (partner != null)
+                {
+                    int extra = partner.archetype == MonsterArchetype.Guardian ? 1 : 2 + rng.Next(2);
+                    for (int i = 0; i < extra; i++) pack.Add(MonsterBrain.Spawn(partner, level, MonsterRank.Normal, Around(2.2f), null, zone));
+                }
             }
 
             foreach (var m in pack)
