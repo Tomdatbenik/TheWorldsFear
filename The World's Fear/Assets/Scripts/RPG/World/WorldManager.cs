@@ -19,6 +19,14 @@ namespace TWF
         public static string PendingGateKey = "";
         public static BossKind PendingBossKind = BossKind.WorldsFear;
 
+        // Set when walking down into a dungeon; read by the dungeon scene.
+        public static int PendingDungeonLevel = 10;
+        public static int PendingDungeonSeed;
+        public static string PendingDungeonKey = "";
+        public static string PendingDungeonName = "The Old Cellars";
+        public static Biome PendingDungeonBiome = Biome.Ruins;
+        public static ZoneDefinition PendingDungeonZone;
+
         // The bosses in the order you face them. Gates hold them by distance from the village (the
         // nearest gates hold the Slime, the furthest the World's Fear), and each lair stays sealed
         // until the boss before it has been slain.
@@ -161,6 +169,21 @@ namespace TWF
         public void Teleport(Waypoint wp)
         {
             if (wp != null) Teleport(wp.id);
+        }
+
+        public void EnterDungeon(int level, string key, string title, Biome biome, ZoneDefinition zone, uint seed, Vector2 returnPoint)
+        {
+            PendingDungeonLevel = level;
+            PendingDungeonKey = key;
+            PendingDungeonName = title;
+            PendingDungeonBiome = biome;
+            PendingDungeonZone = zone;
+            PendingDungeonSeed = (int)(seed & 0x7FFFFFFF);
+            Profile.Data.hasReturn = true;
+            Profile.Data.returnX = returnPoint.x;
+            Profile.Data.returnY = returnPoint.y;
+            Profile.Save();
+            SceneManager.LoadScene("Dungeon");
         }
 
         public void EnterBoss(int level, Vector2 gatePosition)

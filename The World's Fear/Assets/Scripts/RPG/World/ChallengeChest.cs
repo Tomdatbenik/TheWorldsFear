@@ -261,7 +261,7 @@ namespace TWF
         static readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
 
         // A pixel-art chest: wooden body, metal bands in the tier's color, open or closed.
-        static Sprite ChestSprite(bool open, int waves)
+        public static Sprite ChestSprite(bool open, int waves)
         {
             string k = $"{open}_{waves}";
             if (sprites.TryGetValue(k, out var s) && s) return s;

@@ -244,6 +244,24 @@ namespace TWF
             return true;
         }
 
+        // Dungeons: one per patch of the map, at a random chunk and spot inside it, kept clear of other landmarks.
+        public const int DungeonGrid = 6;
+        const int DungeonEdge = 7;   // tiles from the chunk border, so the stairwell never crosses into the next chunk
+
+        public static bool HasDungeon(int cx, int cy, out Vector2Int cell)
+        {
+            cell = default;
+            int px = Mathf.FloorToInt(cx / (float)DungeonGrid), py = Mathf.FloorToInt(cy / (float)DungeonGrid);
+            uint h = Hash(px * 53 + 9, py * 97 - 4);
+            if (Mod(cx, DungeonGrid) != (h & 0xFF) % DungeonGrid || Mod(cy, DungeonGrid) != ((h >> 8) & 0xFF) % DungeonGrid) return false;
+            uint spot = (uint)(ChunkSize - 2 * DungeonEdge);
+            var c = new Vector2Int(cx * ChunkSize + DungeonEdge + (int)(((h >> 16) & 0xFF) % spot), cy * ChunkSize + DungeonEdge + (int)((h >> 24) % spot));
+            if (((Vector2)c).magnitude < HubRadius + 40f) return false;
+            if (HasWaypoint(cx, cy, out _) || HasBossGate(cx, cy, out _) || HasChest(cx, cy, out _, out _)) return false;
+            cell = c;
+            return true;
+        }
+
         public static int Mod(int a, int m) => ((a % m) + m) % m;
 
         public static Vector2Int ChunkOf(Vector2 p) => new Vector2Int(Mathf.FloorToInt(p.x / ChunkSize), Mathf.FloorToInt(p.y / ChunkSize));

@@ -329,7 +329,8 @@ namespace TWF
             }
             if (busy) return;
             float speed = Combatant.MoveSpeed * (state == State.Return ? 1.5f : state == State.Idle ? 0.4f : speedMult);
-            body.linearVelocity = desired * speed;
+            var move = state == State.Chase && DungeonSetup.Instance != null ? DungeonSetup.Instance.Route(transform.position, desired) : desired;
+            body.linearVelocity = move * speed;
         }
 
         void Wander(float dt, Vector2 pos)

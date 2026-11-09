@@ -549,6 +549,33 @@ namespace TWF
                 var gate = go.AddComponent<BossGate>();
                 gate.recommendedLevel = WorldGen.LevelAt(bossCell) + 3;
             }
+            if (WorldGen.HasDungeon(c.x, c.y, out var dungeonCell))
+            {
+                ClearAround(dungeonCell, 6);
+                CarveStairwell(chunk, dungeonCell);
+                var go = new GameObject("DungeonGate");
+                go.transform.SetParent(chunk.root.transform, false);
+                go.transform.position = (Vector2)dungeonCell + Vector2.one * 0.5f;
+                var gate = go.AddComponent<DungeonGate>();
+                gate.areaLevel = WorldGen.LevelAt(dungeonCell);
+                gate.key = WorldManager.GateKey(dungeonCell);
+            }
+        }
+
+        // Opens the ground for a stairwell and clears anything that was placed on the spot.
+        void CarveStairwell(Chunk chunk, Vector2Int cell)
+        {
+            int halfW = DungeonGate.HalfWidth, halfL = DungeonGate.HalfLength;
+            var hole = new BoundsInt(cell.x - halfW, cell.y - halfL, 0, 2 * halfW + 1, 2 * halfL + 1, 1);
+            var none = new TileBase[hole.size.x * hole.size.y];
+            ground.SetTilesBlock(hole, none);
+            detail.SetTilesBlock(hole, none);
+
+            const float ClearX = 5f, ClearY = 7f;
+            bool OnSpot(Vector3 p) => Mathf.Abs(p.x - cell.x) < ClearX && Mathf.Abs(p.y - cell.y) < ClearY;
+            chunk.grass.RemoveAll(m => OnSpot(m.GetColumn(3)));
+            foreach (var t in chunk.root.GetComponentsInChildren<Transform>(true))
+                if (t != chunk.root.transform && OnSpot(t.position)) Destroy(t.gameObject);
         }
 
         // Make sure points of interest aren't buried in walls or water.
@@ -559,7 +586,12 @@ namespace TWF
             blockers.SetTilesBlock(b, empty);
             plateau.SetTilesBlock(b, empty);
             var fill = new TileBase[empty.Length];
-            for (int i = 0; i < fill.Length; i++) fill[i] = tiles.dirt[i % tiles.dirt.Length];
+            var biome = WorldGen.BiomeAt(center);
+            for (int i = 0; i < fill.Length; i++)
+            {
+                int x = center.x - r + i % (2 * r + 1), y = center.y - r + i / (2 * r + 1);
+                fill[i] = EnvArt.PathTile(biome, x, y) ?? tiles.dirt[i % tiles.dirt.Length];
+            }
             ground.SetTilesBlock(b, fill);
         }
 

@@ -23,7 +23,7 @@ namespace TWF
         Volume[] volumes;
         int target = (int)Biome.Village;
         Mood current;
-        bool boss;
+        bool boss, dungeon;
 
         public static ZoneLighting Create()
         {
@@ -73,6 +73,20 @@ namespace TWF
             target = (int)b;
         }
 
+        // Underground there is no sky: the torches do the work, and it starts dark right away.
+        Mood dungeonMood = new Mood { sun = new Color(0.55f, 0.62f, 0.85f), sunIntensity = 0.1f, sunAngles = new Vector2(70, 250), ambient = new Color(0.3f, 0.3f, 0.38f), fog = Color.black, fogStart = 60, fogEnd = 140 };
+
+        public void SetDungeon(Color ambient)
+        {
+            boss = true;
+            dungeon = true;
+            target = (int)Biome.Ruins;
+            dungeonMood.ambient = ambient;
+            current = dungeonMood;
+            for (int i = 0; i < volumes.Length; i++) volumes[i].weight = i == target ? 1f : 0f;
+            ApplyMood(current);
+        }
+
         public void SetBoss()
         {
             boss = true;
@@ -83,7 +97,7 @@ namespace TWF
         {
             DayNight.Tick(Time.deltaTime);
             float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 1.5f);
-            var goal = MoodFor(target, boss);
+            var goal = dungeon ? dungeonMood : MoodFor(target, boss);
             current.sun = Color.Lerp(current.sun, goal.sun, k);
             current.sunIntensity = Mathf.Lerp(current.sunIntensity, goal.sunIntensity, k);
             current.sunAngles = Vector2.Lerp(current.sunAngles, goal.sunAngles, k);

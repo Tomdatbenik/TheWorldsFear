@@ -311,7 +311,7 @@ namespace TWF
                 return;
             }
 
-            moveInput = MobaInput.Move;
+            moveInput = AutoWalk != Vector2.zero ? AutoWalk : MobaInput.Move;
             HandleKeyboardSkills();
             if (!MobaInput.Blocked && KeyBinds.Pressed(GameAction.Potion)) UsePotion();
 
@@ -345,6 +345,9 @@ namespace TWF
             Vector2 input = Vector2.ClampMagnitude(moveInput, 1f);
             body.linearVelocity = input * Combatant.MoveSpeed;
         }
+
+        // Set while the game walks the hero somewhere itself, such as down the dungeon stairs.
+        public Vector2 AutoWalk { get; set; }
 
         void UpdateAnimator()
         {

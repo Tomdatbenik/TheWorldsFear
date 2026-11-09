@@ -27,18 +27,18 @@ namespace TWF
             return found.Count > 0 ? found[rng.Next(found.Count)] : null;
         }
 
-        public static void SpawnPack(ZoneDefinition zone, Vector2 center, float depth, List<MonsterBrain> into, System.Random rng, int fixedLevel = 0)
+        public static void SpawnPack(ZoneDefinition zone, Vector2 center, float depth, List<MonsterBrain> into, System.Random rng, int fixedLevel = 0, float rareOverride = -1f, float eliteOverride = -1f, List<MonsterSpecies> roster = null, float warbandOverride = -1f)
         {
-            var species = MonsterGenerator.SpeciesFor(zone);
+            var species = roster ?? MonsterGenerator.SpeciesFor(zone);
             if (species.Count == 0) return;
             int level = fixedLevel > 0
                 ? Mathf.Max(1, fixedLevel + rng.Next(-1, 2))
                 : Mathf.Clamp(Mathf.RoundToInt(Mathf.Lerp(zone.minLevel, zone.maxLevel, depth)) + rng.Next(-1, 2), zone.minLevel, zone.maxLevel);
             // Further from the village: more elites and rares.
-            float rareChance = fixedLevel > 0 ? WorldGen.RareChance(center) : zone.rareChance;
-            float eliteChance = fixedLevel > 0 ? WorldGen.EliteChance(center) : zone.eliteChance;
+            float rareChance = rareOverride >= 0f ? rareOverride : fixedLevel > 0 ? WorldGen.RareChance(center) : zone.rareChance;
+            float eliteChance = eliteOverride >= 0f ? eliteOverride : fixedLevel > 0 ? WorldGen.EliteChance(center) : zone.eliteChance;
             // Sometimes an organised warband instead of an ordinary pack: a separate, harder tier.
-            if (rng.NextDouble() < Warband.SpawnChance && Warband.Spawn(zone, zone.biome, center, level, into, rng)) return;
+            if (rng.NextDouble() < (warbandOverride >= 0f ? warbandOverride : Warband.SpawnChance) && Warband.Spawn(zone, zone.biome, center, level, into, rng)) return;
 
             var main = species[rng.Next(species.Count)];
             double roll = rng.NextDouble();
