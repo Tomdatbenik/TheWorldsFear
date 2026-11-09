@@ -179,13 +179,13 @@ Shader "TWF/LitSprite"
                 inputData.normalizedScreenSpaceUV = GetNormalizedScreenSpaceUV(i.positionCS);
                 LIGHT_LOOP_BEGIN(count)
                     Light l = GetAdditionalLight(lightIndex, i.positionWS);
-                    light += l.color * l.distanceAttenuation;
+                    light += l.color * min(l.distanceAttenuation, 0.6);   // point blank must not blow a sprite out
                 LIGHT_LOOP_END
                 #else
                 for (uint li = 0; li < count; li++)
                 {
                     Light l = GetAdditionalLight(li, i.positionWS);
-                    light += l.color * l.distanceAttenuation;
+                    light += l.color * min(l.distanceAttenuation, 0.6);   // point blank must not blow a sprite out
                 }
                 #endif
                 #endif

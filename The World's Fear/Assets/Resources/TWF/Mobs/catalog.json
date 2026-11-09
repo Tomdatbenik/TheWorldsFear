@@ -1,15 +1,731 @@
 {
  "mobs": [
   {
+   "id": "ash_cultist",
+   "name": "Ash Cultist",
+   "biome": "Ember",
+   "role": "Caster",
+   "body": "humanoid",
+   "size": "medium",
+   "w": 208,
+   "h": 136,
+   "pivotY": 0.23529411764705882,
+   "heightUnits": 1.3194444444444444,
+   "walkPerFrame": 0.09302083333333333,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "barkshield_treant",
+   "name": "Barkshield Treant",
+   "biome": "Forest",
+   "role": "Guardian",
+   "body": "humanoid",
+   "size": "large",
+   "w": 360,
+   "h": 240,
+   "pivotY": 0.24583333333333332,
+   "heightUnits": 2.322222020890978,
+   "walkPerFrame": 0.14617558256501242,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "block",
+     "frames": 4
+    }
+   ]
+  },
+  {
+   "id": "blight_wisp",
+   "name": "Blight Wisp",
+   "biome": "Marsh",
+   "role": "Caster",
+   "body": "flyer",
+   "size": "medium",
+   "w": 184,
+   "h": 176,
+   "pivotY": 0.2784090909090909,
+   "heightUnits": 1.1875,
+   "walkPerFrame": 0.12468749999999999,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "bloat_slime",
+   "name": "Bloat Slime",
+   "biome": "Marsh",
+   "role": "Exploder",
+   "body": "slime",
+   "size": "small",
+   "w": 120,
+   "h": 104,
+   "pivotY": 0.3076923076923077,
+   "heightUnits": 0.6079999738269382,
+   "walkPerFrame": 0.06839999705553054,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "bog_toad",
+   "name": "Bog Toad",
+   "biome": "Marsh",
+   "role": "Spitter",
+   "body": "quadruped",
+   "size": "medium",
+   "w": 144,
+   "h": 136,
+   "pivotY": 0.23529411764705882,
+   "heightUnits": 0.9499999748335944,
+   "walkPerFrame": 0.04517213942547817,
+   "runPerFrame": 0.1000240230135588,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "run",
+     "frames": 8
+    }
+   ]
+  },
+  {
+   "id": "bone_archer",
+   "name": "Bone Archer",
+   "biome": "Ruins",
+   "role": "Spitter",
+   "body": "humanoid",
+   "size": "medium",
+   "w": 208,
+   "h": 136,
+   "pivotY": 0.25735294117647056,
+   "heightUnits": 1.3194444444444444,
+   "walkPerFrame": 0.09302083333333333,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "undead",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "bristle_boar",
+   "name": "Bristle Boar",
+   "biome": "Forest",
+   "role": "Charger",
+   "body": "quadruped",
+   "size": "medium",
+   "w": 152,
+   "h": 112,
+   "pivotY": 0.29464285714285715,
+   "heightUnits": 0.9499999748335944,
+   "walkPerFrame": 0.05211711018737402,
+   "runPerFrame": 0.11540217255775675,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "run",
+     "frames": 8
+    }
+   ]
+  },
+  {
+   "id": "cinder_mite",
+   "name": "Cinder Mite",
+   "biome": "Ember",
+   "role": "Swarmling",
+   "body": "spider",
+   "size": "tiny",
+   "w": 72,
+   "h": 64,
+   "pivotY": 0.328125,
+   "heightUnits": 0.29027778406937915,
+   "walkPerFrame": 0.02930689166085078,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "cinder_ram",
+   "name": "Cinder Ram",
+   "biome": "Ember",
+   "role": "Charger",
+   "body": "quadruped",
+   "size": "medium",
+   "w": 144,
+   "h": 104,
+   "pivotY": 0.2692307692307692,
+   "heightUnits": 0.9499999748335944,
+   "walkPerFrame": 0.054466349607187645,
+   "runPerFrame": 0.12060405984448695,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "run",
+     "frames": 8
+    }
+   ]
+  },
+  {
+   "id": "crypt_blade",
+   "name": "Crypt Blade",
+   "biome": "Ruins",
+   "role": "Skirmisher",
+   "body": "humanoid",
+   "size": "medium",
+   "w": 208,
+   "h": 144,
+   "pivotY": 0.2361111111111111,
+   "heightUnits": 1.3194444444444444,
+   "walkPerFrame": 0.09302083333333333,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "undead",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "crypt_wraith",
+   "name": "Crypt Wraith",
+   "biome": "Ruins",
+   "role": "Caster",
+   "body": "flyer",
+   "size": "medium",
+   "w": 184,
+   "h": 200,
+   "pivotY": 0.295,
+   "heightUnits": 1.1875,
+   "walkPerFrame": 0.12468749999999999,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "undead",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "death_knight",
+   "name": "Death Knight",
+   "biome": "Ruins",
+   "role": "Brute",
+   "body": "humanoid",
+   "size": "large",
+   "w": 352,
+   "h": 280,
+   "pivotY": 0.2357142857142857,
+   "heightUnits": 2.322222272555033,
+   "walkPerFrame": 0.13097333617210385,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "undead",
+   "leader": true,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "ember_imp",
+   "name": "Ember Imp",
+   "biome": "Ember",
+   "role": "Spitter",
+   "body": "flyer",
+   "size": "small",
+   "w": 128,
+   "h": 136,
+   "pivotY": 0.35294117647058826,
+   "heightUnits": 0.7599999672836728,
+   "walkPerFrame": 0.07979999656478563,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "fire_slime",
+   "name": "Fire Slime",
+   "biome": "Ember",
+   "role": "Exploder",
+   "body": "slime",
+   "size": "small",
+   "w": 72,
+   "h": 88,
+   "pivotY": 0.25,
+   "heightUnits": 0.6079999738269382,
+   "walkPerFrame": 0.06839999705553054,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
    "id": "forest_spider",
    "name": "Forest Spider",
    "biome": "Forest",
    "role": "Skirmisher",
    "body": "spider",
    "size": "medium",
-   "w": 136,
-   "h": 120,
-   "pivotY": 0.3,
+   "w": 128,
+   "h": 104,
+   "pivotY": 0.3076923076923077,
    "heightUnits": 0.7256944444444444,
    "walkPerFrame": 0.07326722756410257,
    "runPerFrame": 0.0,
@@ -26,6 +742,893 @@
    "pack": 1.0,
    "faction": "",
    "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "gnat_swarmling",
+   "name": "Mire Gnat",
+   "biome": "Marsh",
+   "role": "Swarmling",
+   "body": "flyer",
+   "size": "tiny",
+   "w": 80,
+   "h": 80,
+   "pivotY": 0.3375,
+   "heightUnits": 0.4749999874167972,
+   "walkPerFrame": 0.0498749986787637,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "goblin_archer",
+   "name": "Goblin Archer",
+   "biome": "Forest",
+   "role": "Spitter",
+   "body": "humanoid",
+   "size": "small",
+   "w": 136,
+   "h": 88,
+   "pivotY": 0.26136363636363635,
+   "heightUnits": 0.8444443941116333,
+   "walkPerFrame": 0.04762666382789612,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "goblin",
+   "leader": false,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "goblin_cutthroat",
+   "name": "Goblin Cutthroat",
+   "biome": "Forest",
+   "role": "Skirmisher",
+   "body": "humanoid",
+   "size": "small",
+   "w": 136,
+   "h": 96,
+   "pivotY": 0.25,
+   "heightUnits": 0.8444443941116333,
+   "walkPerFrame": 0.05953332978487015,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "goblin",
+   "leader": false,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "goblin_hexer",
+   "name": "Goblin Hexer",
+   "biome": "Forest",
+   "role": "Caster",
+   "body": "humanoid",
+   "size": "small",
+   "w": 136,
+   "h": 96,
+   "pivotY": 0.2604166666666667,
+   "heightUnits": 0.8444444570276473,
+   "walkPerFrame": 0.047626667376359295,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "goblin",
+   "leader": false,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "goblin_shieldbearer",
+   "name": "Goblin Shieldbearer",
+   "biome": "Forest",
+   "role": "Guardian",
+   "body": "humanoid",
+   "size": "medium",
+   "w": 208,
+   "h": 152,
+   "pivotY": 0.21710526315789475,
+   "heightUnits": 1.3194444444444444,
+   "walkPerFrame": 0.08305431547619047,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "goblin",
+   "leader": false,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "block",
+     "frames": 4
+    }
+   ]
+  },
+  {
+   "id": "goblin_warchief",
+   "name": "Goblin Warchief",
+   "biome": "Forest",
+   "role": "Brute",
+   "body": "humanoid",
+   "size": "large",
+   "w": 352,
+   "h": 256,
+   "pivotY": 0.2109375,
+   "heightUnits": 2.322222020890978,
+   "walkPerFrame": 0.13915915460189182,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "goblin",
+   "leader": true,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "grave_hound",
+   "name": "Grave Hound",
+   "biome": "Ruins",
+   "role": "Charger",
+   "body": "quadruped",
+   "size": "medium",
+   "w": 152,
+   "h": 112,
+   "pivotY": 0.2767857142857143,
+   "heightUnits": 0.9499999748335944,
+   "walkPerFrame": 0.05758790567413927,
+   "runPerFrame": 0.12751607684987984,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "run",
+     "frames": 8
+    }
+   ]
+  },
+  {
+   "id": "magma_colossus",
+   "name": "Magma Colossus",
+   "biome": "Ember",
+   "role": "Guardian",
+   "body": "humanoid",
+   "size": "large",
+   "w": 360,
+   "h": 280,
+   "pivotY": 0.22857142857142856,
+   "heightUnits": 2.322222272555033,
+   "walkPerFrame": 0.1461755984063659,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "block",
+     "frames": 4
+    }
+   ]
+  },
+  {
+   "id": "mire_stalker",
+   "name": "Mire Stalker",
+   "biome": "Marsh",
+   "role": "Skirmisher",
+   "body": "quadruped",
+   "size": "medium",
+   "w": 160,
+   "h": 120,
+   "pivotY": 0.3,
+   "heightUnits": 0.9499999748335944,
+   "walkPerFrame": 0.0446042279012187,
+   "runPerFrame": 0.09876650463841284,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "run",
+     "frames": 8
+    }
+   ]
+  },
+  {
+   "id": "moss_slime",
+   "name": "Moss Slime",
+   "biome": "Forest",
+   "role": "Chaser",
+   "body": "slime",
+   "size": "small",
+   "w": 120,
+   "h": 104,
+   "pivotY": 0.3076923076923077,
+   "heightUnits": 0.6079999738269382,
+   "walkPerFrame": 0.06839999705553054,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "mudshell_turtle",
+   "name": "Mudshell Snapper",
+   "biome": "Marsh",
+   "role": "Guardian",
+   "body": "quadruped",
+   "size": "large",
+   "w": 248,
+   "h": 184,
+   "pivotY": 0.2826086956521739,
+   "heightUnits": 1.672000116772122,
+   "walkPerFrame": 0.06629091071590199,
+   "runPerFrame": 0.14678701658521154,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "run",
+     "frames": 8
+    },
+    {
+     "name": "block",
+     "frames": 4
+    }
+   ]
+  },
+  {
+   "id": "scorch_stalker",
+   "name": "Scorch Stalker",
+   "biome": "Ember",
+   "role": "Skirmisher",
+   "body": "quadruped",
+   "size": "medium",
+   "w": 176,
+   "h": 128,
+   "pivotY": 0.2265625,
+   "heightUnits": 0.9499999748335944,
+   "walkPerFrame": 0.04438603804503001,
+   "runPerFrame": 0.09828336995685218,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "run",
+     "frames": 8
+    }
+   ]
+  },
+  {
+   "id": "shambling_dead",
+   "name": "Shambling Dead",
+   "biome": "Ruins",
+   "role": "Chaser",
+   "body": "humanoid",
+   "size": "medium",
+   "w": 208,
+   "h": 128,
+   "pivotY": 0.2109375,
+   "heightUnits": 1.3194444444444444,
+   "walkPerFrame": 0.09302083333333333,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "undead",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "skeleton_guard",
+   "name": "Skeleton Guard",
+   "biome": "Ruins",
+   "role": "Guardian",
+   "body": "humanoid",
+   "size": "medium",
+   "w": 208,
+   "h": 152,
+   "pivotY": 0.25,
+   "heightUnits": 1.3194444444444444,
+   "walkPerFrame": 0.08305431547619047,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "undead",
+   "leader": false,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "block",
+     "frames": 4
+    }
+   ]
+  },
+  {
+   "id": "sporecap_spitter",
+   "name": "Sporecap Spitter",
+   "biome": "Forest",
+   "role": "Spitter",
+   "body": "humanoid",
+   "size": "medium",
+   "w": 208,
+   "h": 168,
+   "pivotY": 0.24404761904761904,
+   "heightUnits": 1.3194444444444444,
+   "walkPerFrame": 0.07906770833333333,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "stone_bulwark",
+   "name": "Stone Bulwark",
+   "biome": "Ruins",
+   "role": "Guardian",
+   "body": "humanoid",
+   "size": "large",
+   "w": 360,
+   "h": 224,
+   "pivotY": 0.22767857142857142,
+   "heightUnits": 2.322222272555033,
+   "walkPerFrame": 0.1461755984063659,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "block",
+     "frames": 4
+    }
+   ]
+  },
+  {
+   "id": "thicket_skitter",
+   "name": "Thicket Skitter",
+   "biome": "Forest",
+   "role": "Swarmling",
+   "body": "spider",
+   "size": "tiny",
+   "w": 48,
+   "h": 48,
+   "pivotY": 0.3125,
+   "heightUnits": 0.29027778406937915,
+   "walkPerFrame": 0.01201582558094882,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
    "anims": [
     {
      "name": "idle",

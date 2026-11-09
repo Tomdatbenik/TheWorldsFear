@@ -29,6 +29,7 @@ Shader "TWF/Ambient"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             half4 _TWF_Ambient;
+            float _TWF_Day;     // 1 by day, 0 at night (set by DayNight)
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
 
@@ -150,6 +151,10 @@ Shader "TWF/Ambient"
                     level = (0.15 + tw * tw * 0.85) * day * 0.5;
                 }
 
+                // Butterflies are out by day only, and sunbeams and their dust go with the sun.
+                if (kind == KIND_BUTTERFLY) size *= saturate(_TWF_Day * 3.0 - 0.5);
+                if (kind == KIND_MOTE) level *= _TWF_Day;
+
                 float3 quad = flat ? float3(c.x, c.y, 0) * size : (right * c.x + up * c.y) * size;
                 float3 positionWS = anchor + off + quad;
                 if (kind == KIND_BEAM)
@@ -159,7 +164,7 @@ Shader "TWF/Ambient"
                     float3 side = cross(beamAxis, UNITY_MATRIX_V[2].xyz);
                     side = normalize(side) * (dot(side, right) < 0 ? -1.0 : 1.0);
                     positionWS = anchor + beamAxis * along + side * c.x * size * (0.8 + 0.4 * along);
-                    level = (0.7 + 0.3 * sin(t * 0.35 + ph) * sin(t * 0.21 + ph * 3.0)) * day;
+                    level = (0.7 + 0.3 * sin(t * 0.35 + ph) * sin(t * 0.21 + ph * 3.0)) * day * _TWF_Day;
                     cell = float2(s, 0);
                 }
                 o.positionCS = TransformWorldToHClip(positionWS);

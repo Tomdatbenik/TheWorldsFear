@@ -1,0 +1,29 @@
+{
+ "name": "lamp",
+ "kind": "lamp",
+ "views": 16,
+ "ppu": 72,
+ "ss": 4,
+ "frame": [
+  74,
+  232
+ ],
+ "pivot": [
+  37.0,
+  22.03
+ ],
+ "depth_range": 10.0,
+ "pitch": 52.0,
+ "footprint": [
+  0.4,
+  0.4
+ ],
+ "height": 4.0320000648498535,
+ "proxy": null,
+ "sheet": [
+  592,
+  464
+ ],
+ "cols": 8,
+ "colors": 48
+}

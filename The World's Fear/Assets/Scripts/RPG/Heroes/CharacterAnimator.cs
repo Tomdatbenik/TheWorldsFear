@@ -37,8 +37,9 @@ namespace TWF
 
         // ---------- The hero rendered from the 3D model ----------
 
-        const float RunAbove = 2.5f;           // world units a second
-        const float IdleFrameTime = 0.16f, AttackFrameTime = 0.05f;
+        const float RunAbove = 4f;             // world units a second: slowed or a light stick push walks, full speed runs
+        const float IdleFrameTime = 0.16f;
+        float attackFrameTime = 0.05f;
 
         Hero3DSet hero3D;
         string attackAnimation = "slash";
@@ -49,10 +50,11 @@ namespace TWF
         // World units a second the hero moves at full input.
         public float MoveSpeed { get; set; }
 
-        public void UseHero3D(Hero3DSet set, string attack)
+        public void UseHero3D(Hero3DSet set, string attack, float attackFrame = 0.05f)
         {
             hero3D = set;
             attackAnimation = attack;
+            attackFrameTime = attackFrame;
         }
 
         class GearLayer
@@ -90,6 +92,15 @@ namespace TWF
             return go.AddComponent<SpriteRenderer>();
         }
 
+        // A piece without its own on-the-move strip uses the standing attack's, which has the same upper body.
+        Sprite[] LayerFrames(string piece, bool front, string animation, int direction)
+        {
+            var frames = hero3D.GetLayer(piece, front, animation, direction);
+            if (frames.Length == 0 && animation.EndsWith("_move"))
+                frames = hero3D.GetLayer(piece, front, animation.Substring(0, animation.Length - 5), direction);
+            return frames;
+        }
+
         void ShowLayer(SpriteRenderer layer, Sprite[] frames, int order)
         {
             layer.sprite = frames.Length > 0 ? frames[frame % frames.Length] : null;
@@ -110,7 +121,7 @@ namespace TWF
             // A hit plays to its end even if the game's short attack flag has already dropped.
             if (Attacking && !wasAttacking && attackLeft <= 0f)
             {
-                attackLeft = hero3D.Get(attackAnimation, direction).Length * AttackFrameTime;
+                attackLeft = hero3D.Get(attackAnimation, direction).Length * attackFrameTime;
                 playing = null;
             }
             wasAttacking = Attacking;
@@ -121,8 +132,10 @@ namespace TWF
             if (attackLeft > 0f)
             {
                 attackLeft -= Time.deltaTime;
-                animation = attackAnimation;
-                frameTime = AttackFrameTime;
+                // A melee hero who keeps moving swings with the legs still running, so the feet don't slide.
+                string moving = attackAnimation + "_move";
+                animation = speed > 0.05f && hero3D.Get(moving, direction).Length > 0 ? moving : attackAnimation;
+                frameTime = attackFrameTime;
             }
             else if (speed > 0.05f)
             {
@@ -138,9 +151,14 @@ namespace TWF
 
             if (animation != playing)
             {
+                // Starting or stopping mid-swing changes the legs only: the swing carries on from its frame.
+                bool sameSwing = playing != null && attackLeft > 0f && playing.StartsWith(attackAnimation) && animation.StartsWith(attackAnimation);
                 playing = animation;
-                frame = 0;
-                t = 0f;
+                if (!sameSwing)
+                {
+                    frame = 0;
+                    t = 0f;
+                }
             }
             t += Time.deltaTime;
             while (t >= frameTime)
@@ -152,8 +170,8 @@ namespace TWF
             if (set.Length > 0) sr.sprite = set[frame % set.Length];
             for (int i = 0; i < gear.Count; i++)
             {
-                ShowLayer(gear[i].back, hero3D.GetLayer(gear[i].piece, false, animation, direction), sr.sortingOrder - gear.Count + i);
-                ShowLayer(gear[i].front, hero3D.GetLayer(gear[i].piece, true, animation, direction), sr.sortingOrder + 1 + i);
+                ShowLayer(gear[i].back, LayerFrames(gear[i].piece, false, animation, direction), sr.sortingOrder - gear.Count + i);
+                ShowLayer(gear[i].front, LayerFrames(gear[i].piece, true, animation, direction), sr.sortingOrder + 1 + i);
             }
         }
 

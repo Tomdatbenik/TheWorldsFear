@@ -127,15 +127,18 @@ namespace TWF
 
         public static Shader EnvShader => shader != null ? shader : shader = Resources.Load<Shader>("TWF/Env/TWF_EnvSprite");
 
-        static readonly Dictionary<float, Material> spriteMats = new Dictionary<float, Material>();
+        static readonly Dictionary<string, Material> spriteMats = new Dictionary<string, Material>();
 
         // Sprites stand on ground at a known height; the shader keeps them above that plane.
-        static Material SpriteMaterial(float height)
+        static Material SpriteMaterial(string art, float height)
         {
-            if (spriteMats.TryGetValue(height, out var m) && m != null) return m;
-            m = new Material(EnvShader) { name = "EnvSprite " + height };
+            string key = art + "@" + height;
+            if (spriteMats.TryGetValue(key, out var m) && m != null) return m;
+            m = new Material(EnvShader) { name = "EnvSprite " + key };
             m.SetFloat("_BaseZ", -height);
-            spriteMats[height] = m;
+            var glow = Tex(art + "_glow");
+            if (glow != null) m.SetTexture("_GlowTex", glow);
+            spriteMats[key] = m;
             return m;
         }
 
@@ -148,6 +151,42 @@ namespace TWF
         }
 
         public static Texture2D Tex(string name) => Resources.Load<Texture2D>("TWF/Env/" + name);
+
+        // Paints a stretch of ground from a tile, with a ragged natural edge. inside(x, y) is how far (x, y) lies inside the area.
+        public static void PaintGround(Transform parent, Rect rect, string tile, Func<float, float, float> inside, string name, float z = -0.02f)
+        {
+            const int ppu = 72, T = 288;
+            int W = Mathf.RoundToInt(rect.width * ppu), H = Mathf.RoundToInt(rect.height * ppu);
+            var src = Tex(tile).GetPixels32();
+            var px = new Color32[W * H];
+            var rim = new Color32(88, 62, 40, 255);
+            for (int y = 0; y < H; y++)
+            for (int x = 0; x < W; x++)
+            {
+                float wx = rect.xMin + (x + 0.5f) / ppu, wy = rect.yMin + (y + 0.5f) / ppu;
+                float d = inside(wx, wy) + (Mathf.PerlinNoise(wx * 0.9f + 3.1f, wy * 0.9f) - 0.5f) * 0.9f + (Mathf.PerlinNoise(wx * 4f, wy * 4f + 9f) - 0.5f) * 0.35f;
+                if (d < 0f) continue;
+                int u = ((Mathf.RoundToInt(wx * ppu) % T) + T) % T, v = ((Mathf.RoundToInt(wy * ppu) % T) + T) % T;
+                px[y * W + x] = d < 0.05f ? rim : src[v * T + u];
+            }
+            var tex = new Texture2D(W, H, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = name };
+            tex.SetPixels32(px);
+            tex.Apply();
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            var mesh = new Mesh { name = name };
+            mesh.vertices = new[] { new Vector3(rect.xMin, rect.yMin, z), new Vector3(rect.xMax, rect.yMin, z), new Vector3(rect.xMax, rect.yMax, z), new Vector3(rect.xMin, rect.yMax, z) };
+            mesh.uv = new[] { new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1) };
+            mesh.colors = new[] { Color.white, Color.white, Color.white, Color.white };
+            mesh.normals = new[] { Vector3.back, Vector3.back, Vector3.back, Vector3.back };
+            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            mesh.RecalculateBounds();
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = new Material(RenderAssets.Instance.litDetail) { mainTexture = tex };
+            r.shadowCastingMode = ShadowCastingMode.Off;
+            r.receiveShadows = true;
+        }
 
         // ---------- Ground tiles for the world generator ----------
 
@@ -216,7 +255,7 @@ namespace TWF
             visual.transform.SetParent(go.transform, false);
             visual.AddComponent<Billboard>();
             var sr = visual.AddComponent<SpriteRenderer>();
-            sr.sharedMaterial = SpriteMaterial(height);
+            sr.sharedMaterial = SpriteMaterial(name, height);
             sr.shadowCastingMode = ShadowCastingMode.Off;
             sr.receiveShadows = false;
             go.AddComponent<EnvSprite>().Init(views, sr);
@@ -225,6 +264,7 @@ namespace TWF
             {
                 var size = new Vector2(m.footprint[0], m.footprint[1]);
                 go.AddComponent<BoxCollider2D>().size = size;
+                ContactShadow(go.transform, size);
             }
             ShadowShape(go.transform, m.proxy);
             return go;
@@ -249,6 +289,38 @@ namespace TWF
             go.AddComponent<CircleCollider2D>().radius = 0.5f;
             ShadowShape(go.transform, LoadMeta(name).proxy);
             return go;
+        }
+
+        static Sprite contactSprite;
+
+        // A soft dark rim on the ground around a footprint, so the building reads as standing on the ground.
+        static void ContactShadow(Transform parent, Vector2 size)
+        {
+            if (contactSprite == null)
+            {
+                const int N = 64;
+                var t = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = "EnvContact" };
+                var px = new Color32[N * N];
+                for (int y = 0; y < N; y++)
+                for (int x = 0; x < N; x++)
+                {
+                    float d = Mathf.Min(Mathf.Min(x + 0.5f, N - x - 0.5f), Mathf.Min(y + 0.5f, N - y - 0.5f)) / (N * 0.5f);
+                    float a = Mathf.Clamp01(d * 3f);
+                    px[y * N + x] = new Color32(20, 16, 12, (byte)(a * a * 150));
+                }
+                t.SetPixels32(px);
+                t.Apply();
+                contactSprite = Sprite.Create(t, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
+            }
+            var go = new GameObject("ContactShadow");
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(0f, 0f, Ground.DecalZ);
+            float pad = Mathf.Min(1.1f, Mathf.Min(size.x, size.y) * 0.5f);
+            go.transform.localScale = new Vector3(size.x + pad, size.y + pad, 1f);
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = contactSprite;
+            sr.sortingOrder = SortOrder.Units - 2;
+            RenderAssets.MakeUnlit(sr);
         }
 
         // Hidden, world-fixed geometry that casts the asset's shadow, so shadows stay put when the camera turns.

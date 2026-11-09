@@ -22,6 +22,7 @@ namespace TWF
         public string status, tint;
         public string faction;        // goblin, undead, ...: fights as an organised warband
         public bool leader;           // the warband's commander
+        public bool warbandOnly;      // never in the ordinary small packs
         public MobAnimInfo[] anims;
 
         [NonSerialized] public MobSprites sprites;

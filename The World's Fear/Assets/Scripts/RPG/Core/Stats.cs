@@ -24,6 +24,7 @@ namespace TWF
         EffectDuration,
         ProjectileSpread,
         SkillPower,
+        Handling,          // less standing still with ranged weapons, more reach with melee
     }
 
     public enum ModKind { Flat, Percent }
@@ -155,6 +156,7 @@ namespace TWF
                 case StatType.EffectDuration: return "Effect Duration";
                 case StatType.ProjectileSpread: return "Projectile Spread";
                 case StatType.SkillPower: return "Skill Power";
+                case StatType.Handling: return "Weapon Handling";
             }
             return stat.ToString();
         }
@@ -165,7 +167,7 @@ namespace TWF
             return stat == StatType.CritChance || stat == StatType.CritDamage ||
                    stat == StatType.CooldownReduction || stat == StatType.LifeSteal ||
                    stat == StatType.SkillRange || stat == StatType.AreaSize || stat == StatType.ProjectileSpeed ||
-                   stat == StatType.EffectDuration || stat == StatType.ProjectileSpread || stat == StatType.SkillPower;
+                   stat == StatType.EffectDuration || stat == StatType.ProjectileSpread || stat == StatType.SkillPower || stat == StatType.Handling;
         }
 
         public static float Clamp(StatType stat, float v)
@@ -184,6 +186,7 @@ namespace TWF
                 case StatType.EffectDuration: return Mathf.Clamp(v, 0f, 2f);
                 case StatType.ProjectileSpread: return Mathf.Clamp(v, -0.6f, 2f);
                 case StatType.SkillPower: return Mathf.Clamp(v, 0f, 5f);
+                case StatType.Handling: return Mathf.Clamp(v, 0f, 0.75f);
                 default: return Mathf.Max(0f, v);
             }
         }

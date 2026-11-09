@@ -52,6 +52,7 @@ namespace TWF
         SpriteRenderer spriteRenderer;
         float attackTimer;
         float castLock;
+        float attackRoot;       // seconds still to stand still for a ranged attack
         float attackAnimTimer;
         float damageAnimTimer;
         Vector2 moveInput;
@@ -142,7 +143,9 @@ namespace TWF
             if (!animator) return;
             // The female hero is rendered from the 3D model; other looks are still drawn by the paper doll.
             var hero3D = Hero3DSet.For(Profile.Data.appearance.Female);
-            animator.UseHero3D(hero3D, Hero3DSet.AttackFor(Weapon.type));
+            // Handling speeds a ranged attack up along with the time spent standing still for it.
+            float attackFrame = Weapon.attackFrame * (Weapon.rootTime > 0f ? 1f - Combatant.Stats.Get(StatType.Handling) : 1f);
+            animator.UseHero3D(hero3D, Hero3DSet.AttackFor(Weapon.type), attackFrame);
             var pieces = new System.Collections.Generic.List<string>();
             string held = null;
             if (hero3D != null)
@@ -297,6 +300,7 @@ namespace TWF
             if (attackTimer > 0f) attackTimer -= dt;
             if (potionTimer > 0f) potionTimer -= dt;
             if (castLock > 0f) castLock -= dt;
+            if (attackRoot > 0f) attackRoot -= dt;
             if (attackAnimTimer > 0f) attackAnimTimer -= dt;
             if (damageAnimTimer > 0f) damageAnimTimer -= dt;
 
@@ -327,13 +331,13 @@ namespace TWF
             }
 
             if (mouseAim.HasValue && castLock <= 0f) Facing = mouseAim.Value;
-            else if (moveInput.sqrMagnitude > 0.01f && castLock <= 0f) Facing = moveInput.normalized;
+            else if (moveInput.sqrMagnitude > 0.01f && castLock <= 0f && attackRoot <= 0f) Facing = moveInput.normalized;
             UpdateAnimator();
         }
 
         void FixedUpdate()
         {
-            if (Combatant.IsDead || castLock > 0f || Combatant.IsStunned)
+            if (Combatant.IsDead || castLock > 0f || attackRoot > 0f || Combatant.IsStunned)
             {
                 body.linearVelocity = Vector2.zero;
                 return;
@@ -345,7 +349,7 @@ namespace TWF
         void UpdateAnimator()
         {
             if (animator == null) return;
-            animator.Velocity = castLock > 0f || Combatant.IsDead ? Vector2.zero : moveInput;
+            animator.Velocity = castLock > 0f || attackRoot > 0f || Combatant.IsDead ? Vector2.zero : moveInput;
             animator.Facing = Facing;
             animator.MoveSpeed = Combatant.MoveSpeed;
             animator.Attacking = attackAnimTimer > 0f;
@@ -368,6 +372,8 @@ namespace TWF
             }
             Facing = dir;
             attackAnimTimer = 0.2f;
+            float handling = Combatant.Stats.Get(StatType.Handling);
+            attackRoot = w.rootTime * (1f - handling);
 
             if (!w.ranged)
             {
@@ -409,21 +415,22 @@ namespace TWF
 
         IEnumerator MeleeAttack(WeaponProfile w, Combatant target, Vector2 dir)
         {
+            float reach = w.range * (1f + 0.4f * Combatant.Stats.Get(StatType.Handling));
             for (int h = 0; h < w.hits; h++)
             {
                 if (w.arc >= 360f)
                 {
                     // Hammer: slam a circle at the target.
-                    Vector2 at = (Vector2)transform.position + dir * (target != null ? Mathf.Min(w.range * 0.7f, Vector2.Distance(transform.position, target.transform.position)) : w.range * 0.7f);
-                    VFX.Ring(at, new Color(1f, 0.9f, 0.7f), w.range * 0.9f, 0.3f);
+                    Vector2 at = (Vector2)transform.position + dir * (target != null ? Mathf.Min(reach * 0.7f, Vector2.Distance(transform.position, target.transform.position)) : reach * 0.7f);
+                    VFX.Ring(at, new Color(1f, 0.9f, 0.7f), reach * 0.9f, 0.3f);
                     CameraFollow.Shake(0.08f);
-                    foreach (var c in Combat.HostilesInRadius(Team.Player, at, w.range * 0.9f))
+                    foreach (var c in Combat.HostilesInRadius(Team.Player, at, reach * 0.9f))
                         Combat.Hit(Combatant, c, w.damageMult, WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
                 }
                 else
                 {
-                    VFX.Slash(transform.position, dir, w.range * 0.9f, w.arc, new Color(1f, 1f, 1f, 0.7f));
-                    foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, dir, w.range, w.arc))
+                    VFX.Slash(transform.position, dir, reach * 0.9f, w.arc, new Color(1f, 1f, 1f, 0.7f));
+                    foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, dir, reach, w.arc))
                         Combat.Hit(Combatant, c, w.damageMult, WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
                 }
                 Swing(dir, w.arc >= 360f ? 90f : w.arc);

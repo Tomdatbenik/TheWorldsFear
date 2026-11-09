@@ -37,6 +37,11 @@ namespace TWF
             door = new MB(); window = new MB(); glow = new MB(); iron = new MB(); cloth = new MB();
 
             BuildGround();
+            if (EnvVillage.Available)
+            {
+                EnvVillage.Build(transform, area, plaza, plazaRadius);
+                return;
+            }
             BuildBuildings();
             BuildProps();
             BuildTrees();
@@ -72,6 +77,7 @@ namespace TWF
                 TileBase[] set = grass;
                 if (dPlaza < plazaRadius) set = cobble;
                 else if (OnRoad(cx, cy)) set = dPlaza < plazaRadius + 9f ? cobble : path;
+                if (EnvVillage.Available) set = grass;   // roads and plaza are painted over grass in the new art
                 TileBase painted = set == grass ? EnvArt.GroundTile(Biome.Village, x, y) : set == path ? EnvArt.PathTile(Biome.Village, x, y) : null;
                 tm.SetTile(new Vector3Int(x, y, 0), painted ?? set[h % (uint)set.Length]);
             }
@@ -322,7 +328,8 @@ namespace TWF
             var holder = new GameObject("Lamp");
             holder.transform.SetParent(transform, false);
             holder.transform.position = new Vector3(p.x, p.y, -2.9f);
-            PointLights.Attach(holder.transform, new Color(1f, 0.78f, 0.45f), 7f, 1.3f, Vector3.zero, true);
+            var lampLight = PointLights.Attach(holder.transform, new Color(1f, 0.78f, 0.45f), 7f, 1.3f, Vector3.zero, true);
+            if (lampLight != null) holder.AddComponent<NightLight>().target = lampLight;
             Solid(p, Vector2.one * 0.3f);
         }
 
@@ -512,6 +519,7 @@ namespace TWF
             Mesh("Awning", cloth, Mat("awning", StripeTex()), true);
             var winMat = Mat("window", WindowTex());
             winMat.SetFloat("_Emission", 0.9f);
+            DayNight.GlowAtNight(winMat, 0.15f, 1.5f);
             Mesh("Windows", window, winMat, false);
             var glowMat = Mat("glow", Solid(new Color(1f, 0.62f, 0.28f)));
             glowMat.SetFloat("_Emission", 1.1f);

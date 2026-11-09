@@ -13,6 +13,8 @@ namespace TWF
         public float range;
         public float arc;            // melee arc in degrees (360 = circle at the target)
         public float attacksPerSecond;
+        public float rootTime;       // seconds the hero must stand still for each attack (0 = can keep moving)
+        public float attackFrame = 0.05f;   // seconds per frame of the attack animation
         public float damageMult;
         public int hits = 1;         // daggers strike twice
         public float critBonus;
@@ -43,16 +45,16 @@ namespace TWF
                 tierNames = new[] { "Shivs", "Twin Daggers", "Fang Blades", "Shadow Kris" } } },
             { WeaponType.Spear, new WeaponProfile { type = WeaponType.Spear, range = 3f, arc = 35f, attacksPerSecond = 1.15f, damageMult = 1.05f, knockback = 0.5f,
                 tierNames = new[] { "Wooden Spear", "Iron Spear", "Halberd", "Dragon Lance" } } },
-            { WeaponType.Bow, new WeaponProfile { type = WeaponType.Bow, ranged = true, range = 7f, attacksPerSecond = 1.4f, damageMult = 0.95f, projectileSpeed = 20f,
+            { WeaponType.Bow, new WeaponProfile { type = WeaponType.Bow, ranged = true, range = 7f, attacksPerSecond = 1.75f, rootTime = 0.18f, attackFrame = 0.03f, damageMult = 0.95f, projectileSpeed = 20f,
                 arrow = true, homing = true, projectileSize = 0.9f, color = new Color(0.95f, 0.75f, 0.35f),
                 tierNames = new[] { "Short Bow", "Hunting Bow", "Composite Bow", "Elderwood Longbow" } } },
-            { WeaponType.Crossbow, new WeaponProfile { type = WeaponType.Crossbow, ranged = true, range = 8f, attacksPerSecond = 0.75f, damageMult = 1.7f, projectileSpeed = 28f,
+            { WeaponType.Crossbow, new WeaponProfile { type = WeaponType.Crossbow, ranged = true, range = 8f, attacksPerSecond = 0.6f, rootTime = 0.18f, attackFrame = 0.03f, damageMult = 1.7f, projectileSpeed = 28f,
                 pierce = 2, arrow = true, projectileSize = 1f, color = new Color(0.8f, 0.8f, 0.85f), implicitDamage = 1.25f,
                 tierNames = new[] { "Light Crossbow", "Crossbow", "Arbalest", "Siege Repeater" } } },
-            { WeaponType.Staff, new WeaponProfile { type = WeaponType.Staff, ranged = true, range = 6.5f, attacksPerSecond = 0.85f, damageMult = 1.35f, projectileSpeed = 11f,
+            { WeaponType.Staff, new WeaponProfile { type = WeaponType.Staff, ranged = true, range = 6.5f, attacksPerSecond = 0.85f, rootTime = 0.42f, attackFrame = 0.07f, damageMult = 1.35f, projectileSpeed = 11f,
                 explodeRadius = 1.5f, projectileSize = 0.55f, color = new Color(0.75f, 0.5f, 1f), implicitDamage = 1.1f,
                 tierNames = new[] { "Gnarled Staff", "Oak Staff", "Crystal Staff", "Starforged Staff" } } },
-            { WeaponType.Wand, new WeaponProfile { type = WeaponType.Wand, ranged = true, range = 6f, attacksPerSecond = 2.2f, damageMult = 0.5f, projectileSpeed = 18f,
+            { WeaponType.Wand, new WeaponProfile { type = WeaponType.Wand, ranged = true, range = 6f, attacksPerSecond = 2.2f, rootTime = 0.3f, attackFrame = 0.05f, damageMult = 0.5f, projectileSpeed = 18f,
                 homing = true, projectileSize = 0.3f, color = new Color(0.5f, 0.85f, 1f), implicitDamage = 0.75f,
                 tierNames = new[] { "Twig Wand", "Bone Wand", "Crystal Wand", "Void Scepter" } } },
             { WeaponType.Fists, new WeaponProfile { type = WeaponType.Fists, range = 1.3f, arc = 90f, attacksPerSecond = 1.4f, damageMult = 0.5f,

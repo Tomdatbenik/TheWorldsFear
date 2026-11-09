@@ -26,6 +26,11 @@ namespace TWF
         float animT;
         int frame;
 
+        // The hero the game will actually play: the rendered sets, when they exist.
+        Hero3DSet HeroSet => Hero3DSet.For(look.Female);
+        static readonly int[] HeroDirections = { 6, 0, 2, 4 };   // front, right, back, left in Hero3DSet's order
+        int heroFrame;
+
         static readonly string[] FacingNames = { "Front", "Right", "Back", "Left" };
 
         // Live lighting test: the character is drawn from albedo + normal maps by a preview camera
@@ -85,6 +90,10 @@ namespace TWF
             ((RectTransform)refB.transform).pivot = new Vector2(1, 1);
             lightLabel = UIFactory.Text("LightInfo", stage.transform, "", 20, Palette.MutedText, TextAlignmentOptions.Left);
             lightLabel.rectTransform.Place(new Vector2(0, 1), new Vector2(16, -16), new Vector2(420, 40));
+            if (HeroSet != null)        // the lighting bench only applies to the old drawn characters
+            {
+                foreach (var tool in new Component[] { lightL, lightR, torchB, mode, refB, lightLabel }) tool.gameObject.SetActive(false);
+            }
             var turnL = UIFactory.Button("TurnLeft", stage.transform, "<", () => { facing = (facing + 3) % 4; Redraw(); }, null, 44);
             ((RectTransform)turnL.transform).Place(new Vector2(0, 0.5f), new Vector2(20, 0), new Vector2(90, 110));
             var turnR = UIFactory.Button("TurnRight", stage.transform, ">", () => { facing = (facing + 1) % 4; Redraw(); }, null, 44);
@@ -134,6 +143,7 @@ namespace TWF
             var random = UIFactory.Button("Random", root, "Randomize", () => { look = Appearance.Random(new System.Random()); RefreshOptions(); Redraw(); }, null, 32);
             ((RectTransform)random.transform).Place(new Vector2(0.55f, 0.04f), new Vector2(260, 0), new Vector2(260, 90));
             ((RectTransform)random.transform).pivot = new Vector2(0, 0);
+            if (HeroSet != null) random.gameObject.SetActive(false);   // only the body can change for now
             var next = UIFactory.Button("Next", root, "Choose weapon >", () =>
             {
                 Pending = look;
@@ -151,6 +161,7 @@ namespace TWF
         {
             foreach (Transform c in options) Destroy(c.gameObject);
             Option("Body", look.Female ? "Female" : "Male", d => { look.body = 1 - look.body; if (look.Female) look.beard = 0; });
+            if (HeroSet != null) return;   // the other options only change the old drawn characters
             Option("Skin", $"Tone {look.skin + 1}", d => look.skin = Wrap(look.skin + d, Appearance.SkinTones.Length));
             Option("Hair", (look.Female ? Appearance.FemaleHair : Appearance.MaleHair)[look.hair], d => look.hair = Wrap(look.hair + d, 5));
             Option("Hair color", $"Color {look.hairColor + 1}", d => look.hairColor = Wrap(look.hairColor + d, Appearance.HairColors.Length));
@@ -210,10 +221,12 @@ namespace TWF
         void Update()
         {
             animT += Time.deltaTime;
-            if (animT > (walking ? 0.15f : 0.5f))
+            float frameLength = HeroSet != null ? (walking ? 0.11f : 0.16f) : (walking ? 0.15f : 0.5f);
+            if (animT > frameLength)
             {
                 animT = 0f;
                 frame = (frame + 1) % 4;
+                heroFrame++;
                 ShowPreview();
             }
             if (torch && torchLight != null)
@@ -227,11 +240,31 @@ namespace TWF
         void Redraw()
         {
             ShowPreview();
+            if (HeroSet != null)
+            {
+                for (int i = 0; i < 4; i++) ShowHeroFrame(turnaround[i], HeroSet, i, "idle", 0);
+                return;
+            }
             for (int i = 0; i < 4; i++) turnaround[i].texture = Frame(i, -1);
+        }
+
+        static void ShowHeroFrame(RawImage image, Hero3DSet set, int dir, string animation, int index)
+        {
+            var frames = set.Get(animation, HeroDirections[dir]);
+            if (frames.Length == 0) return;
+            var sprite = frames[index % frames.Length];
+            var r = sprite.textureRect;
+            image.texture = sprite.texture;
+            image.uvRect = new Rect(r.x / sprite.texture.width, r.y / sprite.texture.height, r.width / sprite.texture.width, r.height / sprite.texture.height);
         }
 
         void ShowPreview()
         {
+            if (HeroSet != null)
+            {
+                ShowHeroFrame(preview, HeroSet, facing, walking ? "walk" : "idle", heroFrame);
+                return;
+            }
             int f = walking ? frame : frame % 2;
             if (!dynamicLight) { preview.texture = Frame(facing, f); return; }
             var maps = MapFrame(facing, f);

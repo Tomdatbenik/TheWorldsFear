@@ -32,17 +32,34 @@ namespace TWF
 
         public static float RotateInput; // -1..1 from UI buttons
 
+        // What the old perspective view showed from top to bottom per unit of distance (fov 38), kept so zoom feels the same.
+        const float ZoomScale = 0.344f;
+        const float ViewStep = 22.5f;
+        const float ArtPPU = 72f;
+        const float MinViewSize = 7.5f;   // never closer than 15 units top to bottom
+
+        // Keeps the camera on whole art pixels so the world never shimmers as it scrolls.
+        Vector3 SnapToPixels(Vector3 pos, Quaternion rot)
+        {
+            int k = Mathf.Max(1, Mathf.RoundToInt(Screen.height / (2f * cam.orthographicSize * ArtPPU)));
+            float step = 1f / (ArtPPU * k);
+            Vector3 right = rot * Vector3.right, up = rot * Vector3.up;
+            float r = Vector3.Dot(pos, right), u = Vector3.Dot(pos, up);
+            return pos + right * (Mathf.Round(r / step) * step - r) + up * (Mathf.Round(u / step) * step - u);
+        }
+
         void Awake()
         {
             instance = this;
             cam = GetComponent<Camera>();
             if (cam)
             {
-                cam.orthographic = false;
-                cam.fieldOfView = fieldOfView;
+                // Orthographic: the world art is rendered flat, so a perspective ground would slide against it.
+                cam.orthographic = true;
+                cam.orthographicSize = distance * ZoomScale;
                 cam.nearClipPlane = 0.3f;
                 cam.farClipPlane = 200f;
-                cam.transparencySortMode = TransparencySortMode.Perspective;
+                cam.transparencySortMode = TransparencySortMode.Orthographic;
                 cam.clearFlags = CameraClearFlags.SolidColor;
                 var data = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(cam);
                 data.renderPostProcessing = true;
@@ -170,13 +187,24 @@ namespace TWF
         // The ground is the XY plane and "up" points toward -Z.
         void Apply(float shakeAmount)
         {
-            var orbit = Quaternion.Euler(0f, 0f, yaw);
+            // One grid for the whole picture: the view size is always a whole number of screen pixels per art pixel.
+            if (cam)
+            {
+                // Whole screen pixels per art pixel, leaning zoomed-out; a small window still shows at least MinViewSize.
+                int k = Mathf.Max(1, Mathf.FloorToInt(Screen.height / (2f * distance * ZoomScale * ArtPPU)));
+                cam.orthographicSize = Mathf.Max(Screen.height / (2f * ArtPPU * k), MinViewSize);
+            }
+            // The world art has a baked view every 22.5 degrees; the camera stops on those so ground and buildings always match.
+            float shownYaw = Mathf.Round(yaw / ViewStep) * ViewStep;
+            var orbit = Quaternion.Euler(0f, 0f, shownYaw);
             Vector3 back = orbit * new Vector3(0f, -Mathf.Cos(pitch * Mathf.Deg2Rad), -Mathf.Sin(pitch * Mathf.Deg2Rad));
             Vector3 pos = focus + back * distance;
             Vector3 forward = (focus - pos).normalized;
             var rot = Quaternion.LookRotation(forward, Vector3.back);
-            transform.SetPositionAndRotation(pos + (Vector3)(Random.insideUnitCircle * shakeAmount), rot);
-            View.Set(rot, yaw);
+            pos += (Vector3)(Random.insideUnitCircle * shakeAmount);
+            if (cam && cam.orthographic) pos = SnapToPixels(pos, rot);
+            transform.SetPositionAndRotation(pos, rot);
+            View.Set(rot, shownYaw);
         }
     }
 

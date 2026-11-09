@@ -17,6 +17,7 @@ namespace TWF
         public List<MonsterBrain> Pack { get; set; }
         public Vector2 Home { get; set; }
         public ZoneDefinition Zone { get; set; }
+        public Warband Band { get; set; }
 
         public float aggroRange = 7.5f;
         public float leashRange = 16f;
@@ -40,7 +41,7 @@ namespace TWF
         float strafeSeed;
 
         // ---------- Guardian: stands in the line of fire ----------
-        public const float BlockedDamage = 0.25f;     // share of a shot's damage that gets through the guard
+        public const float BlockedDamage = 1f;        // a blocked shot still does full damage to the guardian: the guard protects its allies, not itself
         const float GuardArc = 110f;                  // degrees either side of where it faces
         const float GuardReach = 0.45f;               // the raised guard makes it a wider target
 
@@ -59,7 +60,28 @@ namespace TWF
         float dartTimer;
         int circleSign = 1;
 
-        Combatant Hero => HeroController.Instance != null ? HeroController.Instance.Combatant : null;
+        // Every hero in the world. One today; a multiplayer game adds the others here and all monster targeting follows.
+        static IEnumerable<Combatant> Players()
+        {
+            if (HeroController.Instance != null) yield return HeroController.Instance.Combatant;
+        }
+
+        // The hero this monster fights: the nearest living one.
+        Combatant Hero
+        {
+            get
+            {
+                Combatant best = null;
+                float bestD = float.MaxValue;
+                foreach (var c in Players())
+                {
+                    if (c == null || c.IsDead) continue;
+                    float d = ((Vector2)c.transform.position - (Vector2)transform.position).sqrMagnitude;
+                    if (d < bestD) { bestD = d; best = c; }
+                }
+                return best;
+            }
+        }
 
         // ---------- Spawning ----------
 
@@ -190,7 +212,10 @@ namespace TWF
 
         bool Has(MonsterAffix a) => Affixes.Contains(a);
 
-        float CooldownScale => Has(MonsterAffix.Fast) ? 0.7f : 1f;
+        float CooldownScale => (Has(MonsterAffix.Fast) ? 0.7f : 1f) * (Band != null ? Band.CooldownMult : 1f);
+
+        // The warband's commander calling a volley.
+        public void OrderAttack() => attackTimer = Mathf.Min(attackTimer, 0f);
 
         // ---------- Events ----------
 
@@ -326,6 +351,19 @@ namespace TWF
             speedMult = 1f;
             facing = toHero;
 
+            if (Band != null)
+            {
+                Band.Tick();
+                if (Band.Leader != this && sp.archetype != MonsterArchetype.Guardian && Combatant.HP < Combatant.MaxHP * 0.3f)
+                {
+                    Vector2 spot = Band.SafeSpot(this, (Vector2)hero.transform.position, pos);
+                    Vector2 go = spot - pos;
+                    desired = go.magnitude > 0.5f ? go.normalized : Vector2.zero;
+                    if (attackTimer <= 0f && dist <= sp.attackRange) StartCoroutine(MeleeAttack(hero));
+                    return;
+                }
+            }
+
             if (sp.archetype == MonsterArchetype.Guardian)
             {
                 GuardianFight(hero, pos, dist, toHero);
@@ -345,6 +383,13 @@ namespace TWF
                 else desired = new Vector2(-toHero.y, toHero.x) * Mathf.Sign(Mathf.Sin(Time.time * 0.7f + strafeSeed));
             }
             else desired = dist > sp.attackRange * 0.85f ? toHero : Vector2.zero;
+
+            // A warband's melee take a place on a ring round the hero, so it can't all be kited in a line.
+            if (Band != null && sp.preferredDistance <= 0f && dist > sp.attackRange * 0.85f)
+            {
+                Vector2 to = Band.FlankPoint(this, (Vector2)hero.transform.position, Mathf.Max(sp.attackRange * 0.85f, 1f)) - pos;
+                if (to.magnitude > 0.3f) desired = to.normalized;
+            }
 
             switch (sp.archetype)
             {
@@ -413,7 +458,6 @@ namespace TWF
             // A shot flying at something it shields: go and stand in its path.
             if (FindShotToStop(pos, out Vector2 stopAt, out Vector2 from))
             {
-                speedMult = 1.7f;
                 Vector2 to = stopAt - pos;
                 desired = to.magnitude > 0.2f ? to.normalized : Vector2.zero;
                 RaiseGuard(from);
@@ -449,7 +493,7 @@ namespace TWF
             stopAt = from = Vector2.zero;
             float bestTime = float.MaxValue;
             bool found = false;
-            float speed = Combatant.MoveSpeed * 1.7f;
+            float speed = Combatant.MoveSpeed;
             foreach (var p in Projectile.Live)
             {
                 if (p == null || p.OwnerTeam != Team.Player) continue;
@@ -504,18 +548,15 @@ namespace TWF
             switch (dart)
             {
                 case Dart.Circle:
-                    speedMult = 1.1f;
                     desired = (dist > 3.6f ? toHero : dist < 2.6f ? -toHero * 0.6f + around : around).normalized;
                     if (dartTimer <= 0f && attackTimer <= 0f) dart = Dart.In;
                     break;
                 case Dart.In:
-                    speedMult = 1.9f;
                     desired = toHero;
                     if (dist <= sp.attackRange) StartCoroutine(SkirmishStrike(hero));
                     else if (dist > 7f) dart = Dart.Circle;
                     break;
                 case Dart.Out:
-                    speedMult = 2.1f;
                     desired = (-toHero * 0.8f + around * 0.5f).normalized;
                     if (dartTimer <= 0f)
                     {

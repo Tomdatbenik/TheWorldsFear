@@ -60,7 +60,25 @@ namespace TWF
         static List<MonsterSpecies> RosterFor(Biome biome)
         {
             var list = new List<MonsterSpecies>();
-            foreach (var d in MobCatalog.ForBiome(biome)) list.Add(CreateMob(d));
+            foreach (var d in MobCatalog.ForBiome(biome))
+                if (!d.warbandOnly) list.Add(CreateMob(d));
+            return list;
+        }
+
+        // Factions that can field a warband here: a commander and at least one fighter.
+        public static List<string> WarbandFactions(Biome biome)
+        {
+            var found = new HashSet<string>();
+            foreach (var d in MobCatalog.ForBiome(biome))
+                if (!string.IsNullOrEmpty(d.faction) && d.leader) found.Add(d.faction);
+            return new List<string>(found);
+        }
+
+        public static List<MonsterSpecies> WarbandRoster(Biome biome, string faction)
+        {
+            var list = new List<MonsterSpecies>();
+            foreach (var d in MobCatalog.ForBiome(biome))
+                if (d.faction == faction) list.Add(CreateMob(d));
             return list;
         }
 
@@ -104,7 +122,7 @@ namespace TWF
         // A designed mob of this fighting style in this biome, or null. Brutes count guardians too, since guardians took their place.
         public static MonsterSpecies DesignedFor(Biome biome, MonsterArchetype arch, int seed)
         {
-            var match = MobCatalog.ForBiome(biome).FindAll(d => d.RoleValue == arch || (arch == MonsterArchetype.Brute && d.RoleValue == MonsterArchetype.Guardian));
+            var match = MobCatalog.ForBiome(biome).FindAll(d => !d.warbandOnly && (d.RoleValue == arch || (arch == MonsterArchetype.Brute && d.RoleValue == MonsterArchetype.Guardian)));
             return match.Count > 0 ? CreateMob(match[Mathf.Abs(seed) % match.Count]) : null;
         }
 
@@ -197,12 +215,14 @@ namespace TWF
             switch (arch)
             {
                 case MonsterArchetype.Guardian:
-                    sp.hpMult = R(2.8f, 3.3f); sp.damageMult = R(0.9f, 1.1f); sp.armorMult = 3f; sp.moveSpeed = R(2.5f, 2.9f);
-                    sp.attackRange = 1.5f; sp.attackCooldown = R(2.4f, 2.8f); sp.packMultiplier = 0.4f;
+                    // the same threat as a Brute; standing in the line of fire is how it plays, not extra difficulty
+                    sp.hpMult = R(2.4f, 2.9f); sp.damageMult = R(1.7f, 2f); sp.armorMult = 2f; sp.moveSpeed = R(1.9f, 2.3f);
+                    sp.attackRange = 1.6f; sp.attackCooldown = R(2.6f, 3.2f); sp.packMultiplier = 0.5f;
                     break;
                 case MonsterArchetype.Skirmisher:
-                    sp.hpMult = R(0.7f, 0.85f); sp.damageMult = R(1.0f, 1.2f); sp.moveSpeed = R(4.6f, 5.2f);
-                    sp.attackRange = 1.05f; sp.attackCooldown = R(1.1f, 1.4f); sp.preferredDistance = 0f; sp.packMultiplier = 0.8f;
+                    // the same threat as a Chaser; darting in and out replaces walking up, at the same speed
+                    sp.hpMult = R(0.9f, 1.15f); sp.damageMult = R(0.9f, 1.1f); sp.moveSpeed = R(3f, 3.6f);
+                    sp.attackRange = 1.1f; sp.attackCooldown = R(1.0f, 1.4f); sp.preferredDistance = 0f;
                     break;
                 case MonsterArchetype.Chaser:
                     sp.hpMult = R(0.9f, 1.15f); sp.damageMult = R(0.9f, 1.1f); sp.moveSpeed = R(3f, 3.6f);

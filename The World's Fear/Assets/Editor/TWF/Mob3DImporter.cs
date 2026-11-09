@@ -17,6 +17,7 @@ namespace TWF.EditorTools
             t.wrapMode = UnityEngine.TextureWrapMode.Clamp;
             t.npotScale = TextureImporterNPOTScale.None;
             t.textureCompression = TextureImporterCompression.Uncompressed;
+            t.maxTextureSize = 16384;                     // a wide strip must never be shrunk: the frames are cut by exact pixels
         }
     }
 }

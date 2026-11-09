@@ -13,6 +13,8 @@ Shader "TWF/EnvSprite"
         _DepthRange ("Depth Range", Float) = 10
         _WallMode ("Wall Mode", Float) = 0
         _BaseZ ("Wall Foot Z", Float) = 0
+        _GlowTex ("Night Glow Mask", 2D) = "black" {}
+        _GlowStrength ("Night Glow Strength", Float) = 2.2
     }
 
     SubShader
@@ -25,6 +27,9 @@ Shader "TWF/EnvSprite"
 
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
+        TEXTURE2D(_GlowTex);
+        SAMPLER(sampler_GlowTex);
+        float _TWF_Day;
         half4 _TWF_Ambient;
 
         CBUFFER_START(UnityPerMaterial)
@@ -33,17 +38,18 @@ Shader "TWF/EnvSprite"
             float _DepthRange;
             float _WallMode;
             float _BaseZ;
+            float _GlowStrength;
         CBUFFER_END
 
         // A sprite's lower half leans below the ground plane, and its baked depth drifts while the camera swings.
         // Never let a pixel fall behind the ground its own view ray meets.
         float KeepAboveGround(float3 positionWS, float depth)
         {
-            float3 ray = positionWS - _WorldSpaceCameraPos;
+            // Orthographic cameras look along one direction; perspective ones along the ray through the pixel.
+            float3 ray = unity_OrthoParams.w > 0.5 ? -UNITY_MATRIX_V[2].xyz : positionWS - _WorldSpaceCameraPos;
             if (abs(ray.z) < 1e-4) return depth;
-            float t = (_BaseZ - _WorldSpaceCameraPos.z) / ray.z;
-            if (t <= 0) return depth;
-            float3 g = _WorldSpaceCameraPos + ray * t - normalize(ray) * 0.05;
+            float t = (_BaseZ - positionWS.z) / ray.z;
+            float3 g = positionWS + ray * t - normalize(ray) * 0.05;
             float4 cs = TransformWorldToHClip(g);
             float gd = cs.z / cs.w;
             #if UNITY_REVERSED_Z
@@ -135,6 +141,9 @@ Shader "TWF/EnvSprite"
                 #endif
 
                 half3 color = tex.rgb * i.color.rgb * light;
+                // Windows and lamp heads light up as the day goes.
+                half glow = SAMPLE_TEXTURE2D(_GlowTex, sampler_GlowTex, i.uv).r * (1.0 - _TWF_Day);
+                color += tex.rgb * glow * _GlowStrength;
                 return half4(MixFog(color, i.fog), 1);
             }
             ENDHLSL
