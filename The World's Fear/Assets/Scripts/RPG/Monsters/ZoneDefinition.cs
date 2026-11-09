@@ -5,7 +5,8 @@ namespace TWF
 {
     public enum Biome { Village, Forest, Marsh, Ruins, Ember }
 
-    public enum MonsterArchetype { Chaser, Charger, Spitter, Swarmling, Brute, Caster, Exploder }
+    // Add new roles at the end: zones and saved codex entries store these as numbers.
+    public enum MonsterArchetype { Chaser, Charger, Spitter, Swarmling, Brute, Caster, Exploder, Guardian, Skirmisher }
 
     [CreateAssetMenu(menuName = "TWF/Zone")]
     public class ZoneDefinition : ScriptableObject

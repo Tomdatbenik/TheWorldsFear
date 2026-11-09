@@ -18,7 +18,7 @@ namespace TWF
         {
             if (target == null) return;
             float t = Time.time + seed;
-            target.intensity = baseI * (0.85f + Mathf.Sin(t * 9f) * 0.08f + Mathf.Sin(t * 23f) * 0.06f);
+            target.intensity = baseI * DayNight.Scale(0.6f, 1.3f) * (0.85f + Mathf.Sin(t * 9f) * 0.08f + Mathf.Sin(t * 23f) * 0.06f);
         }
     }
 }

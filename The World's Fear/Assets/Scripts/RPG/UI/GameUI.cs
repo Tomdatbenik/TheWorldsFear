@@ -29,6 +29,8 @@ namespace TWF
         TextMeshProUGUI bossText;
         GameObject bossBar;
         TextMeshProUGUI potionCount;
+        readonly TextMeshProUGUI[] skillKeyLabels = new TextMeshProUGUI[HeroController.SlotCount];
+        TextMeshProUGUI potionKeyLabel, keyHint;
 
         public RectTransform Root => root;
         public Canvas Canvas => canvas;
@@ -47,11 +49,13 @@ namespace TWF
         void OnEnable()
         {
             Profile.LeveledUp += OnLevelUp;
+            KeyBinds.Changed += RefreshKeyLabels;
         }
 
         void OnDisable()
         {
             Profile.LeveledUp -= OnLevelUp;
+            KeyBinds.Changed -= RefreshKeyLabels;
         }
 
         // ---------- HUD ----------
@@ -132,7 +136,7 @@ namespace TWF
             toastText.outlineColor = Color.black;
         }
 
-        // ---------- Touch controls ----------
+        // ---------- Controls: touch on mobile, an action bar on desktop ----------
 
         void BuildControls()
         {
@@ -140,6 +144,7 @@ namespace TWF
 
             // Left half: floating joystick zone.
             var zone = UIFactory.Image("JoystickZone", controls, GameAssets.Pixel, new Color(0, 0, 0, 0), true);
+            zone.gameObject.SetActive(!MobaInput.Desktop);
             zone.rectTransform.anchorMin = new Vector2(0, 0);
             zone.rectTransform.anchorMax = new Vector2(0.45f, 0.65f);
             zone.rectTransform.offsetMin = zone.rectTransform.offsetMax = Vector2.zero;
@@ -157,7 +162,9 @@ namespace TWF
             joy.radius = 110f;
 
             // Right side: attack button with skills in an arc around it.
-            var cluster = UIFactory.Rect("SkillCluster", controls).Place(new Vector2(1, 0), new Vector2(-60, 50), new Vector2(520, 520));
+            var cluster = UIFactory.Rect("SkillCluster", controls);
+            if (MobaInput.Desktop) cluster.Place(new Vector2(0.5f, 0), new Vector2(0, 56), new Vector2(600, 120));
+            else cluster.Place(new Vector2(1, 0), new Vector2(-60, 50), new Vector2(520, 520));
 
             var attack = UIFactory.Circle("Attack", cluster, 210, new Color(0.35f, 0.12f, 0.1f, 0.85f), true);
             attack.rectTransform.Place(new Vector2(1, 0), new Vector2(-20, 20), new Vector2(210, 210));
@@ -167,6 +174,7 @@ namespace TWF
             attackIcon.rectTransform.Stretch(45);
             attackIcon.preserveAspect = true;
             attack.gameObject.AddComponent<AttackButton>();
+            attack.gameObject.SetActive(!MobaInput.Desktop);
 
             var cancel = UIFactory.Circle("Cancel", controls, 130, new Color(0.6f, 0.1f, 0.1f, 0.75f), true);
             cancel.rectTransform.Place(new Vector2(1, 0), new Vector2(-560, 520), new Vector2(130, 130));
@@ -181,8 +189,12 @@ namespace TWF
             Vector2[] offsets = { new Vector2(-235, -10), new Vector2(-195, 150), new Vector2(-50, 245), new Vector2(-340, 280), new Vector2(-400, 70),
                                   new Vector2(-510, 200), new Vector2(-470, 370) };
             float[] sizes = { 135, 135, 135, 155, 120, 110, 110 };
+            // On desktop they form a row, with the two socket slots running off to the right when filled.
             for (int i = 0; i < HeroController.SlotCount; i++)
-                MakeSkillButton(cluster, i, atkCenter + offsets[i], sizes[i], cancel.rectTransform);
+            {
+                if (MobaInput.Desktop) MakeSkillButton(cluster, i, new Vector2(-540 + 120 * i, 60), 110, cancel.rectTransform);
+                else MakeSkillButton(cluster, i, atkCenter + offsets[i], sizes[i], cancel.rectTransform);
+            }
 
             // Camera rotation buttons, under the menu.
             for (int i = 0; i < 2; i++)
@@ -196,11 +208,13 @@ namespace TWF
                 ri.rectTransform.Stretch(16);
                 ri.preserveAspect = true;
                 rb.gameObject.AddComponent<RotateButton>().direction = dir;
+                rb.gameObject.SetActive(!MobaInput.Desktop);
             }
 
             // Potion button, left of the skill arc.
             var potion = UIFactory.Circle("Potion", controls, 120, new Color(0.3f, 0.06f, 0.08f, 0.85f), true);
-            potion.rectTransform.Place(new Vector2(1, 0), new Vector2(-640, 40), new Vector2(120, 120));
+            if (MobaInput.Desktop) potion.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(-400, 56), new Vector2(120, 120));
+            else potion.rectTransform.Place(new Vector2(1, 0), new Vector2(-640, 40), new Vector2(120, 120));
             var potRing = UIFactory.Image("Ring", potion.transform, GameAssets.Ring, new Color(1f, 0.45f, 0.45f, 0.9f));
             potRing.rectTransform.Stretch();
             var potIcon = UIFactory.Image("Icon", potion.transform, Pickup.PotionIcon, Color.white);
@@ -215,10 +229,18 @@ namespace TWF
             potionCount.fontStyle = FontStyles.Bold;
             potionCount.rectTransform.Place(new Vector2(1, 0), new Vector2(6, -6), new Vector2(50, 40));
             potion.gameObject.AddComponent<Button>().onClick.AddListener(() => HeroController.Instance?.UsePotion());
+            if (MobaInput.Desktop)
+            {
+                potionKeyLabel = UIFactory.Text("Key", potion.transform, "", 26, Color.white);
+                potionKeyLabel.fontStyle = FontStyles.Bold;
+                potionKeyLabel.textWrappingMode = TextWrappingModes.NoWrap;
+                potionKeyLabel.rectTransform.Place(new Vector2(0, 1), Vector2.zero, new Vector2(30, 26));
+            }
 
             // Context button (talk to merchant, etc.).
             interactButton = UIFactory.Button("Interact", controls, "", () => interactAction?.Invoke(), new Color(0.35f, 0.25f, 0.08f, 0.95f), 40);
-            ((RectTransform)interactButton.transform).Place(new Vector2(1, 0), new Vector2(-600, 220), new Vector2(240, 100));
+            if (MobaInput.Desktop) ((RectTransform)interactButton.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 190), new Vector2(340, 100));
+            else ((RectTransform)interactButton.transform).Place(new Vector2(1, 0), new Vector2(-600, 220), new Vector2(240, 100));
             interactLabel = interactButton.GetComponentInChildren<TextMeshProUGUI>();
             interactLabel.rectTransform.offsetMin = new Vector2(90, 6);
             interactLabel.alignment = TextAlignmentOptions.Left;
@@ -227,11 +249,22 @@ namespace TWF
             interactIcon.preserveAspect = true;
             interactButton.gameObject.SetActive(false);
 
-            if (!Application.isMobilePlatform)
+            if (MobaInput.Desktop)
             {
-                var hint = UIFactory.Text("KeyHint", controls, "WASD move · Space/Click attack · Q E F skills · R ultimate · H potion · Z/C rotate camera", 22, new Color(1, 1, 1, 0.5f));
-                hint.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, 12), new Vector2(1000, 36));
+                keyHint = UIFactory.Text("KeyHint", controls, "", 22, new Color(1, 1, 1, 0.5f));
+                keyHint.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, 12), new Vector2(1400, 36));
+                RefreshKeyLabels();
             }
+        }
+
+        void RefreshKeyLabels()
+        {
+            if (!MobaInput.Desktop) return;
+            for (int i = 0; i < skillKeyLabels.Length; i++) skillKeyLabels[i].text = MobaInput.KeyName(i);
+            potionKeyLabel.text = KeyBinds.Label(GameAction.Potion);
+            keyHint.text = $"{KeyBinds.Label(GameAction.MoveUp)}{KeyBinds.Label(GameAction.MoveLeft)}{KeyBinds.Label(GameAction.MoveDown)}{KeyBinds.Label(GameAction.MoveRight)} move · " +
+                           $"{KeyBinds.Label(GameAction.Attack)}/Click attack · {KeyBinds.Label(GameAction.Interact)} interact · " +
+                           $"{KeyBinds.Label(GameAction.CameraLeft)}/{KeyBinds.Label(GameAction.CameraRight)} rotate camera · Esc menu";
         }
 
         void MakeSkillButton(RectTransform parent, int slot, Vector2 pos, float size, RectTransform cancel)
@@ -265,10 +298,13 @@ namespace TWF
             cdText.rectTransform.Stretch();
             var rank = UIFactory.Text("Rank", bg.transform, "", 20, Palette.Gold);
             rank.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, -6), new Vector2(80, 26));
-            if (!Application.isMobilePlatform)
+            if (MobaInput.Desktop)
             {
-                var key = UIFactory.Text("Key", bg.transform, MobaInput.KeyName(slot), 20, new Color(1, 1, 1, 0.6f));
+                var key = UIFactory.Text("Key", bg.transform, "", 26, Color.white);
+                key.fontStyle = FontStyles.Bold;
+                key.textWrappingMode = TextWrappingModes.NoWrap;
                 key.rectTransform.Place(new Vector2(0, 1), new Vector2(0, 0), new Vector2(30, 26));
+                skillKeyLabels[slot] = key;
             }
 
             var btn = bg.gameObject.AddComponent<SkillButton>();
@@ -424,7 +460,7 @@ namespace TWF
         public void ShowInteract(string label, System.Action action, string iconKey = null)
         {
             interactAction = action;
-            interactLabel.text = label;
+            interactLabel.text = MobaInput.Desktop ? $"{label} <size=60%>[{KeyBinds.Label(GameAction.Interact)}]</size>" : label;
             if (iconKey == null) iconKey = label == "Shop" ? "coin" : label == "Travel" ? "portal" : label == "Forge" ? "anvil" : null;
             interactIcon.sprite = IconFactory.Get(iconKey, new Color(1f, 0.85f, 0.4f));
             interactIcon.enabled = interactIcon.sprite != null;
@@ -439,8 +475,25 @@ namespace TWF
 
         // ---------- Updates ----------
 
+        // Interact and the Esc menu; everything else reads its keys where it's used.
+        void HandleDesktopKeys()
+        {
+            if (!MobaInput.Desktop || KeyBinds.Capturing || ConfirmDialog.IsOpen) return;
+            if (!MobaInput.Blocked && interactAction != null && KeyBinds.Pressed(GameAction.Interact))
+            {
+                interactAction();
+                return;
+            }
+            if (!Input.GetKeyDown(KeyCode.Escape)) return;
+            var hero = HeroController.Instance;
+            if (Panels.AnyOpen) Panels.CloseAll();
+            // Not during cutscenes or the death and victory screens.
+            else if (!MobaInput.Blocked && Time.timeScale > 0f && hero != null && !hero.Combatant.IsDead) Panels.Toggle(PanelKind.Settings);
+        }
+
         void Update()
         {
+            HandleDesktopKeys();
             var hero = HeroController.Instance;
             var data = Profile.Data;
             if (hero != null)

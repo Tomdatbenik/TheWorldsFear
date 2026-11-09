@@ -1,0 +1,34 @@
+{
+ "name": "bush",
+ "kind": "tree",
+ "views": 1,
+ "ppu": 72,
+ "ss": 4,
+ "frame": [
+  152,
+  132
+ ],
+ "pivot": [
+  76.0,
+  16.47
+ ],
+ "depth_range": 10.0,
+ "pitch": 52.0,
+ "footprint": null,
+ "height": 1.704427719116211,
+ "proxy": {
+  "kind": "tree",
+  "w": 0.868,
+  "d": 0.06999999999999999,
+  "wall": 0.9548,
+  "rise": 0,
+  "overhang": 0,
+  "ridge": ""
+ },
+ "sheet": [
+  152,
+  132
+ ],
+ "cols": 1,
+ "colors": 48
+}

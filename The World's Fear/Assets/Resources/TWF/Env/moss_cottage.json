@@ -1,0 +1,37 @@
+{
+ "name": "moss_cottage",
+ "kind": "house",
+ "views": 16,
+ "ppu": 72,
+ "ss": 4,
+ "frame": [
+  728,
+  800
+ ],
+ "pivot": [
+  364.0,
+  288.61
+ ],
+ "depth_range": 10.0,
+ "pitch": 52.0,
+ "footprint": [
+  6.16,
+  4.76
+ ],
+ "height": 6.636000156402588,
+ "proxy": {
+  "kind": "house",
+  "w": 6.16,
+  "d": 4.76,
+  "wall": 4.199999999999999,
+  "rise": 2.2399999999999998,
+  "overhang": 0.504,
+  "ridge": "x"
+ },
+ "sheet": [
+  5824,
+  1600
+ ],
+ "cols": 8,
+ "colors": 48
+}

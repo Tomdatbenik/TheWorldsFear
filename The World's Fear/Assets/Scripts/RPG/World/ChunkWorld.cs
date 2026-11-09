@@ -38,6 +38,7 @@ namespace TWF
         {
             Instance = this;
             WorldGen.HubRect = hubRect;
+            _ = Profile.Data; // loading the hero sets the world seed; playing this scene directly skips the title screen
             tiles = WorldTiles.Instance;
             art = ArtSet.Instance;
             // Note: Unity's fake-null objects break '??', so check explicitly.
@@ -164,7 +165,7 @@ namespace TWF
                 switch (cell)
                 {
                     case Cell.Path:
-                        groundTiles[i] = PathTile(biome, h);
+                        groundTiles[i] = EnvArt.PathTile(biome, wx, wy) ?? PathTile(biome, h);
                         detailTiles[i] = FringeTile(cells, x, y, biome);
                         break;
                     case Cell.Water:
@@ -175,18 +176,18 @@ namespace TWF
                         AddDrop(cells, x, y, wx, wy, cell, cell == Cell.Water ? water : lava);
                         break;
                     case Cell.Plateau:
-                        groundTiles[i] = GroundTile(biome, h);
-                        plateauTiles[i] = GroundTile(biome, h >> 3);
+                        groundTiles[i] = EnvArt.GroundTile(biome, wx, wy) ?? GroundTile(biome, h);
+                        plateauTiles[i] = EnvArt.GroundTile(biome, wx, wy) ?? GroundTile(biome, h >> 3);
                         blockTiles[i] = tiles.blocker;
                         AddCliffs(cells, x, y, wx, wy, rockFaces);
                         break;
                     case Cell.Wall:
-                        groundTiles[i] = GroundTile(biome, h);
+                        groundTiles[i] = EnvArt.GroundTile(biome, wx, wy) ?? GroundTile(biome, h);
                         blockTiles[i] = tiles.blocker;
                         AddBox(wx, wy, 1.6f, brickFaces);
                         break;
                     default:
-                        groundTiles[i] = GroundTile(biome, h);
+                        groundTiles[i] = EnvArt.GroundTile(biome, wx, wy) ?? GroundTile(biome, h);
                         if ((h & 0xFF) < 14) detailTiles[i] = DetailTile(biome, h);
                         break;
                 }
@@ -207,6 +208,7 @@ namespace TWF
 
             PlaceDecor(chunk, cells, x0, y0, decorRng);
             PlaceGrass(chunk, cells, x0, y0, decorRng);
+            AmbientLife.Build(chunk.root.transform, cells, x0, y0, c);
             PlaceCamps(chunk, cells, x0, y0);
             PlacePointsOfInterest(chunk, c);
         }
@@ -312,13 +314,15 @@ namespace TWF
         TileBase FringeTile(Cell[,] cells, int x, int y, Biome b)
         {
             var set = art != null ? art.Fringe(b) : null;
-            if (set == null) return null;
+            if (set == null && EnvArt.FringeTile(b, 1) == null) return null;
             int mask = 0;
             if (At(cells, x, y + 1, Cell.Ground)) mask |= 1;
             if (At(cells, x + 1, y, Cell.Ground)) mask |= 2;
             if (At(cells, x, y - 1, Cell.Ground)) mask |= 4;
             if (At(cells, x - 1, y, Cell.Ground)) mask |= 8;
-            return mask > 0 ? set[mask] : null;
+            var painted = EnvArt.FringeTile(b, mask);
+            if (painted != null) return painted;
+            return mask > 0 && set != null ? set[mask] : null;
         }
 
         TileBase DetailTile(Biome b, uint h)

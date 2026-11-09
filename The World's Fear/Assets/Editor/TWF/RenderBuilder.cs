@@ -41,6 +41,7 @@ namespace TWF.EditorTools
             holder.unlitSprite = Material("UnlitSprite", "Universal Render Pipeline/2D/Sprite-Unlit-Default", null);
             holder.water = Material("Water", "TWF/Water", m => { m.SetFloat("_Lava", 0f); });
             holder.lava = Material("Lava", "TWF/Water", m => { m.SetFloat("_Lava", 1f); });
+            Material("Ambient", "TWF/Ambient", null); // fireflies, butterflies, embers; loaded by AmbientLife
 
             holder.volumes = new VolumeProfile[System.Enum.GetValues(typeof(Biome)).Length + 1];
             foreach (Biome b in System.Enum.GetValues(typeof(Biome)))

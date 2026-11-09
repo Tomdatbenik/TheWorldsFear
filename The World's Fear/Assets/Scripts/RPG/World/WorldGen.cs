@@ -5,7 +5,7 @@ namespace TWF
 {
     public enum Cell : byte { Ground, Path, Water, Lava, Wall, Plateau, Hub }
 
-    // Deterministic infinite world: everything about a position comes from the world seed.
+    // Deterministic infinite world: everything about a position comes from the hero's world seed.
     // Difficulty grows with distance from the village at the origin.
     public static class WorldGen
     {
@@ -14,7 +14,39 @@ namespace TWF
         public const float SafeRadius = 62f;    // no camps this close
         public const float PlateauHeight = 2.4f; // cliffs rise toward -Z
 
-        public static int Seed = 20261028;
+        // Saves from before each hero had their own world all live in this one.
+        public const int LegacySeed = 20261028;
+
+        public static int Seed { get; private set; } = LegacySeed;
+
+        // How far this world slides the grids its landmarks sit on.
+        static Vector2Int waypointShift, chestShift;
+        static int bossSalt;
+
+        public static void SetSeed(int seed)
+        {
+            Seed = seed;
+            regions.Clear();
+            bool legacy = seed == LegacySeed;
+            waypointShift = legacy ? Vector2Int.zero : GridShift(51, WaypointGrid);
+            chestShift = legacy ? Vector2Int.zero : GridShift(53, ChestGrid);
+            if (legacy) return;
+            // Every other lair stays sealed until the first boss is slain, so a layout has to have a gate at its distance.
+            bossSalt = 55;
+            while (!HasFirstBossGate()) bossSalt += 2;
+        }
+
+        static Vector2Int GridShift(int salt, int grid) =>
+            new Vector2Int((int)(Hash(salt, grid) % (uint)grid), (int)(Hash(salt + 1, grid) % (uint)grid));
+
+        static bool HasFirstBossGate()
+        {
+            const int reach = 24; // chunks; well past the first boss's distance band
+            for (int cx = -reach; cx <= reach; cx++)
+            for (int cy = -reach; cy <= reach; cy++)
+                if (HasBossGate(cx, cy, out var cell) && WorldManager.KindForGate(cell) == WorldManager.BossOrder[0]) return true;
+            return false;
+        }
 
         // The copied village's area; generated terrain stays out of it.
         public static RectInt HubRect = new RectInt(-45, -30, 90, 90);
@@ -133,7 +165,7 @@ namespace TWF
             var template = GameDatabase.Instance.zones.Find(t => t != null && t.biome == biome) ?? GameDatabase.Instance.FindZone("forest");
             z = Object.Instantiate(template);
             uint h = Hash(rx * 7919 + (int)biome, ry * 104729);
-            z.id = $"r_{rx}_{ry}_{biome}";
+            z.id = $"r_{Seed}_{rx}_{ry}_{biome}"; // species are cached by id, so it has to differ between worlds
             z.seed = (int)(h & 0x7FFFFFFF);
             var names = placeB[biome];
             z.displayName = $"The {placeA[h % placeA.Length]} {names[(h >> 8) % names.Length]}";
@@ -161,7 +193,7 @@ namespace TWF
         public static bool HasWaypoint(int cx, int cy, out Vector2Int cell)
         {
             cell = default;
-            if (Mod(cx, WaypointGrid) != WaypointGrid / 2 || Mod(cy, WaypointGrid) != WaypointGrid / 2) return false;
+            if (Mod(cx + waypointShift.x, WaypointGrid) != WaypointGrid / 2 || Mod(cy + waypointShift.y, WaypointGrid) != WaypointGrid / 2) return false;
             var center = new Vector2Int(cx * ChunkSize + ChunkSize / 2, cy * ChunkSize + ChunkSize / 2);
             if (((Vector2)center).magnitude < HubRadius + 20f) return false;
             cell = center;
@@ -171,8 +203,21 @@ namespace TWF
         public static bool HasBossGate(int cx, int cy, out Vector2Int cell)
         {
             cell = default;
-            if (Mod(cx + 3, BossGrid) != 0 || Mod(cy + 5, BossGrid) != 0) return false;
-            var center = new Vector2Int(cx * ChunkSize + ChunkSize / 2 + 4, cy * ChunkSize + ChunkSize / 2 - 3);
+            Vector2Int center;
+            if (Seed == LegacySeed)
+            {
+                if (Mod(cx + 3, BossGrid) != 0 || Mod(cy + 5, BossGrid) != 0) return false;
+                center = new Vector2Int(cx * ChunkSize + ChunkSize / 2 + 4, cy * ChunkSize + ChunkSize / 2 - 3);
+            }
+            else
+            {
+                // One gate per patch of the map, at its own random chunk and spot inside that patch.
+                int px = Mathf.FloorToInt(cx / (float)BossGrid), py = Mathf.FloorToInt(cy / (float)BossGrid);
+                uint h = Hash(px * 101 + bossSalt, py * 211 - bossSalt);
+                if (Mod(cx, BossGrid) != (h & 0xFF) % BossGrid || Mod(cy, BossGrid) != ((h >> 8) & 0xFF) % BossGrid) return false;
+                // Even cells only: gate keys round position + 0.5, which lands back on the cell only when it is even.
+                center = new Vector2Int(cx * ChunkSize + (4 + (int)((h >> 16) & 0xFF) % 16 & ~1), cy * ChunkSize + (4 + (int)(h >> 24) % 16 & ~1));
+            }
             if (((Vector2)center).magnitude < 220f) return false;
             cell = center;
             return true;
@@ -186,7 +231,7 @@ namespace TWF
         {
             cell = default;
             waves = 0;
-            if (Mod(cx + 1, ChestGrid) != 0 || Mod(cy + 2, ChestGrid) != 0) return false;
+            if (Mod(cx + 1 + chestShift.x, ChestGrid) != 0 || Mod(cy + 2 + chestShift.y, ChestGrid) != 0) return false;
             uint h = Hash(cx * 7 + 3, cy * 13 + 5);
             if ((h & 3) == 0) return false;   // some grid spots stay empty
             var p = new Vector2Int(cx * ChunkSize + 4 + (int)(h >> 4) % (ChunkSize - 8), cy * ChunkSize + 4 + (int)(h >> 12) % (ChunkSize - 8));

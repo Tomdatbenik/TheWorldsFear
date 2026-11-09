@@ -22,6 +22,9 @@ MonoBehaviour:
   - stat: 4
     kind: 1
     value: 0.06
+  - stat: 17
+    kind: 0
+    value: 0.04
   procs: []
   references:
     version: 2

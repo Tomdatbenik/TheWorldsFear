@@ -9,6 +9,7 @@ namespace TWF
         public string name;
         public int element, biome, archetype, seed;
         public bool spider;
+        public string mobId;          // a designed mob; empty for the older generated creatures
         public int kills, highestLevel;
     }
 
@@ -22,7 +23,7 @@ namespace TWF
             var e = list.Find(m => m.name == sp.name);
             if (e == null)
             {
-                e = new CodexMonster { name = sp.name, element = (int)sp.element, biome = (int)sp.biome, archetype = (int)sp.archetype, seed = sp.seed, spider = sp.isSpider };
+                e = new CodexMonster { name = sp.name, element = (int)sp.element, biome = (int)sp.biome, archetype = (int)sp.archetype, seed = sp.seed, spider = sp.isSpider, mobId = sp.mob?.id };
                 list.Add(e);
                 GameUI.Instance?.Toast($"New codex entry: {sp.name}", Palette.Gold, 1.6f);
             }
@@ -49,6 +50,7 @@ namespace TWF
 
         // Rebuild a monster's look for its codex page.
         public static MonsterLook LookOf(CodexMonster m) =>
+            !string.IsNullOrEmpty(m.mobId) && MobCatalog.Get(m.mobId) != null ? MonsterGenerator.CreateMob(MobCatalog.Get(m.mobId)).look :
             m.spider ? SpiderSpriteGenerator.Generate(m.seed, (Biome)m.biome) : MonsterSpriteGenerator.Generate(m.seed, (Biome)m.biome, (MonsterArchetype)m.archetype);
     }
 }

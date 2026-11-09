@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -80,6 +81,7 @@ namespace TWF
 
         void Update()
         {
+            DayNight.Tick(Time.deltaTime);
             float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 1.5f);
             var goal = MoodFor(target, boss);
             current.sun = Color.Lerp(current.sun, goal.sun, k);
@@ -95,8 +97,36 @@ namespace TWF
                 volumes[i].weight = Mathf.MoveTowards(volumes[i].weight, i == target ? 1f : 0f, Time.unscaledDeltaTime * 0.6f);
         }
 
+        // The biome's mood at this time of day. The boss arenas keep their own fixed light, and the Ember's lava lights its nights.
+        Mood AtTimeOfDay(Mood m)
+        {
+            float amount = boss ? 0f : target == (int)Biome.Ember ? 0.55f : 1f;
+            float height = DayNight.SunHeight;
+            float day = Mathf.Lerp(1f, DayNight.Daylight, amount);
+            float warm = amount * Mathf.Clamp01(DayNight.Daylight * 1.5f) * (1f - Mathf.SmoothStep(0f, 0.35f, Mathf.Abs(height)));
+
+            var moon = new Color(0.55f, 0.66f, 1f);
+            m.sun = Color.Lerp(moon, Color.Lerp(m.sun, new Color(1f, 0.55f, 0.3f), warm * 0.7f), day);
+            m.sunIntensity = Mathf.Lerp(m.sunIntensity * 0.35f, m.sunIntensity, day);
+            m.ambient = Color.Lerp(new Color(m.ambient.r * 0.55f, m.ambient.g * 0.6f, m.ambient.b * 0.85f, m.ambient.a), m.ambient, day);
+            m.ambient = Color.Lerp(m.ambient, new Color(m.ambient.r * 1.15f, m.ambient.g * 0.95f, m.ambient.b * 0.8f, m.ambient.a), warm);
+            var duskFog = Color.Lerp(m.fog, new Color(0.95f, 0.55f, 0.4f), warm * 0.25f);
+            m.fog = Color.Lerp(new Color(m.fog.r * 0.35f, m.fog.g * 0.4f, m.fog.b * 0.6f, m.fog.a), duskFog, day);
+
+            // The sun climbs and crosses the sky; the moon takes over while the light is dimmest, with no shadow to give it away.
+            float elevation = height > 0f ? Mathf.Lerp(30f, m.sunAngles.x, Mathf.SmoothStep(0f, 0.7f, height)) : m.sunAngles.x * 0.9f;
+            // Flat ground gets less light from a low sun; make up for it so dawn and dusk stay warm rather than dark.
+            float elevated = Mathf.Lerp(m.sunAngles.x, elevation, amount);
+            m.sunIntensity *= Mathf.Clamp(Mathf.Sin(m.sunAngles.x * Mathf.Deg2Rad) / Mathf.Sin(elevated * Mathf.Deg2Rad), 1f, 1.6f);
+            float azimuth = m.sunAngles.y + DayNight.ArcPosition * 140f;
+            m.sunAngles = Vector2.Lerp(m.sunAngles, new Vector2(elevation, azimuth), amount);
+            sun.shadowStrength = 0.75f * Mathf.Lerp(1f, Mathf.SmoothStep(0f, 0.18f, Mathf.Abs(height)), amount);
+            return m;
+        }
+
         void ApplyMood(Mood m)
         {
+            m = AtTimeOfDay(m);
             sun.color = m.sun;
             sun.intensity = m.sunIntensity;
             // The ground is XY with up = -Z: tilt the light down from that "sky".
@@ -119,7 +149,7 @@ namespace TWF
             switch ((Biome)index)
             {
                 case Biome.Village:
-                    return new Mood { sun = new Color(1f, 0.9f, 0.74f), sunIntensity = 0.85f, sunAngles = new Vector2(48, 225), ambient = new Color(0.36f, 0.36f, 0.4f), fog = new Color(0.58f, 0.65f, 0.7f), fogStart = 40, fogEnd = 95 };
+                    return new Mood { sun = new Color(1f, 0.93f, 0.8f), sunIntensity = 0.92f, sunAngles = new Vector2(48, 45), ambient = new Color(0.36f, 0.36f, 0.38f), fog = new Color(0.58f, 0.65f, 0.7f), fogStart = 40, fogEnd = 95 };
                 case Biome.Forest:
                     return new Mood { sun = new Color(1f, 0.88f, 0.62f), sunIntensity = 0.74f, sunAngles = new Vector2(55, 210), ambient = new Color(0.29f, 0.32f, 0.27f), fog = new Color(0.5f, 0.52f, 0.38f), fogStart = 28, fogEnd = 70 };
                 case Biome.Marsh:
@@ -131,6 +161,79 @@ namespace TWF
                 default:
                     return new Mood { sun = Color.white, sunIntensity = 0.62f, sunAngles = new Vector2(50, 220), ambient = new Color(0.30f, 0.30f, 0.34f), fog = Color.gray, fogStart = 30, fogEnd = 80 };
             }
+        }
+    }
+
+    // The time of day: a sunny stretch and a shorter night. Other systems ask it how bright the world is.
+    public static class DayNight
+    {
+        public const float CycleSeconds = 600f;
+        const float DayShare = 0.65f;     // of the whole cycle
+
+        static readonly List<(Material material, float day, float night)> glowing = new List<(Material, float, float)>();
+
+        // 0..1 around the cycle: 0 is sunrise.
+        public static float Time01 { get; private set; } = 0.12f;
+
+        // Around the circle: 0..PI is the day, PI..2PI the night.
+        static float Phase => Time01 < DayShare ? Time01 / DayShare * Mathf.PI : Mathf.PI + (Time01 - DayShare) / (1f - DayShare) * Mathf.PI;
+
+        // +1 at noon, -1 at midnight.
+        public static float SunHeight => Mathf.Sin(Phase);
+
+        // -0.5..0.5 across the arc of whichever of the sun or moon is up.
+        public static float ArcPosition => (Phase % Mathf.PI) / Mathf.PI - 0.5f;
+
+        // 0 at night, 1 in full day.
+        public static float Daylight => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(-0.18f, 0.12f, SunHeight));
+
+        // How strongly a lamp shines now: `day` times its strength in full daylight, `night` in the dark.
+        public static float Scale(float day, float night) => Mathf.Lerp(night, day, Daylight);
+
+        // Windows and the like: a material whose _Emission follows the time of day.
+        public static void GlowAtNight(Material material, float day, float night)
+        {
+            if (material != null) glowing.Add((material, day, night));
+        }
+
+        public static void SetTime(float t01)
+        {
+            Time01 = Mathf.Repeat(t01, 1f);
+            Apply();
+        }
+
+        public static void Tick(float dt)
+        {
+            Time01 = Mathf.Repeat(Time01 + dt / CycleSeconds, 1f);
+            Apply();
+        }
+
+        static void Apply()
+        {
+            Shader.SetGlobalFloat("_TWF_Day", Daylight);
+            for (int i = glowing.Count - 1; i >= 0; i--)
+            {
+                if (glowing[i].material == null) { glowing.RemoveAt(i); continue; }
+                glowing[i].material.SetFloat("_Emission", Scale(glowing[i].day, glowing[i].night));
+            }
+        }
+    }
+
+    // A lamp that is dim by day and bright at night.
+    public class NightLight : MonoBehaviour
+    {
+        public Light target;
+        public float day = 0.2f, night = 1.5f;
+        float baseIntensity;
+
+        void Start()
+        {
+            if (target != null) baseIntensity = target.intensity;
+        }
+
+        void Update()
+        {
+            if (target != null) target.intensity = baseIntensity * DayNight.Scale(day, night);
         }
     }
 }

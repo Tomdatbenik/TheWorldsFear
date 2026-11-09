@@ -1,0 +1,37 @@
+{
+ "name": "well",
+ "kind": "well",
+ "views": 16,
+ "ppu": 72,
+ "ss": 4,
+ "frame": [
+  402,
+  452
+ ],
+ "pivot": [
+  201.0,
+  106.28
+ ],
+ "depth_range": 10.0,
+ "pitch": 52.0,
+ "footprint": [
+  3,
+  3
+ ],
+ "height": 4.710538864135742,
+ "proxy": {
+  "kind": "well",
+  "w": 1.4,
+  "d": 1.26,
+  "wall": 4.199999999999999,
+  "rise": 0,
+  "overhang": 0,
+  "ridge": ""
+ },
+ "sheet": [
+  3216,
+  904
+ ],
+ "cols": 8,
+ "colors": 48
+}

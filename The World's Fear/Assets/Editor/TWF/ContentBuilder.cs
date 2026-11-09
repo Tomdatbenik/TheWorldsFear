@@ -188,15 +188,15 @@ namespace TWF.EditorTools
             string red = "#e8573c", gold = "#f2c14e", green = "#7cd65a", ice = "#8fd8ff", venom = "#9be04a", arcane = "#b884ff", fire = "#ff6a2b", storm = "#ffe066";
 
             var thickSkin = Passive("p_thickskin", "Thick Skin", "HP", "#8fbf6a", "Toughened by battle.", 5, new[] { Pct(StatType.MaxHP, 0.05f), Flat(StatType.Armor, 4f) });
-            var mastery = Passive("p_mastery", "Weapon Mastery", "DMG", red, "Every hit lands harder.", 5, new[] { Pct(StatType.Damage, 0.05f), Flat(StatType.CritChance, 0.015f) });
-            var swift = Passive("p_swift", "Swift Strikes", "SPD", green, "Attack faster.", 5, new[] { Pct(StatType.AttackSpeed, 0.06f) });
-            var nimble = Passive("p_nimble", "Nimble", "NMB", "#d7d7d7", "Light on your feet.", 3, new[] { Pct(StatType.MoveSpeed, 0.05f), Flat(StatType.Armor, 2f) });
+            var mastery = Passive("p_mastery", "Weapon Mastery", "DMG", red, "Every hit lands harder.", 5, new[] { Pct(StatType.Damage, 0.05f), Flat(StatType.CritChance, 0.015f), Flat(StatType.Handling, 0.03f) });
+            var swift = Passive("p_swift", "Swift Strikes", "SPD", green, "Attack faster.", 5, new[] { Pct(StatType.AttackSpeed, 0.06f), Flat(StatType.Handling, 0.04f) });
+            var nimble = Passive("p_nimble", "Nimble", "NMB", "#d7d7d7", "Light on your feet.", 3, new[] { Pct(StatType.MoveSpeed, 0.05f), Flat(StatType.Armor, 2f), Flat(StatType.Handling, 0.06f) });
             var mind = Passive("p_mind", "Arcane Mind", "CDR", arcane, "Skills recover faster.", 5, new[] { Flat(StatType.CooldownReduction, 0.03f) });
             var power = Passive("p_power", "Skill Power", "PWR", fire, "Crafted skills hit harder.", 5, new[] { Flat(StatType.SkillPower, 0.06f) });
 
             var bloodlust = Passive("p_bloodlust", "Bloodlust", "BLD", "#b0302a", "Kills restore life.", 3, null, new HealOnKillProc { percentMaxHPPerRank = 0.025f });
             var eagle = Passive("p_eagle", "Eagle Eye", "EYE", gold, "Find the weak spots.", 5, new[] { Flat(StatType.CritChance, 0.03f), Flat(StatType.CritDamage, 0.1f) });
-            var reach = Passive("p_reach", "Far Reach", "RNG", ice, "Skills travel further.", 3, new[] { Flat(StatType.SkillRange, 0.08f), Flat(StatType.ProjectileSpeed, 0.08f) });
+            var reach = Passive("p_reach", "Far Reach", "RNG", ice, "Skills travel further.", 3, new[] { Flat(StatType.SkillRange, 0.08f), Flat(StatType.ProjectileSpeed, 0.08f), Flat(StatType.Handling, 0.04f) });
             var expanse = Passive("p_expanse", "Expanse", "AREA", arcane, "Bigger blasts.", 3, new[] { Flat(StatType.AreaSize, 0.08f) });
 
             var hardened = Passive("p_hardened", "Battle Hardened", "SHLD", "#9fc3ff", "Getting hit raises a barrier.", 3, null, new ShieldOnHitTakenProc { percentPerRank = 0.06f, cooldown = 8f });

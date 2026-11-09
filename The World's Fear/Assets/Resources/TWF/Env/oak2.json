@@ -1,0 +1,34 @@
+{
+ "name": "oak2",
+ "kind": "tree",
+ "views": 1,
+ "ppu": 72,
+ "ss": 4,
+ "frame": [
+  358,
+  350
+ ],
+ "pivot": [
+  179.0,
+  35.73
+ ],
+ "depth_range": 10.0,
+ "pitch": 52.0,
+ "footprint": null,
+ "height": 5.479360103607178,
+ "proxy": {
+  "kind": "tree",
+  "w": 2.0999999999999996,
+  "d": 0.308,
+  "wall": 3.6456,
+  "rise": 0,
+  "overhang": 0,
+  "ridge": ""
+ },
+ "sheet": [
+  358,
+  350
+ ],
+ "cols": 1,
+ "colors": 48
+}

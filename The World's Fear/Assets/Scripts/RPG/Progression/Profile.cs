@@ -16,6 +16,7 @@ namespace TWF
     public class SaveData
     {
         public int version = 1;
+        public int worldSeed;           // 0 on saves from before each hero had their own world
         public string classId = "adventurer";
         public int level = 1;
         public int xp;
@@ -105,7 +106,8 @@ namespace TWF
         public static void NewGame(WeaponType starterWeapon, Appearance look = null)
         {
             RunOver = false;
-            data = new SaveData { classId = "adventurer", appearance = look ?? new Appearance() };
+            data = new SaveData { classId = "adventurer", appearance = look ?? new Appearance(), worldSeed = new System.Random().Next(1, int.MaxValue) };
+            WorldGen.SetSeed(data.worldSeed);
             ranks = null;
             exploredSet = null;
             data.skillPoints = 1;
@@ -130,6 +132,8 @@ namespace TWF
                     return false;
                 }
                 exploredSet = null;
+                if (data.worldSeed == 0) data.worldSeed = WorldGen.LegacySeed;
+                WorldGen.SetSeed(data.worldSeed);
                 if (data.equippedSkills == null || data.equippedSkills.Length != 4) data.equippedSkills = new string[4];
                 if (data.attributes == null || data.attributes.Length != Attributes.Count) data.attributes = new int[Attributes.Count];
                 if (data.weaponSkillAttached == null || data.weaponSkillAttached.Length != 10) data.weaponSkillAttached = new int[10];
