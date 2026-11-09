@@ -24,6 +24,7 @@ Shader "TWF/EnvSprite"
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "Assets/Shaders/TWF_Reveal.hlsl"
 
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
@@ -59,7 +60,7 @@ Shader "TWF/EnvSprite"
             #endif
         }
 
-        float EnvDepth(float3 positionWS, float alpha)
+        float EnvDepth(float3 positionWS, float alpha, float4 positionCS)
         {
             float3 p = positionWS;
             if (_WallMode > 0.5)
@@ -73,6 +74,7 @@ Shader "TWF/EnvSprite"
                 float3 forward = -UNITY_MATRIX_V[2].xyz;
                 p += forward * d;
             }
+            TWF_RevealClip(positionWS, p, positionCS);
             float4 cs = TransformWorldToHClip(p);
             return KeepAboveGround(positionWS, cs.z / cs.w);
         }
@@ -111,7 +113,7 @@ Shader "TWF/EnvSprite"
             half4 frag(Varyings i, out float depth : SV_Depth) : SV_Target
             {
                 half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv);
-                depth = EnvDepth(i.positionWS, tex.a);
+                depth = EnvDepth(i.positionWS, tex.a, i.positionCS);
 
                 // Light as the ground is lit, so the two stay one picture; walls use their own normals.
                 float3 up = float3(0, 0, -1);
@@ -174,7 +176,7 @@ Shader "TWF/EnvSprite"
 
             float frag(Varyings i, out float depth : SV_Depth) : SV_Target
             {
-                depth = EnvDepth(i.positionWS, SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).a);
+                depth = EnvDepth(i.positionWS, SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).a, i.positionCS);
                 return 0;
             }
             ENDHLSL

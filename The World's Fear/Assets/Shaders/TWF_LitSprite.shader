@@ -27,6 +27,7 @@ Shader "TWF/LitSprite"
 
         HLSLINCLUDE
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+        #include "Assets/Shaders/TWF_Reveal.hlsl"
 
         TEXTURE2D(_MainTex);
         SAMPLER(sampler_MainTex);
@@ -49,6 +50,9 @@ Shader "TWF/LitSprite"
             half _Bands;
             half4 _ShadowTint;
         CBUFFER_END
+
+        // Trees, bushes and 3D walls dither away in front of a hero; the ground and units never do.
+        bool RevealsHero() { return _FlatGround < 0.5 && (_Wind > 0.001 || _MeshNormals > 0.5); }
 
         // Sway the top of the sprite; the base (uv.y = 0) stays put.
         float3 ApplyWind(float3 positionWS, float2 uv)
@@ -124,6 +128,7 @@ Shader "TWF/LitSprite"
             {
                 half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv) * i.color;
                 clip(tex.a - _Cutoff);
+                if (RevealsHero()) TWF_RevealClip(i.positionWS, i.positionWS, i.positionCS);
 
                 // Sprites are lit as if they face the sky, so the whole sprite gets even light
                 // no matter which way the billboard turns. Shadows still fall per pixel.
@@ -280,12 +285,14 @@ Shader "TWF/LitSprite"
                 float4 positionCS : SV_POSITION;
                 float2 uv : TEXCOORD0;
                 float alpha : TEXCOORD1;
+                float3 positionWS : TEXCOORD2;
             };
 
             Varyings vert(Attributes v)
             {
                 Varyings o;
                 float3 ws = ApplyWind(TransformObjectToWorld(v.positionOS.xyz), v.uv);
+                o.positionWS = ws;
                 o.positionCS = TransformWorldToHClip(ws);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.alpha = v.color.a * _Color.a;
@@ -295,6 +302,7 @@ Shader "TWF/LitSprite"
             half4 frag(Varyings i) : SV_Target
             {
                 clip(SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).a * i.alpha - _Cutoff);
+                if (RevealsHero()) TWF_RevealClip(i.positionWS, i.positionWS, i.positionCS);
                 return 0;
             }
             ENDHLSL

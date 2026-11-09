@@ -159,7 +159,7 @@ namespace TWF
                 npc.Facing = Vector2.down;
             }
             var rng = new System.Random(4242);
-            string[] looks = { "villager_a", "villager_b", "villager_c", "villager_a", "villager_b", "guard", "villager_c", "villager_b" };
+            string[] looks = { "villager_a", "m_villager_a", "villager_b", "m_villager_b", "guard", "m_guard", "m_villager_c", "villager_c", "m_villager_a", "villager_b" };
             for (int i = 0; i < looks.Length; i++)
             {
                 int start = rng.Next(nodes.Count);
@@ -176,10 +176,10 @@ namespace TWF
             switch (name)
             {
                 case "Merchant": return "merchant";
-                case "Weaponmaster": return "smith";
-                case "Arcane Forge":
+                case "Weaponmaster": return "m_smith";
+                case "Arcane Forge": return "m_mystic";
                 case "Mystic": return "mystic";
-                default: return "villager_c";
+                default: return "m_villager_b";
             }
         }
     }
