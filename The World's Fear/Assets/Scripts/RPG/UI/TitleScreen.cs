@@ -13,9 +13,16 @@ namespace TWF
 
         RectTransform root, mainMenu, classMenu;
         WeaponType pickedWeapon = WeaponType.Sword;
-        static readonly WeaponType[] starters = { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff };
+        static readonly WeaponType[] starters =
+        {
+            WeaponType.Sword, WeaponType.Axe, WeaponType.Hammer,
+            WeaponType.Daggers, WeaponType.Spear, WeaponType.Bow,
+            WeaponType.Crossbow, WeaponType.Staff, WeaponType.Wand,
+        };
+        const int CardsPerRow = 3;
         TextMeshProUGUI classInfo;
-        Image preview;
+        Image preview, previewBack, previewFront;   // body, and the held weapon's layers behind and in front of it
+        static readonly int[] PreviewDirections = { 6, 0, 2, 4 };   // front, right, back, left in Hero3DSet's order
         readonly System.Collections.Generic.List<Image> cards = new System.Collections.Generic.List<Image>();
 
         // Set before loading the title to jump straight to picking a new hero's weapon.
@@ -80,21 +87,29 @@ namespace TWF
             row.anchorMin = new Vector2(0, 0.45f);
             row.anchorMax = new Vector2(0.6f, 1f);
             row.offsetMin = row.offsetMax = Vector2.zero;
-            var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.spacing = 24;
-            h.childForceExpandHeight = h.childForceExpandWidth = true;
+            var v = row.gameObject.AddComponent<VerticalLayoutGroup>();
+            v.spacing = 14;
+            v.childForceExpandHeight = v.childForceExpandWidth = true;
 
-            foreach (var wt in starters)
+            RectTransform cardRow = null;
+            for (int i = 0; i < starters.Length; i++)
             {
-                var w = wt;
-                var card = UIFactory.Panel(w.ToString(), row, new Color(0.1f, 0.08f, 0.1f, 0.95f));
+                if (i % CardsPerRow == 0)
+                {
+                    cardRow = UIFactory.Rect("CardRow", row);
+                    var h = cardRow.gameObject.AddComponent<HorizontalLayoutGroup>();
+                    h.spacing = 14;
+                    h.childForceExpandHeight = h.childForceExpandWidth = true;
+                }
+                var w = starters[i];
+                var card = UIFactory.Panel(w.ToString(), cardRow, new Color(0.1f, 0.08f, 0.1f, 0.95f));
                 cards.Add(card);
                 var img = UIFactory.Image("Weapon", card.transform, Weapons.Sprite(w), Color.white);
-                img.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -30), new Vector2(200, 200));
+                img.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(104, 104));
                 img.preserveAspect = true;
-                var name = UIFactory.Text("Name", card.transform, Weapons.Name(w), 44, Palette.Gold);
+                var name = UIFactory.Text("Name", card.transform, Weapons.Name(w), 34, Palette.Gold, TextAlignmentOptions.Left);
                 name.fontStyle = FontStyles.Bold;
-                name.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, 20), new Vector2(400, 60));
+                name.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(128, 0), new Vector2(200, 60));
                 card.gameObject.AddComponent<Button>().onClick.AddListener(() => Pick(w));
             }
 
@@ -112,9 +127,9 @@ namespace TWF
             previewPanel.rectTransform.anchorMin = new Vector2(0, 0);
             previewPanel.rectTransform.anchorMax = new Vector2(0.6f, 0.42f);
             previewPanel.rectTransform.offsetMin = previewPanel.rectTransform.offsetMax = Vector2.zero;
-            preview = UIFactory.Image("Anim", previewPanel.transform, null, Color.white);
-            preview.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(220, 256));
-            preview.preserveAspect = true;
+            previewBack = PreviewLayer("AnimBack", previewPanel.transform);
+            preview = PreviewLayer("Anim", previewPanel.transform);
+            previewFront = PreviewLayer("AnimFront", previewPanel.transform);
             var back = UIFactory.Button("Back", previewPanel.transform, "Back", ShowMain, null, 30);
             ((RectTransform)back.transform).Place(new Vector2(0, 0), new Vector2(20, 20), new Vector2(200, 70));
         }
@@ -125,8 +140,7 @@ namespace TWF
             var p = Weapons.Get(w);
             var sb = new System.Text.StringBuilder();
             sb.Append($"<size=130%><b><color=#ffd040>{Weapons.Name(w)}</color></b></size>\n\n");
-            sb.Append(w == WeaponType.Sword ? "A balanced blade: quick arcs in front of you." :
-                      w == WeaponType.Bow ? "Fast homing arrows from a safe distance." : "Slow arcane orbs that explode on impact.");
+            sb.Append(Blurb(w));
             sb.Append($"\n\n{(p.ranged ? "Ranged" : "Melee")} · range {p.range:0.#}m · {p.attacksPerSecond:0.##} attacks/s");
             sb.Append("\n\n<color=#aaa>There are no classes: find any of 9 weapon types, spend attribute points as you level, " +
                       "and craft your own skills from elements, deliveries and modifiers at the Arcane Forge.</color>");
@@ -134,6 +148,23 @@ namespace TWF
             classInfo.text = sb.ToString();
             for (int i = 0; i < cards.Count; i++)
                 cards[i].color = starters[i] == w ? new Color(0.3f, 0.22f, 0.12f, 1f) : new Color(0.1f, 0.08f, 0.1f, 0.95f);
+        }
+
+        static string Blurb(WeaponType w)
+        {
+            switch (w)
+            {
+                case WeaponType.Sword: return "A balanced blade: quick arcs in front of you.";
+                case WeaponType.Axe: return "Heavy, wide sweeps that hit everything beside you.";
+                case WeaponType.Hammer: return "Slow, crushing blows all around you that can stun.";
+                case WeaponType.Daggers: return "Very fast twin strikes, up close.";
+                case WeaponType.Spear: return "Long reach in a narrow line.";
+                case WeaponType.Bow: return "Fast homing arrows from a safe distance.";
+                case WeaponType.Crossbow: return "Slow, heavy bolts that pierce through enemies.";
+                case WeaponType.Staff: return "Slow arcane orbs that explode on impact.";
+                case WeaponType.Wand: return "A rapid stream of small homing bolts.";
+                default: return "";
+            }
         }
 
         float animT;
@@ -148,9 +179,39 @@ namespace TWF
                 animT = 0f;
                 animFrame++;
             }
-            var set = CharacterSpriteGenerator.Get(Outfit.Adventurer);
-            int dir = (animFrame / 16) % 4;
-            preview.sprite = (animFrame / 8) % 2 == 0 ? set.walk[dir][animFrame % 4] : set.attack[dir][animFrame % 2];
+            int turn = (animFrame / 16) % 4;
+            bool attacking = (animFrame / 8) % 2 != 0;
+            var hero = Hero3DSet.For((CharacterCreator.Pending ?? new Appearance()).Female);
+            if (hero == null)
+            {
+                var set = CharacterSpriteGenerator.Get(Outfit.Adventurer);
+                preview.sprite = attacking ? set.attack[turn][animFrame % 2] : set.walk[turn][animFrame % 4];
+                preview.enabled = true;
+                previewBack.enabled = previewFront.enabled = false;
+                return;
+            }
+            // The same layered strips the hero plays in the world, holding the picked weapon.
+            int dir = PreviewDirections[turn];
+            string animation = attacking ? Hero3DSet.AttackFor(pickedWeapon) : "walk";
+            string piece = Hero3DSet.WeaponPiece(pickedWeapon);
+            ShowPreviewLayer(preview, hero.Get(animation, dir));
+            ShowPreviewLayer(previewBack, hero.GetLayer(piece, false, animation, dir));
+            ShowPreviewLayer(previewFront, hero.GetLayer(piece, true, animation, dir));
+        }
+
+        static Image PreviewLayer(string name, Transform parent)
+        {
+            var layer = UIFactory.Image(name, parent, null, Color.white);
+            layer.rectTransform.Place(new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(220, 256));
+            layer.preserveAspect = true;
+            layer.enabled = false;
+            return layer;
+        }
+
+        void ShowPreviewLayer(Image layer, Sprite[] frames)
+        {
+            layer.enabled = frames.Length > 0;
+            if (layer.enabled) layer.sprite = frames[animFrame % frames.Length];
         }
 
         void ShowMain()
