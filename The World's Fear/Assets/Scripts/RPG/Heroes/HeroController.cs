@@ -183,6 +183,12 @@ namespace TWF
             weaponProfile = Weapons.Get(Weapons.Equipped);
             stats.RemoveModifiersFrom(weaponSource);
             if (weaponProfile.critBonus > 0f) stats.AddModifier(new StatModifier(StatType.CritChance, ModKind.Flat, weaponProfile.critBonus, weaponSource));
+            if (weaponProfile.critDamage > 0f) stats.AddModifier(new StatModifier(StatType.CritDamage, ModKind.Flat, weaponProfile.critDamage, weaponSource));
+            if (weaponProfile.lifeSteal > 0f) stats.AddModifier(new StatModifier(StatType.LifeSteal, ModKind.Flat, weaponProfile.lifeSteal, weaponSource));
+            if (weaponProfile.skillPower > 0f) stats.AddModifier(new StatModifier(StatType.SkillPower, ModKind.Flat, weaponProfile.skillPower, weaponSource));
+            var weaponItem = Profile.Equipped(ItemSlot.Weapon);
+            float guard = weaponItem != null ? Weapons.GuardArmor(weaponProfile.type, weaponItem.itemLevel) : 0f;
+            if (guard > 0f) stats.AddModifier(new StatModifier(StatType.Armor, ModKind.Flat, guard, weaponSource));
             if (weapon) weapon.GetComponent<SpriteRenderer>().sprite = Weapons.Sprite(weaponProfile.type);
 
             if (Combatant.MaxHP > 0 && !Combatant.IsDead) Combatant.SetHP(Combatant.MaxHP * hpFraction);
@@ -315,7 +321,7 @@ namespace TWF
             HandleKeyboardSkills();
             if (!MobaInput.Blocked && KeyBinds.Pressed(GameAction.Potion)) UsePotion();
 
-            CurrentTarget = Combat.NearestHostile(Team.Player, transform.position, Weapon.range + 0.2f);
+            CurrentTarget = Combat.NearestHostile(Team.Player, transform.position, AttackRange + 0.2f);
             var mouseAim = MobaInput.MouseAttackDirection(transform.position);
             if (mouseAim.HasValue)
             {
@@ -365,7 +371,11 @@ namespace TWF
         {
             if (attackTimer > 0f || castLock > 0f || Combatant.IsStunned) return;
             var w = Weapon;
-            attackTimer = 1f / (w.attacksPerSecond * Combatant.Stats.Get(StatType.AttackSpeed));
+            bool mastery = WeaponMasteries.Active(w.type);
+            float interval = 1f / (w.attacksPerSecond * Combatant.Stats.Get(StatType.AttackSpeed));
+            if (mastery && w.type == WeaponType.Bow) interval /= WeaponMasteries.RunAndGunSpeed;
+            if (mastery && w.type == WeaponType.Crossbow) interval *= WeaponMasteries.RepeaterReload;
+            attackTimer = interval;
             Vector2 dir = aim ?? ((Vector2)(target.transform.position - transform.position)).normalized;
             if (aim.HasValue)
             {
@@ -376,10 +386,17 @@ namespace TWF
             Facing = dir;
             attackAnimTimer = 0.2f;
             float handling = Combatant.Stats.Get(StatType.Handling);
-            attackRoot = w.rootTime * (1f - handling);
+            attackRoot = mastery && w.type == WeaponType.Bow ? 0f : w.rootTime * (1f - handling);
 
             if (!w.ranged)
             {
+                if (mastery && w.type == WeaponType.Daggers) { ThrowKnives(w, dir); return; }
+                if (mastery && w.type == WeaponType.Spear && ++javelinCount >= WeaponMasteries.JavelinEvery)
+                {
+                    javelinCount = 0;
+                    ThrowJavelin(w, dir);
+                    return;
+                }
                 StartCoroutine(MeleeAttack(w, target, dir));
                 return;
             }
@@ -392,6 +409,19 @@ namespace TWF
                 elements = Elements.Mask(Weapons.EquippedElement),
             };
             if (Weapons.EquippedElement != ElementPart.Physical && !w.arrow) spec.color = Elements.Color(Weapons.EquippedElement);
+            if (mastery && w.type == WeaponType.Staff) spec.onHit = GravityOnHit;
+            if (mastery && w.type == WeaponType.Wand) spec.onHit = ChainOnHit(spec, WeaponMasteries.ChainJumps, new HashSet<Combatant>());
+            if (mastery && w.type == WeaponType.Crossbow)
+            {
+                spec.damageMult *= WeaponMasteries.RepeaterDamage;
+                StartCoroutine(RepeaterBurst(w, spec, dir, target));
+            }
+            else FireVolley(w, spec, dir, target);
+        }
+
+        // The main shot plus one for each extra projectile.
+        void FireVolley(WeaponProfile w, ProjectileSpec spec, Vector2 dir, Combatant target)
+        {
             Projectile.Fire(Combatant, (Vector2)transform.position + dir * 0.4f, dir, spec, w.homing ? target : null);
             int extra = Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraProjectiles));
             for (int k = 1; k <= extra; k++)
@@ -406,6 +436,97 @@ namespace TWF
             Sound.Play(Sfx.Swing, transform.position, 0.3f);
         }
 
+        // ---------- Weapon masteries ----------
+
+        int javelinCount;
+
+        // How close an enemy must be before the basic attack starts: thrown knives reach further than a stab.
+        float AttackRange => WeaponMasteries.Active(WeaponType.Daggers) && Weapon.type == WeaponType.Daggers ? WeaponMasteries.KnifeRange : Weapon.range;
+
+        IEnumerator RepeaterBurst(WeaponProfile w, ProjectileSpec spec, Vector2 dir, Combatant target)
+        {
+            for (int i = 0; i < WeaponMasteries.RepeaterBolts; i++)
+            {
+                if (Combatant.IsDead) yield break;
+                FireVolley(w, spec, dir, target);
+                if (i < WeaponMasteries.RepeaterBolts - 1) yield return new WaitForSeconds(0.11f);
+            }
+        }
+
+        // Daggers: a fan of knives, one per strike, extra slash and extra projectile.
+        void ThrowKnives(WeaponProfile w, Vector2 dir)
+        {
+            var stats = Combatant.Stats;
+            int knives = w.hits + Mathf.RoundToInt(stats.Get(StatType.ExtraSlashes)) + Mathf.RoundToInt(stats.Get(StatType.ExtraProjectiles));
+            var spec = new ProjectileSpec
+            {
+                speed = 18f * (1f + stats.Get(StatType.ProjectileSpeed)), range = WeaponMasteries.KnifeRange + 1f, hitRadius = 0.3f,
+                damageMult = w.damageMult, color = new Color(0.85f, 0.88f, 0.95f), size = 0.55f, sprite = HeroVisuals.ArrowSprite, rotateSprite = true,
+                status = WeaponStatus(w), elements = Elements.Mask(Weapons.EquippedElement),
+            };
+            float spread = 9f * (1f + stats.Get(StatType.ProjectileSpread));
+            for (int k = 0; k < knives; k++)
+            {
+                var d = (Vector2)(Quaternion.Euler(0, 0, (k - (knives - 1) / 2f) * spread) * dir);
+                Projectile.Fire(Combatant, (Vector2)transform.position + d * 0.4f, d, spec);
+            }
+            Shoot(dir, false);
+            Sound.Play(Sfx.Swing, transform.position, 0.4f);
+        }
+
+        // Spear: a thrown spear that goes through everything in a long line.
+        void ThrowJavelin(WeaponProfile w, Vector2 dir)
+        {
+            var spec = new ProjectileSpec
+            {
+                speed = 22f * (1f + Combatant.Stats.Get(StatType.ProjectileSpeed)), range = WeaponMasteries.JavelinRange, hitRadius = 0.4f,
+                damageMult = w.damageMult * WeaponMasteries.JavelinDamage, pierce = -1, knockback = 0.5f,
+                color = new Color(0.9f, 0.8f, 0.6f), size = 1.1f, sprite = HeroVisuals.ArrowSprite, rotateSprite = true,
+                status = WeaponStatus(w), elements = Elements.Mask(Weapons.EquippedElement),
+            };
+            FireVolley(w, spec, dir, null);
+        }
+
+        // Staff: everything near the impact is dragged toward it.
+        void GravityOnHit(Combatant victim)
+        {
+            if (victim == null) return;
+            Vector2 at = victim.transform.position;
+            VFX.Ring(at, new Color(0.75f, 0.5f, 1f), WeaponMasteries.GravityRadius, 0.35f);
+            foreach (var c in Combat.HostilesInRadius(Team.Player, at, WeaponMasteries.GravityRadius).ToArray())
+            {
+                if (c == victim || c.IsDead) continue;
+                var info = Combat.Roll(Combatant, 0.15f, true);
+                info.knockback = (at - (Vector2)c.transform.position).normalized * WeaponMasteries.GravityPull;
+                c.TakeDamage(info);
+            }
+        }
+
+        // Wand: after a hit the bolt leaps on to the nearest enemy it hasn't struck yet.
+        System.Action<Combatant> ChainOnHit(ProjectileSpec spec, int jumpsLeft, HashSet<Combatant> struck) => victim =>
+        {
+            if (victim == null) return;
+            struck.Add(victim);
+            if (jumpsLeft <= 0) return;
+            Combatant next = null;
+            float best = WeaponMasteries.ChainRange;
+            foreach (var c in Combat.HostilesInRadius(Team.Player, victim.transform.position, WeaponMasteries.ChainRange))
+            {
+                if (c == victim || c.IsDead || struck.Contains(c)) continue;
+                float d = Vector2.Distance(victim.transform.position, c.transform.position);
+                if (d < best) { best = d; next = c; }
+            }
+            if (next == null) return;
+            struck.Add(next);
+            var hop = spec;
+            hop.homing = true;
+            hop.range = WeaponMasteries.ChainRange + 1f;
+            hop.onHit = ChainOnHit(spec, jumpsLeft - 1, struck);
+            Vector2 from = victim.transform.position;
+            var dir = ((Vector2)next.transform.position - from).normalized;
+            Projectile.Fire(Combatant, from + dir * 0.9f, dir, hop, next);
+        };
+
         // An elemental weapon sometimes applies its element's effect (burn, chill, ...).
         static StatusSpec WeaponStatus(WeaponProfile w)
         {
@@ -416,10 +537,17 @@ namespace TWF
             return st;
         }
 
+        // The axe finishes off enemies that are nearly down.
+        static float MeleeMult(WeaponProfile w, Combatant c) =>
+            w.damageMult * (w.executeBelow > 0f && c.HPFraction < w.executeBelow ? 1f + w.executeBonus : 1f);
+
         IEnumerator MeleeAttack(WeaponProfile w, Combatant target, Vector2 dir)
         {
             float reach = w.range * (1f + 0.4f * Combatant.Stats.Get(StatType.Handling));
-            for (int h = 0; h < w.hits; h++)
+            int swings = w.hits + Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraSlashes)) + (w.type == WeaponType.Sword && WeaponMasteries.DualWielding ? 1 : 0);
+            bool spin = w.type == WeaponType.Axe && WeaponMasteries.Active(WeaponType.Axe);
+            bool heavy = w.type == WeaponType.Hammer && WeaponMasteries.Active(WeaponType.Hammer);
+            for (int h = 0; h < swings; h++)
             {
                 if (w.arc >= 360f)
                 {
@@ -428,17 +556,31 @@ namespace TWF
                     VFX.Ring(at, new Color(1f, 0.9f, 0.7f), reach * 0.9f, 0.3f);
                     CameraFollow.Shake(0.08f);
                     foreach (var c in Combat.HostilesInRadius(Team.Player, at, reach * 0.9f))
-                        Combat.Hit(Combatant, c, w.damageMult, WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
+                        Combat.Hit(Combatant, c, MeleeMult(w, c), WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
+                    if (heavy)
+                        AreaEffect.Spawn(Combatant, at, new AreaSpec
+                        {
+                            radius = reach * 0.9f, delay = 0.35f, ticks = WeaponMasteries.HeavyTicks, interval = 0.45f,
+                            damageMult = w.damageMult * WeaponMasteries.HeavyDamage, status = StatusSpec.Slow(0.4f, 1.2f),
+                            color = new Color(0.65f, 0.5f, 0.3f), elements = Elements.Mask(Weapons.EquippedElement),
+                        });
+                }
+                else if (spin)
+                {
+                    // Axe mastery: a full spin around the hero.
+                    VFX.Ring(transform.position, new Color(1f, 1f, 1f, 0.7f), reach, 0.25f);
+                    foreach (var c in Combat.HostilesInRadius(Team.Player, transform.position, reach))
+                        Combat.Hit(Combatant, c, MeleeMult(w, c), WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
                 }
                 else
                 {
                     VFX.Slash(transform.position, dir, reach * 0.9f, w.arc, new Color(1f, 1f, 1f, 0.7f));
                     foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, dir, reach, w.arc))
-                        Combat.Hit(Combatant, c, w.damageMult, WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
+                        Combat.Hit(Combatant, c, MeleeMult(w, c), WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
                 }
                 Swing(dir, w.arc >= 360f ? 90f : w.arc);
                 Sound.Play(Sfx.Swing, transform.position, 0.5f);
-                if (h < w.hits - 1) yield return new WaitForSeconds(0.12f);
+                if (h < swings - 1) yield return new WaitForSeconds(0.12f);
             }
         }
 

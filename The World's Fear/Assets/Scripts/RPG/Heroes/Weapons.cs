@@ -29,6 +29,13 @@ namespace TWF
         public Color color = Color.white;
         public float implicitDamage = 1f; // weapon item damage scale
         public bool twoHanded;       // both hands on the weapon: no off-hand item
+        // Each weapon's own trait, shown on the weapon pick and in tooltips.
+        public string trait = "", traitText = "";
+        public float critDamage;     // added to the 1.5x crit multiplier
+        public float lifeSteal;      // fraction of damage dealt healed back
+        public float skillPower;     // flat skill power while wielded
+        public float executeBelow, executeBonus;   // bonus damage to enemies under this fraction of their health
+        public float guard;          // melee weapons: armor while wielded, scaled by the weapon's item level (see GuardArmor)
         public string[] tierNames;
     }
 
@@ -36,33 +43,49 @@ namespace TWF
     {
         public static readonly Dictionary<WeaponType, WeaponProfile> Profiles = new Dictionary<WeaponType, WeaponProfile>
         {
-            { WeaponType.Sword, new WeaponProfile { type = WeaponType.Sword, range = 1.9f, arc = 120f, attacksPerSecond = 1.3f, damageMult = 1f, knockback = 0.4f,
+            { WeaponType.Sword, new WeaponProfile { type = WeaponType.Sword, range = 1.9f, arc = 120f, attacksPerSecond = 1.3f, damageMult = 1.25f, knockback = 0.4f, implicitDamage = 1.3f, guard = 1f,
+                trait = "Keen Edge", traitText = "The highest weapon damage of any weapon.",
                 tierNames = new[] { "Rusty Blade", "Iron Sword", "Steel Broadsword", "Runed Greatsword" } } },
-            { WeaponType.Axe, new WeaponProfile { type = WeaponType.Axe, range = 2.1f, arc = 200f, attacksPerSecond = 0.95f, damageMult = 1.15f, knockback = 0.7f, implicitDamage = 1.1f,
+            { WeaponType.Axe, new WeaponProfile { type = WeaponType.Axe, range = 2.1f, arc = 200f, attacksPerSecond = 0.95f, damageMult = 1.15f, knockback = 0.7f, implicitDamage = 1.1f, guard = 1f,
+                executeBelow = 0.3f, executeBonus = 0.5f, trait = "Executioner", traitText = "+50% damage to enemies below 30% health.",
                 tierNames = new[] { "Hatchet", "Iron Axe", "Battle Axe", "Bloodreaver" } } },
-            { WeaponType.Hammer, new WeaponProfile { type = WeaponType.Hammer, range = 1.8f, arc = 360f, attacksPerSecond = 0.7f, damageMult = 1.6f, knockback = 1.2f, implicitDamage = 1.3f, twoHanded = true,
-                status = StatusSpec.Stun(0.7f, 0.25f), tierNames = new[] { "Mallet", "War Hammer", "Maul", "Earthbreaker" } } },
-            { WeaponType.Daggers, new WeaponProfile { type = WeaponType.Daggers, range = 1.5f, arc = 90f, attacksPerSecond = 2f, damageMult = 0.55f, hits = 2, critBonus = 0.1f, implicitDamage = 0.8f,
+            { WeaponType.Hammer, new WeaponProfile { type = WeaponType.Hammer, range = 1.8f, arc = 360f, attacksPerSecond = 0.7f, damageMult = 1.6f, knockback = 1.2f, implicitDamage = 1.3f, twoHanded = true, guard = 1.5f,
+                status = StatusSpec.Stun(0.7f, 0.35f), trait = "Earthshaker", traitText = "Slams everything around the target, with a 35% chance to stun. Two-handed.",
+                tierNames = new[] { "Mallet", "War Hammer", "Maul", "Earthbreaker" } } },
+            { WeaponType.Daggers, new WeaponProfile { type = WeaponType.Daggers, range = 1.7f, arc = 90f, attacksPerSecond = 2f, damageMult = 0.6f, hits = 2, critBonus = 0.25f, critDamage = 0.5f, implicitDamage = 0.8f, guard = 0.6f,
+                trait = "Assassin", traitText = "+25% crit chance, and crits deal 2x damage instead of 1.5x. Strikes twice.",
                 tierNames = new[] { "Shivs", "Twin Daggers", "Fang Blades", "Shadow Kris" } } },
-            { WeaponType.Spear, new WeaponProfile { type = WeaponType.Spear, range = 3f, arc = 35f, attacksPerSecond = 1.15f, damageMult = 1.05f, knockback = 0.5f,
+            { WeaponType.Spear, new WeaponProfile { type = WeaponType.Spear, range = 3f, arc = 35f, attacksPerSecond = 1.15f, damageMult = 1.05f, knockback = 0.5f, guard = 0.8f,
+                lifeSteal = 0.1f, trait = "Bloodthirst", traitText = "Heals you for 10% of the damage you deal.",
                 tierNames = new[] { "Wooden Spear", "Iron Spear", "Halberd", "Dragon Lance" } } },
-            { WeaponType.Bow, new WeaponProfile { type = WeaponType.Bow, ranged = true, range = 7f, attacksPerSecond = 1.75f, rootTime = 0.18f, attackFrame = 0.03f, damageMult = 0.95f, projectileSpeed = 20f,
+            { WeaponType.Bow, new WeaponProfile { type = WeaponType.Bow, ranged = true, range = 7f, attacksPerSecond = 2.4f, rootTime = 0.18f, attackFrame = 0.03f, damageMult = 0.95f, projectileSpeed = 20f,
                 arrow = true, homing = true, projectileSize = 0.9f, color = new Color(0.95f, 0.75f, 0.35f),
+                trait = "Quickdraw", traitText = "The fastest attacks of any weapon. You still stand still to shoot.",
                 tierNames = new[] { "Short Bow", "Hunting Bow", "Composite Bow", "Elderwood Longbow" } } },
             { WeaponType.Crossbow, new WeaponProfile { type = WeaponType.Crossbow, ranged = true, range = 8f, attacksPerSecond = 0.6f, rootTime = 0.18f, attackFrame = 0.03f, damageMult = 1.7f, projectileSpeed = 28f,
-                pierce = 2, arrow = true, projectileSize = 1f, color = new Color(0.8f, 0.8f, 0.85f), implicitDamage = 1.25f,
+                pierce = 4, arrow = true, projectileSize = 1f, color = new Color(0.8f, 0.8f, 0.85f), implicitDamage = 1.25f,
+                trait = "Piercing Bolts", traitText = "Heavy bolts that pass through up to 4 enemies.",
                 tierNames = new[] { "Light Crossbow", "Crossbow", "Arbalest", "Siege Repeater" } } },
             { WeaponType.Staff, new WeaponProfile { type = WeaponType.Staff, ranged = true, range = 6.5f, attacksPerSecond = 0.85f, rootTime = 0.42f, attackFrame = 0.07f, damageMult = 1.35f, projectileSpeed = 11f,
-                explodeRadius = 1.5f, projectileSize = 0.55f, color = new Color(0.75f, 0.5f, 1f), implicitDamage = 1.1f,
+                explodeRadius = 1.1f, projectileSize = 0.55f, color = new Color(0.75f, 0.5f, 1f), implicitDamage = 1.1f,
+                skillPower = 0.25f, trait = "Spellweaver", traitText = "+25% skill power while you hold it.",
                 tierNames = new[] { "Gnarled Staff", "Oak Staff", "Crystal Staff", "Starforged Staff" } } },
-            { WeaponType.Wand, new WeaponProfile { type = WeaponType.Wand, ranged = true, range = 6f, attacksPerSecond = 2.2f, rootTime = 0.3f, attackFrame = 0.05f, damageMult = 0.5f, projectileSpeed = 18f,
-                homing = true, projectileSize = 0.3f, color = new Color(0.5f, 0.85f, 1f), implicitDamage = 0.75f,
+            { WeaponType.Wand, new WeaponProfile { type = WeaponType.Wand, ranged = true, range = 6f, attacksPerSecond = 1.6f, rootTime = 0.3f, attackFrame = 0.05f, damageMult = 0.5f, projectileSpeed = 18f,
+                homing = true, explodeRadius = 1.6f, projectileSize = 0.3f, color = new Color(0.5f, 0.85f, 1f), implicitDamage = 0.75f,
+                trait = "Arcane Burst", traitText = "Homing bolts that burst on impact, hitting everything nearby. You still stand still to cast.",
                 tierNames = new[] { "Twig Wand", "Bone Wand", "Crystal Wand", "Void Scepter" } } },
             { WeaponType.Fists, new WeaponProfile { type = WeaponType.Fists, range = 1.3f, arc = 90f, attacksPerSecond = 1.4f, damageMult = 0.5f,
                 tierNames = new[] { "Fists", "Fists", "Fists", "Fists" } } },
         };
 
         public static WeaponProfile Get(WeaponType t) => Profiles[t];
+
+        // Melee weapons guard as well as hit: flat armor while wielded, growing with the weapon's item level.
+        public static float GuardArmor(WeaponType t, int itemLevel)
+        {
+            var p = Get(t);
+            return p.guard > 0f ? Mathf.Round(p.guard * (4f + Mathf.Max(1, itemLevel) * 1.2f)) : 0f;
+        }
 
         public static WeaponType Equipped
         {

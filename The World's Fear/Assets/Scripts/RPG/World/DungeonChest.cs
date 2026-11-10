@@ -89,6 +89,27 @@ namespace TWF
             opened?.Invoke();
         }
 
+        // Deep, high-level dungeons can hold mythics: from MythicFromLevel each item may be one, the vault's
+        // guaranteed legendary much more often than the rest.
+        public const int MythicFromLevel = 30;
+        const float VaultMythicPerLevel = 0.02f, VaultMythicMax = 0.5f;
+        const float ChestMythicPerLevel = 0.005f, ChestMythicMax = 0.1f;
+
+        public static float MythicChance(int level, bool vaultPrize)
+        {
+            int above = level - MythicFromLevel + 1;
+            if (above <= 0) return 0f;
+            return vaultPrize ? Mathf.Min(VaultMythicMax, above * VaultMythicPerLevel) : Mathf.Min(ChestMythicMax, above * ChestMythicPerLevel);
+        }
+
+        public static Rarity RollRarity(System.Random rng, int level, bool vault, int index)
+        {
+            bool prize = vault && index == 0;
+            if (rng.NextDouble() < MythicChance(level, prize)) return Rarity.Mythic;
+            if (prize) return Rarity.Legendary;
+            return rng.NextDouble() < (vault ? 0.4 : 0.2) ? Rarity.Legendary : Rarity.Rare;
+        }
+
         void DropLoot()
         {
             var rng = new System.Random(key.GetHashCode() ^ Environment.TickCount);
@@ -98,7 +119,7 @@ namespace TWF
             int items = vault ? 5 : 2;
             for (int i = 0; i < items; i++)
             {
-                var rarity = vault && i == 0 ? Rarity.Legendary : rng.NextDouble() < (vault ? 0.4 : 0.2) ? Rarity.Legendary : Rarity.Rare;
+                var rarity = RollRarity(rng, level, vault, i);
                 Pickup.SpawnItem(Spot(), ItemGenerator.Generate(level + (vault ? 2 : 1), rarity, ItemGenerator.RandomSlot(rng), rng));
             }
             Pickup.SpawnGold(Spot(), level * (vault ? 90 : 25));

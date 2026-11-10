@@ -7,7 +7,7 @@ namespace TWF
     public enum ItemSlot { Weapon, Helm, Chest, Gloves, Boots, Ring, Amulet, OffHand }
 
     // What an off-hand item is: each adds a different kind of power.
-    public enum OffHandKind { Shield, Orb, Tome, Quiver, ParryDagger }
+    public enum OffHandKind { Shield, Orb, Tome, Quiver, ParryDagger, Sword }   // Sword needs the Dual Wield mastery
 
     [Flags]
     public enum SlotMask

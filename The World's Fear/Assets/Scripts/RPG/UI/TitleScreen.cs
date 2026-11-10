@@ -141,7 +141,10 @@ namespace TWF
             var sb = new System.Text.StringBuilder();
             sb.Append($"<size=130%><b><color=#ffd040>{Weapons.Name(w)}</color></b></size>\n\n");
             sb.Append(Blurb(w));
+            if (p.trait.Length > 0) sb.Append($"\n\n<color=#ffd040><b>{p.trait}</b></color>: {p.traitText}");
             sb.Append($"\n\n{(p.ranged ? "Ranged" : "Melee")} · range {p.range:0.#}m · {p.attacksPerSecond:0.##} attacks/s");
+            float guard = Weapons.GuardArmor(w, 1);
+            if (guard > 0f) sb.Append($" · +{guard:0} armor");
             sb.Append("\n\n<color=#aaa>There are no classes: find any of 9 weapon types, spend attribute points as you level, " +
                       "and craft your own skills from elements, deliveries and modifiers at the Arcane Forge.</color>");
             sb.Append("\n\n<color=#f88>One life. If you fall, the run is over.</color>");
@@ -154,15 +157,15 @@ namespace TWF
         {
             switch (w)
             {
-                case WeaponType.Sword: return "A balanced blade: quick arcs in front of you.";
+                case WeaponType.Sword: return "A balanced blade that hits hard: quick arcs in front of you.";
                 case WeaponType.Axe: return "Heavy, wide sweeps that hit everything beside you.";
                 case WeaponType.Hammer: return "Slow, crushing blows all around you that can stun.";
-                case WeaponType.Daggers: return "Very fast twin strikes, up close.";
-                case WeaponType.Spear: return "Long reach in a narrow line.";
-                case WeaponType.Bow: return "Fast homing arrows from a safe distance.";
+                case WeaponType.Daggers: return "Very fast twin strikes up close that crit often and hard.";
+                case WeaponType.Spear: return "Long reach in a narrow line, and every hit feeds you.";
+                case WeaponType.Bow: return "A rapid stream of homing arrows from a safe distance.";
                 case WeaponType.Crossbow: return "Slow, heavy bolts that pierce through enemies.";
                 case WeaponType.Staff: return "Slow arcane orbs that explode on impact.";
-                case WeaponType.Wand: return "A rapid stream of small homing bolts.";
+                case WeaponType.Wand: return "Homing bolts that burst among the enemies they hit.";
                 default: return "";
             }
         }

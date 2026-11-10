@@ -161,3 +161,10 @@ MonoBehaviour:
     column: 4
     requiredLevel: 20
     requires: 
+  - id: p_flurry
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: e978b54bd9e644e6eb71826fdf75a158, type: 2}
+    tier: 3
+    column: 4
+    requiredLevel: 20
+    requires: 

@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
@@ -21,25 +23,33 @@ namespace TWF
 
         bool prompted, walking;
         TextMeshPro label;
+        GameObject steps, well, kerb, doorway, rubble;
+        readonly List<Light> lights = new List<Light>();
 
         float W => HalfWidth + 0.5f;
         float L => HalfLength + 0.5f;
         float Depth => Steps * Rise;
         Vector2 Mouth => (Vector2)transform.position + Vector2.down * (L + 0.4f);
         int MonsterLevel => areaLevel + LevelBonus;
-        bool Plundered => Profile.Data.openedChests.Contains(DoneKey(key));
+        // Cleared once its warden falls (or every chest is opened); after that the way down caves in for good.
+        bool Cleared => Profile.Data.openedChests.Contains(DoneKey(key));
+        bool Fallen => Profile.Data.openedChests.Contains(FallenKey(key));
         Biome LandBiome => WorldGen.BiomeAt(transform.position);
         int Seed => (int)(WorldGen.Hash(Mathf.FloorToInt(transform.position.x), Mathf.FloorToInt(transform.position.y)) & 0x7FFFFFFF);
         DungeonVariant Variant => DungeonVariant.For(LandBiome, Seed);
 
         public static string DoneKey(string gateKey) => $"dgn_{gateKey}_done";
+        static string FallenKey(string gateKey) => $"dgn_{gateKey}_fallen";
 
         void Start()
         {
             BuildStairs();
             BuildColliders();
             foreach (float side in new[] { -1f, 1f })
-                PointLights.Attach(transform, Variant.torch, 6f, 0.8f, new Vector3(side * (W + 0.2f), -L + 0.5f, -1.2f), true);
+            {
+                var light = PointLights.Attach(transform, Variant.torch, 6f, 0.8f, new Vector3(side * (W + 0.2f), -L + 0.5f, -1.2f), true);
+                if (light != null) lights.Add(light);
+            }
 
             label = new GameObject("Label").AddComponent<TextMeshPro>();
             label.transform.SetParent(Billboard.Create(transform), false);
@@ -53,14 +63,20 @@ namespace TWF
             label.sortingOrder = SortOrder.Text - 5;
             label.rectTransform.sizeDelta = new Vector2(12f, 2f);
             RefreshLabel();
+
+            if (Cleared)
+            {
+                if (Fallen) Collapse();
+                else StartCoroutine(Crumble());
+            }
         }
 
         string Title => Variant.NameFor(LandBiome, Seed);
 
         void RefreshLabel()
         {
-            label.text = Plundered
-                ? $"{Title}\n<size=70%><color=#bbb>Plundered</color></size>"
+            label.text = Cleared
+                ? $"{Title}\n<size=70%><color=#bbb>Collapsed</color></size>"
                 : $"{Title}\n<size=70%>{Variant.kind} · Monster level {MonsterLevel}</size>";
         }
 
@@ -104,14 +120,14 @@ namespace TWF
             rim.Add(new Vector3(-outer, l, 0f), Vector3.up, up, Vector3.left, 0.5f, PortalHeight);
             rim.Add(new Vector3(outer, l, 0f), Vector3.up, up, Vector3.right, 0.5f, PortalHeight);
 
-            steps.Build(transform, "Steps", stone);
-            walls.Build(transform, "Well", stone);
-            rim.Build(transform, "Kerb", stone, true);
+            this.steps = steps.Build(transform, "Steps", stone);
+            well = walls.Build(transform, "Well", stone);
+            kerb = rim.Build(transform, "Kerb", stone, true);
 
             var door = new StoneQuads { darkDepth = 0.001f };
             door.Add(new Vector3(-1.5f, l - 0.03f, Depth), Vector3.right, up, Vector3.down, 3f, Depth + PortalHeight * 0.75f);
-            var doorObject = door.Build(transform, "Doorway", stone);
-            if (doorObject != null) doorObject.GetComponent<MeshRenderer>().sharedMaterial = BlackMaterial();
+            doorway = door.Build(transform, "Doorway", stone);
+            if (doorway != null) doorway.GetComponent<MeshRenderer>().sharedMaterial = BlackMaterial();
         }
 
         static Material black;
@@ -145,14 +161,105 @@ namespace TWF
             if (near && !prompted)
             {
                 prompted = true;
-                if (Plundered)
-                    GameUI.Instance?.Toast("Nothing left below but dust.", new Color(0.8f, 0.8f, 0.85f), 3f);
+                if (Cleared)
+                    GameUI.Instance?.Toast("The way down has caved in.", new Color(0.8f, 0.8f, 0.85f), 3f);
                 else
                     ConfirmDialog.Show(
                         $"Descend into {Title}?\n<size=70%>{Variant.kind}: {Variant.tagline}.\nMonster level {MonsterLevel}, stronger than the land above. You are level {Profile.Data.level}.</size>",
                         "Descend", () => Descend(hero));
             }
             if (!near) prompted = false;
+        }
+
+        // ---------- Caving in ----------
+
+        const float CrumbleSeconds = 2.6f;
+        const float CrumbleViewRange = 25f;   // further than this from the hero, it just falls in unseen
+        static readonly Color Dust = new Color(0.55f, 0.5f, 0.44f);
+
+        // The first time the hero is back on the surface after clearing it: the gate shakes, the portal sinks
+        // and rubble fills the well.
+        IEnumerator Crumble()
+        {
+            yield return new WaitForSeconds(1f);   // let the scene fade in first
+            var hero = HeroController.Instance;
+            if (hero == null || Vector2.Distance(hero.transform.position, transform.position) > CrumbleViewRange)
+            {
+                Collapse();
+                yield break;
+            }
+
+            BuildRubble();
+            var kerbStart = kerb != null ? kerb.transform.localPosition : Vector3.zero;
+            var lightStart = new List<float>();
+            foreach (var l in lights) lightStart.Add(l != null ? l.intensity : 0f);
+            GameUI.Instance?.Toast($"{Title} caves in behind you.", new Color(0.8f, 0.8f, 0.85f), 3f);
+
+            float t = 0f, nextDust = 0f;
+            while (t < CrumbleSeconds)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.Clamp01(t / CrumbleSeconds);
+                float fall = k * k * (3f - 2f * k);
+                float jitter = (1f - k) * 0.07f;
+                if (kerb != null)
+                    kerb.transform.localPosition = kerbStart + new Vector3(Random.Range(-jitter, jitter), 0f, (PortalHeight + RimHeight) * fall);
+                if (rubble != null) rubble.transform.localPosition = new Vector3(0f, 0f, Depth * (1f - fall));
+                for (int i = 0; i < lights.Count; i++)
+                    if (lights[i] != null) lights[i].intensity = lightStart[i] * (1f - fall);
+                if (t >= nextDust)
+                {
+                    nextDust = t + 0.12f;
+                    var at = (Vector2)transform.position + new Vector2(Random.Range(-W, W), Random.Range(-L, L));
+                    VFX.Burst(at, Dust, 6, 0.9f);
+                    CameraFollow.Shake(0.18f * (1f - k) + 0.04f);
+                }
+                yield return null;
+            }
+            for (int i = 0; i < 4; i++)
+                VFX.Burst((Vector2)transform.position + new Vector2(Random.Range(-W, W), Random.Range(-L, L)), Dust, 10, 1.2f);
+            Collapse();
+        }
+
+        // What is left once it has fallen in: a sealed mound of rubble, no light, no way down.
+        void Collapse()
+        {
+            foreach (var part in new[] { steps, well, kerb, doorway })
+                if (part != null) part.SetActive(false);
+            foreach (var l in lights)
+                if (l != null) l.enabled = false;
+            BuildRubble();
+            rubble.transform.localPosition = Vector3.zero;
+            if (!Fallen)
+            {
+                Profile.Data.openedChests.Add(FallenKey(key));
+                Profile.Save();
+            }
+        }
+
+        void BuildRubble()
+        {
+            if (rubble != null) return;
+            var rng = new System.Random(Seed);
+            float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
+            var q = new StoneQuads();
+            var up = Vector3.back;
+            const float Ground = -0.05f;
+            float w = W + 0.5f, l = L;
+
+            // A flat fill over the whole hole, then loose blocks heaped on it.
+            q.Add(new Vector3(-w, -l, Ground), Vector3.right, Vector3.up, up, 2f * w, 2f * l);
+            for (int i = 0; i < 16; i++)
+            {
+                float sx = R(0.6f, 1.5f), sy = R(0.5f, 1.3f), h = R(0.25f, 0.95f);
+                float x = R(-w, w - sx), y = R(-l, l - sy), top = Ground - h;
+                q.Add(new Vector3(x, y, top), Vector3.right, Vector3.up, up, sx, sy);
+                q.Add(new Vector3(x, y, top), Vector3.right, Vector3.forward, Vector3.down, sx, h);
+                q.Add(new Vector3(x, y + sy, top), Vector3.right, Vector3.forward, Vector3.up, sx, h);
+                q.Add(new Vector3(x, y, top), Vector3.up, Vector3.forward, Vector3.left, sy, h);
+                q.Add(new Vector3(x + sx, y, top), Vector3.up, Vector3.forward, Vector3.right, sy, h);
+            }
+            rubble = q.Build(transform, "Rubble", StoneQuads.Stone(Variant.wall), true);
         }
 
         void Descend(HeroController hero)

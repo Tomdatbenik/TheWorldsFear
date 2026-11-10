@@ -25,6 +25,7 @@ namespace TWF
         ProjectileSpread,
         SkillPower,
         Handling,          // less standing still with ranged weapons, more reach with melee
+        ExtraSlashes,   // extra swings on melee basic attacks
     }
 
     public enum ModKind { Flat, Percent }
@@ -157,6 +158,7 @@ namespace TWF
                 case StatType.ProjectileSpread: return "Projectile Spread";
                 case StatType.SkillPower: return "Skill Power";
                 case StatType.Handling: return "Weapon Handling";
+                case StatType.ExtraSlashes: return "Slashes";
             }
             return stat.ToString();
         }
@@ -187,6 +189,7 @@ namespace TWF
                 case StatType.ProjectileSpread: return Mathf.Clamp(v, -0.6f, 2f);
                 case StatType.SkillPower: return Mathf.Clamp(v, 0f, 5f);
                 case StatType.Handling: return Mathf.Clamp(v, 0f, 0.75f);
+                case StatType.ExtraSlashes: return Mathf.Clamp(Mathf.Round(v), 0f, 4f);
                 default: return Mathf.Max(0f, v);
             }
         }

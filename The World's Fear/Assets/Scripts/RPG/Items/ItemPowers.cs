@@ -38,6 +38,8 @@ namespace TWF
                 proc = new StatBonusProc { stat = StatType.AreaSize, valuePerRank = 0.45f } },
             new Power { id = "storm", name = "of the Storm", slots = SlotMask.Weapon | SlotMask.Gloves,
                 proc = new StatBonusProc { stat = StatType.ExtraProjectiles, valuePerRank = 2f } },
+            new Power { id = "whirlwind", name = "of the Whirlwind", slots = SlotMask.Weapon | SlotMask.Gloves,
+                proc = new StatBonusProc { stat = StatType.ExtraSlashes, valuePerRank = 2f } },
             new Power { id = "horizon", name = "of the Horizon", slots = SlotMask.Weapon | SlotMask.Boots | SlotMask.Amulet,
                 proc = new StatBonusProc { stat = StatType.SkillRange, valuePerRank = 0.45f } },
             new Power { id = "eternity", name = "of Eternity", slots = SlotMask.Helm | SlotMask.Ring,

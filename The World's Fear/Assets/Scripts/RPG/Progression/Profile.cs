@@ -45,6 +45,7 @@ namespace TWF
         public List<string> guardiansSlain = new List<string>();
         public List<int> weaponSkillsOwned = new List<int>();          // WeaponSkillId values
         public int[] weaponSkillAttached = new int[10];                 // per WeaponType: skill id + 1, 0 = none
+        public List<int> masteriesOwned = new List<int>();              // WeaponType values with their mastery learned
         public List<string> revealedGates = new List<string>();         // boss lairs bought from the cartographer
         // Codex
         public List<CodexMonster> codexMonsters = new List<CodexMonster>();
@@ -138,6 +139,7 @@ namespace TWF
                 if (data.attributes == null || data.attributes.Length != Attributes.Count) data.attributes = new int[Attributes.Count];
                 if (data.weaponSkillAttached == null || data.weaponSkillAttached.Length != 10) data.weaponSkillAttached = new int[10];
                 data.weaponSkillsOwned ??= new List<int>();
+                data.masteriesOwned ??= new List<int>();
                 data.revealedGates ??= new List<string>();
                 data.codexMonsters ??= new List<CodexMonster>();
                 data.bossesSeen ??= new List<string>();
@@ -302,6 +304,13 @@ namespace TWF
 
         public static ItemInstance Equipped(ItemSlot slot) => Data.equipment.Find(i => i.slot == slot);
 
+        // The weapon the hero is fighting with right now; false when bare-handed.
+        public static bool RunWeapon(out WeaponType weapon)
+        {
+            weapon = Weapons.Equipped;
+            return weapon != WeaponType.Fists;
+        }
+
         public static bool IsTwoHanded(ItemInstance item) =>
             item != null && item.slot == ItemSlot.Weapon && Weapons.Get((WeaponType)item.weaponType).twoHanded;
 
@@ -309,7 +318,7 @@ namespace TWF
         // off hand, and an off-hand item frees the hands from a two-handed weapon.
         public static bool EquipItem(ItemInstance item)
         {
-            if (!Data.inventory.Contains(item)) return false;
+            if (!Data.inventory.Contains(item) || WeaponMasteries.NeedsDualWield(item)) return false;
             var old = Equipped(item.slot);
             ItemInstance bumped = null;
             if (IsTwoHanded(item)) bumped = Equipped(ItemSlot.OffHand);

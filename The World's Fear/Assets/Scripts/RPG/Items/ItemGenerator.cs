@@ -25,6 +25,7 @@ namespace TWF
             { OffHandKind.Tome, new[] { "Worn Tome", "Grimoire", "Codex of Ash", "Book of Ages" } },
             { OffHandKind.Quiver, new[] { "Hide Quiver", "Hunter's Quiver", "Elven Quiver", "Endless Quiver" } },
             { OffHandKind.ParryDagger, new[] { "Parrying Knife", "Main Gauche", "Twin Sai", "Fang Dagger" } },
+            { OffHandKind.Sword, new[] { "Short Sword", "Sidesword", "Steel Sabre", "Runed Blade" } },
         };
 
         static readonly string[] rareFirst = { "Grim", "Doom", "Storm", "Blood", "Shadow", "Ash", "Soul", "Bone", "Dread", "Wolf", "Raven", "Night", "Ember", "Frost" };
@@ -42,10 +43,23 @@ namespace TWF
             return Mathf.Clamp((int)item.rarity, 0, 3);
         }
 
-        public static ItemSlot RandomSlot(System.Random rng)
+        // Early on, monsters drop weapons much more often so new heroes get to try other weapon types:
+        // the weapon weight starts EarlyWeaponBonus higher at level 1 and is back to normal by EarlyGameEnd.
+        public const int EarlyGameEnd = 15;
+        const int EarlyWeaponBonus = 28;
+        // From this item level (the top weapon tier) a weapon is the type the hero is wielding this often,
+        // otherwise one of the other types.
+        public const int LateGameItemLevel = 25;
+        public const float LateOwnWeaponChance = 0.5f;
+
+        public static ItemSlot RandomSlot(System.Random rng) => RandomSlot(rng, EarlyGameEnd);
+
+        public static ItemSlot RandomSlot(System.Random rng, int monsterLevel)
         {
             // Weapons and jewelry a little rarer than armor.
             int[] weights = { 14, 15, 15, 15, 15, 13, 13, 12 };
+            float early = Mathf.Clamp01((EarlyGameEnd - monsterLevel) / (float)(EarlyGameEnd - 1));
+            weights[(int)ItemSlot.Weapon] += Mathf.RoundToInt(EarlyWeaponBonus * early);
             int total = 0;
             foreach (var w in weights) total += w;
             int r = rng.Next(total);
@@ -55,6 +69,15 @@ namespace TWF
                 r -= weights[i];
             }
             return ItemSlot.Chest;
+        }
+
+        public static WeaponType RandomWeaponType(System.Random rng, int itemLevel)
+        {
+            const int Types = 9;   // every WeaponType but Fists
+            if (itemLevel < LateGameItemLevel || !Profile.RunWeapon(out var own)) return (WeaponType)rng.Next(Types);
+            if (rng.NextDouble() < LateOwnWeaponChance) return own;
+            int other = rng.Next(Types - 1);
+            return (WeaponType)(other >= (int)own ? other + 1 : other);
         }
 
         public static Rarity RollRarity(System.Random rng, MonsterRank source, float magicFind = 0f)
@@ -93,13 +116,13 @@ namespace TWF
             if (slot == ItemSlot.Weapon)
             {
                 // Any weapon type can drop; each has its own basic attack.
-                var wt = forcedWeapon ?? (WeaponType)rng.Next(9);
+                var wt = forcedWeapon ?? RandomWeaponType(rng, itemLevel);
                 item.weaponType = (int)wt;
                 item.baseName = Weapons.Get(wt).tierNames[tier];
             }
             else if (slot == ItemSlot.OffHand)
             {
-                var kind = (OffHandKind)rng.Next(5);
+                var kind = (OffHandKind)rng.Next(6);
                 item.offHandKind = (int)kind;
                 item.baseName = offHandNames[kind][tier];
             }
@@ -129,6 +152,7 @@ namespace TWF
                 case ItemSlot.OffHand:
                     switch ((OffHandKind)item.offHandKind)
                     {
+                        case OffHandKind.Sword: item.implicitStat = StatType.Damage; item.implicitValue = Mathf.Round((3f + itemLevel * 1.8f) * jitter * 0.5f); break;
                         case OffHandKind.Shield: item.implicitStat = StatType.Armor; item.implicitValue = Mathf.Round((3f + itemLevel * 1.6f) * jitter); break;
                         case OffHandKind.Orb: item.implicitStat = StatType.SkillPower; item.implicitValue = Mathf.Round((0.04f + itemLevel * 0.004f) * jitter * 100f) / 100f; break;
                         case OffHandKind.Tome: item.implicitStat = StatType.CooldownReduction; item.implicitValue = Mathf.Round(Mathf.Min(0.2f, 0.03f + itemLevel * 0.002f) * jitter * 100f) / 100f; break;
@@ -210,8 +234,15 @@ namespace TWF
             var sb = new System.Text.StringBuilder();
             sb.Append($"<color={Palette.Hex(RarityInfo.Color(item.rarity))}><b>{item.name}</b></color>\n");
             string kind = item.slot == ItemSlot.Weapon ? Weapons.Name((WeaponType)item.weaponType) + (Weapons.Get((WeaponType)item.weaponType).twoHanded ? " (two-handed)" : "")
-                : item.slot == ItemSlot.OffHand ? $"Off-hand {(OffHandKind)item.offHandKind}" : item.slot.ToString();
+                : item.slot == ItemSlot.OffHand ? $"Off-hand {(OffHandKind)item.offHandKind}" + (WeaponMasteries.IsOffHandSword(item) ? " (needs Dual Wield)" : "") : item.slot.ToString();
             sb.Append($"<size=80%><color=#999>{item.rarity} {kind} · Item level {item.itemLevel}</color></size>\n");
+            if (item.slot == ItemSlot.Weapon)
+            {
+                var wp = Weapons.Get((WeaponType)item.weaponType);
+                float guard = Weapons.GuardArmor((WeaponType)item.weaponType, item.itemLevel);
+                if (guard > 0f) sb.Append($"<color=#fff>+{guard:0} Armor</color> <size=80%><color=#999>(melee guard)</color></size>\n");
+                if (wp.trait.Length > 0) sb.Append($"<size=80%><color=#ffd040>{wp.trait}</color>: {wp.traitText}</size>\n");
+            }
             sb.Append($"<color=#fff>{StatInfo.Format(item.implicitStat, ModKind.Flat, item.implicitValue)}</color>\n");
             if (item.socket)
             {

@@ -352,7 +352,14 @@ namespace TWF
             // A way out right here, so nobody has to walk the whole way back.
             int cx = layout.ExitColumn(last);
             AddExit(new Vector2(cx + 0.5f, last.rect.yMax - DungeonExit.Length));
-            GameUI.Instance?.Toast($"The {variant.wardenTitle} is slain. A way out opens.", Palette.Gold, 4f);
+            // Cleared: saved now, so it stays cleared even if the game is closed down here. The gate caves in once the hero is back up.
+            var done = DungeonGate.DoneKey(gateKey);
+            if (!string.IsNullOrEmpty(gateKey) && !Profile.Data.openedChests.Contains(done))
+            {
+                Profile.Data.openedChests.Add(done);
+                Profile.Save();
+            }
+            GameUI.Instance?.Toast($"The {variant.wardenTitle} is slain. A way out opens; this place will cave in once you leave, so loot what you can.", Palette.Gold, 5f);
         }
 
         // ---------- Finding the way around walls ----------

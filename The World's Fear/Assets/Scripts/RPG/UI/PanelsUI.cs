@@ -609,6 +609,7 @@ namespace TWF
         {
             if (selected == null) return;
             if (IsEquipped(selected)) Profile.UnequipItem(selected);
+            else if (WeaponMasteries.NeedsDualWield(selected)) GameUI.Instance?.Toast("Learn Dual Wield at the Weaponmaster to hold a sword in your off hand", Palette.MutedText);
             else if (!Profile.EquipItem(selected)) GameUI.Instance?.Toast("Bag full: no room for the item this replaces", Palette.MutedText);
             Refresh();
         }

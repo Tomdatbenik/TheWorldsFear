@@ -62,7 +62,7 @@ namespace TWF
             foreach (Transform c in tabs) Destroy(c.gameObject);
             foreach (Transform c in cards) Destroy(c.gameObject);
             goldText.text = $"{Profile.Data.gold} gold";
-            hint.text = $"You are holding: <color=#fff>{Weapons.Name(Weapons.Equipped)}</color>   ·   Its attached skill is on the 5th skill button";
+            hint.text = $"You are holding: <color=#fff>{Weapons.Name(Weapons.Equipped)}</color>   ·   Its attached skill is on the 5th skill button   ·   Masteries are always on";
 
             for (int i = 0; i < 10; i++)
             {
@@ -79,6 +79,37 @@ namespace TWF
             }
 
             foreach (var id in WeaponSkills.For(shown)) Card(id);
+            if (shown != WeaponType.Fists) MasteryCard(shown);
+        }
+
+        void MasteryCard(WeaponType w)
+        {
+            var color = Palette.Gold;
+            var card = UIFactory.Panel("Mastery", cards, new Color(0.16f, 0.12f, 0.08f, 0.95f));
+            var icon = UIFactory.Image("Icon", card.transform, IconFactory.Get(WeaponMasteries.Icon(w), color), Color.white);
+            icon.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -24), new Vector2(120, 120));
+            icon.preserveAspect = true;
+            var title = UIFactory.Text("Title", card.transform, WeaponMasteries.Name(w), 38, Palette.Gold);
+            title.fontStyle = FontStyles.Bold;
+            title.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -150), new Vector2(520, 50));
+            var body = UIFactory.Text("Body", card.transform,
+                $"{WeaponMasteries.Describe(w)}\n\n<color=#aaa>{Weapons.Name(w)} mastery  ·  always on while you hold one</color>",
+                24, Palette.Text, TextAlignmentOptions.Top);
+            body.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -210), new Vector2(520, 220));
+
+            bool owned = WeaponMasteries.Has(w);
+            int price = WeaponMasteries.Price(w);
+            var btn = UIFactory.Button("Action", card.transform, owned ? "Learned" : $"Learn  {price}g", () =>
+            {
+                if (WeaponMasteries.Buy(w))
+                {
+                    Sound.Play(Sfx.LevelUp, Vector3.zero, 0.4f);
+                    GameUI.Instance?.Toast($"Mastered {WeaponMasteries.Name(w)}", Palette.Gold);
+                }
+                Refresh();
+            }, owned ? new Color(0.3f, 0.26f, 0.1f, 1f) : Profile.Data.gold >= price ? new Color(0.2f, 0.4f, 0.15f, 1f) : new Color(0.25f, 0.2f, 0.2f, 1f), 30);
+            ((RectTransform)btn.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(420, 84));
+            btn.interactable = !owned && Profile.Data.gold >= price;
         }
 
         void Card(WeaponSkillId id)
@@ -90,12 +121,12 @@ namespace TWF
             icon.preserveAspect = true;
             var title = UIFactory.Text("Title", card.transform, WeaponSkills.Name(id), 38, Palette.Text);
             title.fontStyle = FontStyles.Bold;
-            title.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -150), new Vector2(600, 50));
+            title.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -150), new Vector2(520, 50));
             var def = WeaponSkills.Get(id);
             var body = UIFactory.Text("Body", card.transform,
                 $"{WeaponSkills.Describe(id)}\n\n<color=#aaa>{Weapons.Name(WeaponSkills.WeaponOf(id))} skill  ·  {def.baseCooldown:0} s cooldown</color>",
                 24, Palette.Text, TextAlignmentOptions.Top);
-            body.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -210), new Vector2(600, 180));
+            body.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -210), new Vector2(520, 220));
 
             bool owned = WeaponSkills.Owned(id);
             bool attached = WeaponSkills.Attached(WeaponSkills.WeaponOf(id)) == id;

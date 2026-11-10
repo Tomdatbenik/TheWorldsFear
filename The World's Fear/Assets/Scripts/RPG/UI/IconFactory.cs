@@ -746,7 +746,7 @@ namespace TWF
             if (s.Contains("execut") || s.Contains("explosive")) return "skull";
             if (s.Contains("eagle") || s.Contains("hunter")) return "eye";
             if (s.Contains("pierce") || s.Contains("sharp") || s.Contains("arrow")) return "bow";
-            if (s.Contains("cleave") || s.Contains("mastery")) return "slash";
+            if (s.Contains("cleave") || s.Contains("mastery") || s.Contains("flurry")) return "slash";
             return "arcane";
         }
 

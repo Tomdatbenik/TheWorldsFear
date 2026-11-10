@@ -39,7 +39,7 @@ namespace TWF
             for (int i = 0; i < items; i++)
             {
                 var rarity = rank == MonsterRank.Boss && i == 0 ? Rarity.Legendary : ItemGenerator.RollRarity(rng, rank, WorldGen.MagicFind(level));
-                var item = ItemGenerator.Generate(level + (rank == MonsterRank.Normal ? 0 : 1), rarity, ItemGenerator.RandomSlot(rng), rng);
+                var item = ItemGenerator.Generate(level + (rank == MonsterRank.Normal ? 0 : 1), rarity, ItemGenerator.RandomSlot(rng, level), rng);
                 Pickup.SpawnItem(at + Random.insideUnitCircle * 1.2f, item);
             }
         }
