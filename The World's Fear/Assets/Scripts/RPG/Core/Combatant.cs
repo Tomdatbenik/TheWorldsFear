@@ -206,6 +206,7 @@ namespace TWF
         {
             if (!spec.IsSet || IsDead) return;
             if (spec.chance > 0f && spec.chance < 1f && UnityEngine.Random.value > spec.chance) return;
+            if (spec.type == StatusType.Burn || spec.type == StatusType.Poison || spec.type == StatusType.Chill) StatusFx.Ensure(this);
 
             float duration = spec.duration;
             if (rank == MonsterRank.Boss) duration *= 0.5f; // bosses shrug off crowd control faster

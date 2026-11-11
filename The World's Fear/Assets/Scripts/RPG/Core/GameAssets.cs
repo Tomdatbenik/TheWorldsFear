@@ -147,7 +147,8 @@ namespace TWF
     public static class Ground
     {
         // Flat decals (telegraphs, rings) sit a hair above the ground to avoid z-fighting. Up is -Z.
-        public const float DecalZ = -0.03f;
+        // Above the village plaza (-0.04) and roads, which would otherwise hide decals there.
+        public const float DecalZ = -0.07f;
 
         public static Vector3 Decal(Vector2 p) => new Vector3(p.x, p.y, DecalZ);
     }

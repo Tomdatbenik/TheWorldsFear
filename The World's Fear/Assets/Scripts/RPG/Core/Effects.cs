@@ -22,6 +22,7 @@ namespace TWF
         public float snapshotDamage;
         public System.Action<Combatant> onHit;
         public int elements;
+        public string look;           // drawn look: "arrow", "knife", "spear", "axe", "orb", "bolt"; empty picks from the sprite and size
 
         public static ProjectileSpec Default(Color color) => new ProjectileSpec
         {
@@ -63,10 +64,14 @@ namespace TWF
             p.pierceLeft = spec.pierce;
             p.homingTarget = homingTarget;
 
-            var sprite = spec.sprite != null ? spec.sprite : GameAssets.PixelDot;
-            var sr = GameAssets.CreateWorldSprite("visual", sprite, go.transform, spec.color, SortOrder.Projectiles, spec.size);
-            if (spec.sprite == null)
+            // The drawn look in the shot's element: arrows, knives, spears, axes, bolts and orbs.
+            var drawn = Fx.Projectile(spec, go.transform);
+            if (drawn != null) { }
+            else if (spec.sprite != null)
+                GameAssets.CreateWorldSprite("visual", spec.sprite, go.transform, spec.color, SortOrder.Projectiles, spec.size);
+            else
             {
+                GameAssets.CreateWorldSprite("visual", GameAssets.PixelDot, go.transform, spec.color, SortOrder.Projectiles, spec.size);
                 var glow = GameAssets.CreateWorldSprite("glow", GameAssets.PixelGlow, go.transform,
                     new Color(spec.color.r, spec.color.g, spec.color.b, 0.45f), SortOrder.Projectiles - 1, spec.size * 2.4f);
                 var core = GameAssets.CreateWorldSprite("core", GameAssets.PixelDot, go.transform,
@@ -75,7 +80,7 @@ namespace TWF
             // Fly at chest height (the ground is z = 0 and up is -z).
             foreach (Transform child in go.transform) child.localPosition += Vector3.back * 0.7f;
             if (owner != null && owner.team == Team.Player) PointLights.Attach(go.transform, spec.color, 3.5f, 2.2f, new Vector3(0, 0, -0.9f));
-            if (spec.rotateSprite || spec.sprite != null)
+            if (spec.rotateSprite || spec.sprite != null || drawn != null)
                 go.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(p.dir.y, p.dir.x) * Mathf.Rad2Deg);
             return p;
         }
@@ -98,7 +103,7 @@ namespace TWF
                 if (spec.explodeRadius > 0f) Explode();
                 else
                 {
-                    VFX.Burst(transform.position, spec.color, 4, 0.2f);
+                    Fx.Hit(transform.position + Vector3.back * 0.7f, Element, 0.3f);
                     Destroy(gameObject);
                 }
                 return;
@@ -123,7 +128,7 @@ namespace TWF
                 }
                 Combat.Hit(owner, c, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);
                 spec.onHit?.Invoke(c);
-                VFX.Burst(transform.position, spec.color, 5, 0.25f);
+                Fx.HitOn(c, Element);
                 if (spec.pierce >= 0)
                 {
                     if (pierceLeft <= 0)
@@ -143,10 +148,11 @@ namespace TWF
             }
         }
 
+        string Element => Fx.Element(spec.elements, spec.color);
+
         void Explode()
         {
-            VFX.Ring(transform.position, spec.color, spec.explodeRadius, 0.3f);
-            VFX.Burst(transform.position, spec.color, 12, spec.explodeRadius);
+            Fx.Blast(transform.position, spec.explodeRadius, Element);
             foreach (var c in Combat.HostilesInRadius(team, transform.position, spec.explodeRadius).ToArray())
             {
                 Combat.Hit(owner, c, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);
@@ -204,8 +210,9 @@ namespace TWF
             a.owner = owner;
             a.team = owner != null ? owner.team : Team.Enemy;
             var c = spec.color;
-            a.ringSr = GameAssets.CreateWorldSprite("ring", GameAssets.PixelRing, go.transform, new Color(c.r, c.g, c.b, 0.8f), SortOrder.Telegraph + 1, spec.radius * 2f);
-            a.fillSr = GameAssets.CreateWorldSprite("fill", GameAssets.PixelDisc, go.transform, new Color(c.r, c.g, c.b, 0.45f), SortOrder.Telegraph, spec.radius * 2f);
+            // Drawn at their real size so the warning stays crisp instead of turning into a blocky grid.
+            a.ringSr = GameAssets.CreateWorldSprite("ring", Fx.Ring(spec.radius), go.transform, new Color(c.r, c.g, c.b, 0.85f), SortOrder.Telegraph + 1, spec.radius * 2f);
+            a.fillSr = GameAssets.CreateWorldSprite("fill", Fx.Disc(spec.radius), go.transform, new Color(c.r, c.g, c.b, 0.3f), SortOrder.Telegraph, spec.radius * 2f);
             a.StartCoroutine(a.Run());
             return a;
         }
@@ -224,11 +231,19 @@ namespace TWF
             }
             fillSr.transform.localScale = full;
 
+            // One pulse explodes; several leave a pool that pulses (and, when it stays put, starts with a blast).
+            string el = Fx.Element(spec.elements, c);
+            bool lingers = spec.ticks > 1;
+            if (lingers)
+                Fx.Linger(transform.position, spec.radius, el, spec.interval * (spec.ticks - 1) + 0.5f,
+                    spec.followOwner && owner != null ? owner.transform : null);
             for (int i = 0; i < spec.ticks; i++)
             {
                 Follow();
-                fillSr.color = new Color(c.r, c.g, c.b, 0.55f);
-                VFX.Burst(transform.position, c, 8, spec.radius * 0.8f);
+                fillSr.color = new Color(c.r, c.g, c.b, lingers ? 0.16f : 0.22f);
+                if (!lingers) Fx.Blast(transform.position, spec.radius, el);
+                else if (i == 0 && !spec.followOwner) Fx.Blast(transform.position, spec.radius * 0.8f, el);
+                else Fx.Shock(transform.position, spec.radius, el, 0.55f);
                 foreach (var target in Combat.HostilesInRadius(team, transform.position, spec.radius).ToArray())
                 {
                     Combat.Hit(owner, target, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);
@@ -239,7 +254,7 @@ namespace TWF
                 {
                     w += Time.deltaTime;
                     Follow();
-                    fillSr.color = new Color(c.r, c.g, c.b, Mathf.Lerp(0.55f, 0.2f, w / Mathf.Max(0.01f, spec.interval)));
+                    fillSr.color = new Color(c.r, c.g, c.b, Mathf.Lerp(0.16f, 0.1f, w / Mathf.Max(0.01f, spec.interval)));
                     yield return null;
                 }
             }
@@ -248,8 +263,8 @@ namespace TWF
             while (fade > 0f)
             {
                 fade -= Time.deltaTime;
-                fillSr.color = new Color(c.r, c.g, c.b, 0.55f * fade / 0.25f);
-                ringSr.color = new Color(c.r, c.g, c.b, 0.8f * fade / 0.25f);
+                fillSr.color = new Color(c.r, c.g, c.b, 0.2f * fade / 0.25f);
+                ringSr.color = new Color(c.r, c.g, c.b, 0.85f * fade / 0.25f);
                 yield return null;
             }
             Destroy(gameObject);
@@ -292,8 +307,8 @@ namespace TWF
         {
             for (int i = 0; i < count; i++)
             {
-                // Square sparks snapped to whole art pixels (1/16 of a unit).
-                var sr = GameAssets.CreateWorldSprite("spark", GameAssets.Pixel, null, color, SortOrder.Effects, Random.Range(1, 3) / 16f);
+                // Square sparks of 2-3 art pixels, the same pixel size as the characters.
+                var sr = GameAssets.CreateWorldSprite("spark", GameAssets.Pixel, null, color, SortOrder.Effects, Random.Range(2, 4) / Fx.PPU);
                 sr.transform.position = new Vector3(pos.x, pos.y, -0.5f);
                 sr.transform.rotation = View.Rotation;
                 var v = sr.gameObject.AddComponent<VFX>();
@@ -308,7 +323,7 @@ namespace TWF
 
         public static void Ring(Vector3 pos, Color color, float radius, float duration)
         {
-            var sr = GameAssets.CreateWorldSprite("ring", GameAssets.PixelRing, null, color, SortOrder.Effects, radius * 2f);
+            var sr = GameAssets.CreateWorldSprite("ring", Fx.Ring(radius), null, color, SortOrder.Effects, radius * 2f);
             sr.transform.position = new Vector3(pos.x, pos.y, Ground.DecalZ * 2f);
             var v = sr.gameObject.AddComponent<VFX>();
             v.sr = sr;
@@ -318,25 +333,9 @@ namespace TWF
             v.growTo = 3.3f;
         }
 
-        public static void Slash(Vector3 pos, Vector2 dir, float radius, float arcDeg, Color color)
-        {
-            int segments = Mathf.Clamp(Mathf.RoundToInt(arcDeg / 12f), 3, 30);
-            float baseAngle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-            for (int i = 0; i <= segments; i++)
-            {
-                float a = (baseAngle - arcDeg / 2f + arcDeg * i / segments) * Mathf.Deg2Rad;
-                var p = pos + new Vector3(Mathf.Cos(a), Mathf.Sin(a)) * radius * 0.85f + Vector3.back * 0.4f;
-                var sr = GameAssets.CreateWorldSprite("slash", GameAssets.PixelDot, null, color, SortOrder.Effects, radius * 0.22f);
-                sr.transform.position = p;
-                var v = sr.gameObject.AddComponent<VFX>();
-                v.sr = sr;
-                v.color = color;
-                v.velocity = new Vector3(Mathf.Cos(a), Mathf.Sin(a)) * 1.5f;
-                v.life = v.maxLife = 0.12f + 0.1f * i / segments;
-                v.startScale = sr.transform.localScale;
-                v.growTo = 0.6f;
-            }
-        }
+        // A drawn swing trail on the ground (see Fx.Slash).
+        public static void Slash(Vector3 pos, Vector2 dir, float radius, float arcDeg, Color color) =>
+            Fx.Slash(pos, dir, radius, arcDeg, Fx.Element(0, color));
 
         void Update()
         {

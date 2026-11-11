@@ -461,7 +461,7 @@ namespace TWF
             var spec = new ProjectileSpec
             {
                 speed = 18f * (1f + stats.Get(StatType.ProjectileSpeed)), range = WeaponMasteries.KnifeRange + 1f, hitRadius = 0.3f,
-                damageMult = w.damageMult, color = new Color(0.85f, 0.88f, 0.95f), size = 0.55f, sprite = HeroVisuals.ArrowSprite, rotateSprite = true,
+                damageMult = w.damageMult, color = new Color(0.85f, 0.88f, 0.95f), size = 0.55f, sprite = HeroVisuals.ArrowSprite, look = "knife", rotateSprite = true,
                 status = WeaponStatus(w), elements = Elements.Mask(Weapons.EquippedElement),
             };
             float spread = 9f * (1f + stats.Get(StatType.ProjectileSpread));
@@ -481,7 +481,7 @@ namespace TWF
             {
                 speed = 22f * (1f + Combatant.Stats.Get(StatType.ProjectileSpeed)), range = WeaponMasteries.JavelinRange, hitRadius = 0.4f,
                 damageMult = w.damageMult * WeaponMasteries.JavelinDamage, pierce = -1, knockback = 0.5f,
-                color = new Color(0.9f, 0.8f, 0.6f), size = 1.1f, sprite = HeroVisuals.ArrowSprite, rotateSprite = true,
+                color = new Color(0.9f, 0.8f, 0.6f), size = 1.1f, sprite = HeroVisuals.ArrowSprite, look = "spear", rotateSprite = true,
                 status = WeaponStatus(w), elements = Elements.Mask(Weapons.EquippedElement),
             };
             FireVolley(w, spec, dir, null);
@@ -547,16 +547,22 @@ namespace TWF
             int swings = w.hits + Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraSlashes)) + (w.type == WeaponType.Sword && WeaponMasteries.DualWielding ? 1 : 0);
             bool spin = w.type == WeaponType.Axe && WeaponMasteries.Active(WeaponType.Axe);
             bool heavy = w.type == WeaponType.Hammer && WeaponMasteries.Active(WeaponType.Hammer);
+            string fx = Fx.Name(Weapons.EquippedElement);
             for (int h = 0; h < swings; h++)
             {
                 if (w.arc >= 360f)
                 {
-                    // Hammer: slam a circle at the target.
+                    // Hammer: slam a circle at the target: a shockwave with cracks and a puff of dust (or the weapon's element).
                     Vector2 at = (Vector2)transform.position + dir * (target != null ? Mathf.Min(reach * 0.7f, Vector2.Distance(transform.position, target.transform.position)) : reach * 0.7f);
-                    VFX.Ring(at, new Color(1f, 0.9f, 0.7f), reach * 0.9f, 0.3f);
+                    Fx.Shock(at, reach * 0.9f, fx);
+                    Fx.Play("blast_" + fx, at, reach * 0.42f);
                     CameraFollow.Shake(0.08f);
                     foreach (var c in Combat.HostilesInRadius(Team.Player, at, reach * 0.9f))
+                    {
                         Combat.Hit(Combatant, c, MeleeMult(w, c), WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
+                        Fx.HitOn(c, fx);
+                        Fx.Proc(c, Weapons.EquippedElement);
+                    }
                     if (heavy)
                         AreaEffect.Spawn(Combatant, at, new AreaSpec
                         {
@@ -568,15 +574,23 @@ namespace TWF
                 else if (spin)
                 {
                     // Axe mastery: a full spin around the hero.
-                    VFX.Ring(transform.position, new Color(1f, 1f, 1f, 0.7f), reach, 0.25f);
+                    Fx.Slash(transform.position, dir, reach, 360f, fx);
                     foreach (var c in Combat.HostilesInRadius(Team.Player, transform.position, reach))
+                    {
                         Combat.Hit(Combatant, c, MeleeMult(w, c), WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
+                        Fx.HitOn(c, fx);
+                        Fx.Proc(c, Weapons.EquippedElement);
+                    }
                 }
                 else
                 {
-                    VFX.Slash(transform.position, dir, reach * 0.9f, w.arc, new Color(1f, 1f, 1f, 0.7f));
+                    Fx.Slash(transform.position, dir, reach * 0.95f, w.arc, fx);
                     foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, dir, reach, w.arc))
+                    {
                         Combat.Hit(Combatant, c, MeleeMult(w, c), WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
+                        Fx.HitOn(c, fx);
+                        Fx.Proc(c, Weapons.EquippedElement);
+                    }
                 }
                 Swing(dir, w.arc >= 360f ? 90f : w.arc);
                 Sound.Play(Sfx.Swing, transform.position, 0.5f);

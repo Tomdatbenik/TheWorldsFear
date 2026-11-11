@@ -316,6 +316,7 @@ namespace TWF
         public int count = 1;
         public float spread;
         public float speed = 15f, range = 9f, size = 0.5f, hitRadius = 0.35f, damageMult = 1.5f;
+        public string look;   // "arrow", "knife", "spear", "axe", "orb", "bolt"; empty: a bolt or orb by size
         public int pierce;
         public bool homing;
         public float explodeRadius;
@@ -336,7 +337,7 @@ namespace TWF
                 {
                     speed = speed * ctx.ProjectileSpeed, range = range * ctx.Range, hitRadius = hitRadius, damageMult = damageMult * ctx.power,
                     pierce = pierce, status = ctx.Scale(hit.status), color = hit.color, size = size, knockback = hit.knockback,
-                    homing = homing && target != null, rotateSprite = true, explodeRadius = explodeRadius * ctx.Area, elements = hit.elements,
+                    homing = homing && target != null, rotateSprite = true, explodeRadius = explodeRadius * ctx.Area, elements = hit.elements, look = look,
                     onHit = t => hit.OnHit(c, t),
                 };
                 Projectile.Fire(ctx.caster, ctx.origin + d * 0.4f, d, spec, target);
@@ -426,7 +427,7 @@ namespace TWF
         public override void Apply(SkillContext ctx)
         {
             float r = radius * ctx.Area;
-            VFX.Slash(ctx.caster.transform.position, ctx.direction, r, angle, hit.color);
+            Fx.Slash(ctx.caster.transform.position, ctx.direction, r, angle, Fx.Element(hit.elements, hit.color));
             foreach (var t in Combat.HostilesInArc(ctx.caster.team, ctx.caster.transform.position, ctx.direction, r, angle))
             {
                 Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, hit.knockback, -1f, hit.elements);

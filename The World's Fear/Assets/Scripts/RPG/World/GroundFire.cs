@@ -21,8 +21,11 @@ namespace TWF
             var gf = Spawn(owner, at, null, radius, duration > 0f ? duration : Random.Range(8f, 11f));
             gf.status = status;
             gf.poolColor = new Color(color.r, color.g, color.b, 0.55f);
-            gf.pool = GameAssets.CreateWorldSprite("Pool", GameAssets.PixelDisc, gf.transform, gf.poolColor, SortOrder.Ground + 5, radius * 2.3f);
+            // A faint crisp disc marks the area; the drawn pool on top carries the look.
+            gf.poolColor = new Color(color.r, color.g, color.b, 0.22f);
+            gf.pool = GameAssets.CreateWorldSprite("Pool", Fx.Disc(radius), gf.transform, gf.poolColor, SortOrder.Ground + 5, radius * 2f);
             gf.pool.transform.localPosition = new Vector3(0, 0, Ground.DecalZ);
+            Fx.Linger(at, radius, Fx.Element(0, color), gf.life);
             if (gf.glow != null) { gf.glow.color = color; gf.glow.range = radius * 2.5f; }
             return gf;
         }
@@ -51,6 +54,7 @@ namespace TWF
                 RenderAssets.MakeLit(r, false, RenderAssets.Instance.litEmissive);
                 gf.flames = f.transform;
                 gf.baseScale = f.transform.localScale;
+                Fx.Play("linger_fire", at, radius * 0.9f, null, Random.Range(0f, 360f), gf.life);
             }
             gf.glow = PointLights.Attach(go.transform, new Color(1f, 0.5f, 0.2f), 3.5f, 1.6f, new Vector3(0, 0, -0.6f));
             return gf;

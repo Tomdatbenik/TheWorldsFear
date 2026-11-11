@@ -196,7 +196,7 @@ namespace TWF
                     break;
                 case WeaponSkillId.AxeThrow:
                     Shot(s, 9f, 5f);
-                    fx.Add(new CraftedProjectile { speed = 14f, range = 9f, size = 0.9f, hitRadius = 0.6f, damageMult = 2f, pierce = -1, hit = hit });
+                    fx.Add(new CraftedProjectile { look = "axe", speed = 14f, range = 9f, size = 0.9f, hitRadius = 0.6f, damageMult = 2f, pierce = -1, hit = hit });
                     break;
                 case WeaponSkillId.Earthquake:
                     Self(s, 10f, 4.5f);
@@ -209,7 +209,7 @@ namespace TWF
                     break;
                 case WeaponSkillId.FanOfKnives:
                     Self(s, 6f, 7f);
-                    fx.Add(new CraftedProjectile { count = 12, spread = 360f, speed = 16f, range = 7f, size = 0.45f, hitRadius = 0.35f, damageMult = 0.9f,
+                    fx.Add(new CraftedProjectile { look = "knife", count = 12, spread = 360f, speed = 16f, range = 7f, size = 0.45f, hitRadius = 0.35f, damageMult = 0.9f,
                         hit = new HitExtras { color = col, status = StatusSpec.Poison(0.4f, 3f) } });
                     break;
                 case WeaponSkillId.ShadowStep:
@@ -219,7 +219,7 @@ namespace TWF
                     break;
                 case WeaponSkillId.Impale:
                     Shot(s, 11f, 6f);
-                    fx.Add(new CraftedProjectile { speed = 34f, range = 11f, size = 0.5f, hitRadius = 0.5f, damageMult = 2.5f, pierce = -1, hit = new HitExtras { color = col, knockback = 2f } });
+                    fx.Add(new CraftedProjectile { look = "spear", speed = 34f, range = 11f, size = 0.5f, hitRadius = 0.5f, damageMult = 2.5f, pierce = -1, hit = new HitExtras { color = col, knockback = 2f } });
                     break;
                 case WeaponSkillId.Vault:
                     Dash(s, 7f, 7f);
@@ -229,7 +229,7 @@ namespace TWF
                 case WeaponSkillId.Barrage:
                     Shot(s, 10f, 7f);
                     fx.Add(new RepeatEffect { times = 5, interval = 0.12f, inner = new List<SkillEffect> {
-                        new CraftedProjectile { count = 3, spread = 18f, speed = 22f, range = 10f, size = 0.45f, hitRadius = 0.35f, damageMult = 0.6f, hit = hit } } });
+                        new CraftedProjectile { look = "arrow", count = 3, spread = 18f, speed = 22f, range = 10f, size = 0.45f, hitRadius = 0.35f, damageMult = 0.6f, hit = hit } } });
                     break;
                 case WeaponSkillId.RainOfArrows:
                     Ground(s, 9f, 9f, 3.2f);
@@ -237,13 +237,13 @@ namespace TWF
                     break;
                 case WeaponSkillId.ExplosiveBolt:
                     Shot(s, 10f, 7f);
-                    fx.Add(new CraftedProjectile { speed = 20f, range = 10f, size = 0.7f, hitRadius = 0.45f, damageMult = 2.6f, explodeRadius = 2.4f,
+                    fx.Add(new CraftedProjectile { look = "arrow", speed = 20f, range = 10f, size = 0.7f, hitRadius = 0.45f, damageMult = 2.6f, explodeRadius = 2.4f,
                         hit = new HitExtras { color = new Color(1f, 0.55f, 0.2f), status = StatusSpec.Burn(0.3f, 2f) } });
                     break;
                 case WeaponSkillId.PiercingVolley:
                     Shot(s, 12f, 8f);
                     fx.Add(new RepeatEffect { times = 3, interval = 0.2f, inner = new List<SkillEffect> {
-                        new CraftedProjectile { speed = 30f, range = 12f, size = 0.5f, hitRadius = 0.45f, damageMult = 1.2f, pierce = -1, hit = hit } } });
+                        new CraftedProjectile { look = "arrow", speed = 30f, range = 12f, size = 0.5f, hitRadius = 0.45f, damageMult = 1.2f, pierce = -1, hit = hit } } });
                     break;
                 case WeaponSkillId.Meteor:
                     Ground(s, 9f, 10f, 3f);
@@ -251,12 +251,12 @@ namespace TWF
                     break;
                 case WeaponSkillId.ArcaneOrb:
                     Shot(s, 12f, 7f);
-                    fx.Add(new CraftedProjectile { speed = 6f, range = 12f, size = 1.4f, hitRadius = 1f, damageMult = 1.7f, pierce = -1, hit = hit });
+                    fx.Add(new CraftedProjectile { look = "orb", speed = 6f, range = 12f, size = 1.4f, hitRadius = 1f, damageMult = 1.7f, pierce = -1, hit = hit });
                     break;
                 case WeaponSkillId.MagicMissiles:
                     Shot(s, 10f, 6f);
                     fx.Add(new RepeatEffect { times = 6, interval = 0.1f, inner = new List<SkillEffect> {
-                        new CraftedProjectile { speed = 14f, range = 10f, size = 0.45f, hitRadius = 0.4f, damageMult = 0.65f, homing = true, hit = hit } } });
+                        new CraftedProjectile { look = "bolt", speed = 14f, range = 10f, size = 0.45f, hitRadius = 0.4f, damageMult = 0.65f, homing = true, hit = hit } } });
                     break;
                 case WeaponSkillId.ChainSpark:
                     Shot(s, 9f, 6f);
