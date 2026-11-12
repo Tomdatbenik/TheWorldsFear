@@ -48,5 +48,18 @@ namespace TWF
         // A rolled value made stronger (mythic items), kept whole only where the stat is whole.
         public static float Scale(StatType stat, ModKind kind, float value, float mult) =>
             Whole(stat, kind) ? Mathf.Round(value * mult) : value * mult;
+
+        public const float MythicMult = 1.3f;
+
+        // A mythic stat: the roll x1.3, then 5-10 more on top. Whole stats get +5-10, percentages +5-10%
+        // (crit chance, cooldown...), and small decimal stats (attack speed, move speed, regen) 5-10% of their value.
+        public static float Mythic(StatType stat, ModKind kind, float value, System.Random rng, float mult = MythicMult)
+        {
+            float extra = 5f + (float)rng.NextDouble() * 5f;
+            float v = Scale(stat, kind, value, mult);
+            if (Whole(stat, kind)) return v + Mathf.Round(extra);
+            if (kind == ModKind.Percent || StatInfo.IsFraction(stat)) return v + extra / 100f;
+            return v * (1f + extra / 100f);
+        }
     }
 }

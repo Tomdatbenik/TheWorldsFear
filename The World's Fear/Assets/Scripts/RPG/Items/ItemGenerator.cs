@@ -210,8 +210,8 @@ namespace TWF
                     var mythPower = mythPowers.Count > 0 ? mythPowers[rng.Next(mythPowers.Count)] : ItemPowers.All[0];
                     item.legendaryPower = mythPower.id;
                     item.name = $"{mythicAdj[rng.Next(mythicAdj.Length)]} {item.baseName} {mythPower.name}";
-                    item.implicitValue = ScaleImplicit(item, 1.5f);
-                    foreach (var a in item.affixes) a.value = AffixDefinition.Scale(a.stat, a.kind, a.value, 1.3f);
+                    item.implicitValue = AffixDefinition.Mythic(item.implicitStat, ModKind.Flat, item.implicitValue, rng, 1.5f);
+                    foreach (var a in item.affixes) a.value = AffixDefinition.Mythic(a.stat, a.kind, a.value, rng);
                     break;
             }
             return item;
@@ -251,7 +251,7 @@ namespace TWF
                 var def = db.affixes.Find(d => d != null && d.id == a.affixId);
                 if (def == null) continue;
                 float v = def.Roll(item.itemLevel, rng);
-                a.value = item.rarity == Rarity.Mythic ? AffixDefinition.Scale(def.stat, def.kind, v, 1.3f) : v;
+                a.value = item.rarity == Rarity.Mythic ? AffixDefinition.Mythic(def.stat, def.kind, v, rng) : v;
                 changed = true;
             }
             return changed;
