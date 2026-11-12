@@ -128,7 +128,7 @@ namespace TWF
                 }
                 Combat.Hit(owner, c, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);
                 spec.onHit?.Invoke(c);
-                Fx.HitOn(c, Element);
+                Fx.HitOn(c, spec.elements, spec.color);
                 if (spec.pierce >= 0)
                 {
                     if (pierceLeft <= 0)
@@ -152,7 +152,7 @@ namespace TWF
 
         void Explode()
         {
-            Fx.Blast(transform.position, spec.explodeRadius, Element);
+            Fx.Blast(transform.position, spec.explodeRadius, spec.elements, spec.color);
             foreach (var c in Combat.HostilesInRadius(team, transform.position, spec.explodeRadius).ToArray())
             {
                 Combat.Hit(owner, c, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);
@@ -232,18 +232,18 @@ namespace TWF
             fillSr.transform.localScale = full;
 
             // One pulse explodes; several leave a pool that pulses (and, when it stays put, starts with a blast).
-            string el = Fx.Element(spec.elements, c);
+            var els = Fx.Parts(spec.elements, c);
             bool lingers = spec.ticks > 1;
             if (lingers)
-                Fx.Linger(transform.position, spec.radius, el, spec.interval * (spec.ticks - 1) + 0.5f,
+                Fx.Linger(transform.position, spec.radius, spec.elements, c, spec.interval * (spec.ticks - 1) + 0.5f,
                     spec.followOwner && owner != null ? owner.transform : null);
             for (int i = 0; i < spec.ticks; i++)
             {
                 Follow();
                 fillSr.color = new Color(c.r, c.g, c.b, lingers ? 0.16f : 0.22f);
-                if (!lingers) Fx.Blast(transform.position, spec.radius, el);
-                else if (i == 0 && !spec.followOwner) Fx.Blast(transform.position, spec.radius * 0.8f, el);
-                else Fx.Shock(transform.position, spec.radius, el, 0.55f);
+                if (!lingers) Fx.Blast(transform.position, spec.radius, spec.elements, c);
+                else if (i == 0 && !spec.followOwner) Fx.Blast(transform.position, spec.radius * 0.8f, spec.elements, c);
+                else Fx.Shock(transform.position, spec.radius, Fx.Name(els[i % els.Count]), 0.55f);   // pulses take turns per element
                 foreach (var target in Combat.HostilesInRadius(team, transform.position, spec.radius).ToArray())
                 {
                     Combat.Hit(owner, target, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);

@@ -52,21 +52,44 @@ namespace TWF
 
         public static string Name(ElementPart e) => e.ToString().ToLowerInvariant();
 
-        // The first element in the mask; with none, the closest element colour (monster attacks), else physical.
-        public static string Element(int mask, Color color)
+        static float ColorDistance(ElementPart e, Color color)
         {
-            for (int i = 0; i < 8; i++)
-                if ((mask & (1 << i)) != 0) return Name((ElementPart)i);
-            string best = "physical";
-            float bestD = 0.08f;
-            foreach (ElementPart e in Enum.GetValues(typeof(ElementPart)))
+            var c = SkillParts.ElementColor(e);
+            return (c.r - color.r) * (c.r - color.r) + (c.g - color.g) * (c.g - color.g) + (c.b - color.b) * (c.b - color.b);
+        }
+
+        // Every element of a multi-element spell, the main one first (its colour leans toward the main element).
+        // With no elements, the closest element colour (monster attacks), else physical.
+        public static List<ElementPart> Parts(int mask, Color color)
+        {
+            var list = new List<ElementPart>(Elements.In(mask));
+            if (list.Count == 0)
             {
-                if (e == ElementPart.Physical) continue;
-                var c = SkillParts.ElementColor(e);
-                float d = (c.r - color.r) * (c.r - color.r) + (c.g - color.g) * (c.g - color.g) + (c.b - color.b) * (c.b - color.b);
-                if (d < bestD) { bestD = d; best = Name(e); }
+                var best = ElementPart.Physical;
+                float bestD = 0.08f;
+                foreach (ElementPart e in Enum.GetValues(typeof(ElementPart)))
+                {
+                    if (e == ElementPart.Physical) continue;
+                    float d = ColorDistance(e, color);
+                    if (d < bestD) { bestD = d; best = e; }
+                }
+                list.Add(best);
             }
-            return best;
+            else if (list.Count > 1)
+            {
+                list.Sort((a, b) => ColorDistance(a, color).CompareTo(ColorDistance(b, color)));
+                // A crafted spell names its main element; otherwise the colour decides.
+                if (Elements.Main(mask) is ElementPart main && list.Remove(main)) list.Insert(0, main);
+            }
+            return list;
+        }
+
+        // The main element.
+        public static string Element(int mask, Color color) => Name(Parts(mask, color)[0]);
+
+        static void Above(FxPlayer p, int layer)
+        {
+            if (p != null && layer > 0) p.GetComponent<SpriteRenderer>().sortingOrder += layer;
         }
 
         // ---------- Playing ----------
@@ -105,6 +128,20 @@ namespace TWF
             Play("blast_" + element, at, radius * 0.85f);
         }
 
+        // A multi-element explosion: the main element's blast, with each extra element's blast layered over it.
+        public static void Blast(Vector2 at, float radius, int mask, Color color)
+        {
+            var els = Parts(mask, color);
+            Blast(at, radius, Name(els[0]));
+            for (int i = 1; i < els.Count; i++)
+            {
+                string n = Name(els[i]);
+                var off = UnityEngine.Random.insideUnitCircle * radius * 0.25f;
+                Above(Play("shock_" + n, at, radius * 0.75f, new Color(1f, 1f, 1f, 0.8f), UnityEngine.Random.Range(0f, 360f)), i);
+                Above(Play("blast_" + n, at + off, radius * 0.6f), i);
+            }
+        }
+
         public static void Shock(Vector2 at, float radius, string element, float alpha = 1f) =>
             Play("shock_" + element, at, radius, new Color(1f, 1f, 1f, alpha));
 
@@ -138,6 +175,15 @@ namespace TWF
             if (c != null) OnBody("hit_" + element, c, 0.4f + 0.1f * c.height);
         }
 
+        // A multi-element hit: the main element's spark, plus each extra element's small hit extra.
+        public static void HitOn(Combatant c, int mask, Color color)
+        {
+            if (c == null) return;
+            var els = Parts(mask, color);
+            HitOn(c, Name(els[0]));
+            for (int i = 1; i < els.Count; i++) Proc(c, els[i]);
+        }
+
         // What an elemental weapon adds to each hit (small bolts, poison puffs, embers, shards...). Nothing for plain weapons.
         public static void Proc(Combatant c, ElementPart e)
         {
@@ -160,6 +206,14 @@ namespace TWF
             }
             // Lifted so a swing away from the camera isn't hidden behind the hero's own body.
             Lift(Play(name, pos, radius, null, angle), 2.5f);
+        }
+
+        // A multi-element swing: one trail per element, each extra a little shorter so they nest.
+        public static void Slash(Vector3 pos, Vector2 dir, float radius, float arc, int mask, Color color)
+        {
+            var els = Parts(mask, color);
+            for (int i = 0; i < els.Count; i++)
+                Slash(pos, dir, radius * (1f - 0.18f * i), arc, Name(els[i]));
         }
 
         // ---------- Projectiles ----------
@@ -188,26 +242,59 @@ namespace TWF
             float size = look == "bolt" || look == "orb"
                 ? world * Mathf.Max(0.2f, spec.size)
                 : world * Mathf.Clamp(spec.size / baseSize, 0.8f, 1.4f);
-            var p = Play(look + "_" + Element(spec.elements, spec.color), parent.position, size);
+            var els = Parts(spec.elements, spec.color);
+            var p = Attach(look + "_" + Name(els[0]), parent, size, Vector3.zero, SortOrder.Projectiles);
+            if (p == null) return null;
+            // Extra elements fly along as small bolts beside and just behind the shot.
+            float ball = look == "bolt" || look == "orb" ? size : Mathf.Max(0.3f, size * 0.45f);
+            for (int i = 1; i < els.Count; i++)
+            {
+                float side = (i % 2 == 1 ? 1f : -1f) * ball * 0.32f;
+                Attach("bolt_" + Name(els[i]), parent, ball * 0.6f, new Vector3(-ball * 0.3f * i, side, 0f), SortOrder.Projectiles - i);
+            }
+            return p;
+        }
+
+        static FxPlayer Attach(string name, Transform parent, float size, Vector3 local, int order)
+        {
+            var p = Play(name, parent.position, size);
             if (p == null) return null;
             p.transform.SetParent(parent, false);
-            p.transform.localPosition = Vector3.zero;
+            p.transform.localPosition = local;
             p.transform.localRotation = Quaternion.identity;
-            p.GetComponent<SpriteRenderer>().sortingOrder = SortOrder.Projectiles;
+            p.GetComponent<SpriteRenderer>().sortingOrder = order;
             return p;
         }
 
         // A lingering zone: a looping pool, with a few flames standing in it.
-        public static void Linger(Vector2 at, float radius, string element, float duration, Transform follow = null)
+        public static void Linger(Vector2 at, float radius, string element, float duration, Transform follow = null) =>
+            Linger(at, radius, new List<string> { element }, duration, follow);
+
+        // A multi-element pool: the main element's pool, a smaller pool per extra element on top, and flames of every element.
+        public static void Linger(Vector2 at, float radius, int mask, Color color, float duration, Transform follow = null)
         {
-            var pool = Play("linger_" + element, at, radius, new Color(1f, 1f, 1f, 0.9f), UnityEngine.Random.Range(0f, 360f), duration);
+            var names = new List<string>();
+            foreach (var e in Parts(mask, color)) names.Add(Name(e));
+            Linger(at, radius, names, duration, follow);
+        }
+
+        static void Linger(Vector2 at, float radius, List<string> elements, float duration, Transform follow)
+        {
+            var pool = Play("linger_" + elements[0], at, radius, new Color(1f, 1f, 1f, 0.9f), UnityEngine.Random.Range(0f, 360f), duration);
             if (pool == null) return;
             pool.Follow(follow);
+            for (int i = 1; i < elements.Count; i++)
+            {
+                var extra = Play("linger_" + elements[i], at, radius * (0.7f - 0.12f * (i - 1)), new Color(1f, 1f, 1f, 0.8f), UnityEngine.Random.Range(0f, 360f), duration);
+                Above(extra, i);
+                extra?.Follow(follow);
+            }
             int count = Mathf.Clamp(Mathf.RoundToInt(radius * 3f), 3, 10);
+            if (elements.Count > 1) count = Mathf.Max(count, 2 * elements.Count);
             for (int i = 0; i < count; i++)
             {
                 var off = UnityEngine.Random.insideUnitCircle * radius * 0.7f;
-                var f = Play("flame_" + element, at + off, UnityEngine.Random.Range(0.4f, 0.65f), null, 0f, duration);
+                var f = Play("flame_" + elements[i % elements.Count], at + off, UnityEngine.Random.Range(0.4f, 0.65f), null, 0f, duration);
                 if (f == null) continue;
                 f.Follow(follow);
                 f.StartAt(UnityEngine.Random.Range(0, 8));

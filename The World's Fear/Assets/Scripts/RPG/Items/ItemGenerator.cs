@@ -154,10 +154,11 @@ namespace TWF
                     {
                         case OffHandKind.Sword: item.implicitStat = StatType.Damage; item.implicitValue = Mathf.Round((3f + itemLevel * 1.8f) * jitter * 0.5f); break;
                         case OffHandKind.Shield: item.implicitStat = StatType.Armor; item.implicitValue = Mathf.Round((3f + itemLevel * 1.6f) * jitter); break;
-                        case OffHandKind.Orb: item.implicitStat = StatType.SkillPower; item.implicitValue = Mathf.Round((0.04f + itemLevel * 0.004f) * jitter * 100f) / 100f; break;
-                        case OffHandKind.Tome: item.implicitStat = StatType.CooldownReduction; item.implicitValue = Mathf.Round(Mathf.Min(0.2f, 0.03f + itemLevel * 0.002f) * jitter * 100f) / 100f; break;
-                        case OffHandKind.Quiver: item.implicitStat = StatType.AttackSpeed; item.implicitValue = Mathf.Round((0.06f + itemLevel * 0.004f) * jitter * 100f) / 100f; break;
-                        default: item.implicitStat = StatType.CritChance; item.implicitValue = Mathf.Round(Mathf.Min(0.15f, 0.02f + itemLevel * 0.0012f) * jitter * 100f) / 100f; break;
+                        default:
+                            // Orb, tome, quiver and parry dagger: a fraction stat (skill power, cooldown, attack speed, crit).
+                            item.implicitStat = FractionImplicit((OffHandKind)item.offHandKind, itemLevel, out float v);
+                            item.implicitValue = Mathf.Round(v * jitter * 100f) / 100f;
+                            break;
                     }
                     break;
             }
@@ -201,7 +202,7 @@ namespace TWF
                     var power = powers.Count > 0 ? powers[rng.Next(powers.Count)] : ItemPowers.All[0];
                     item.legendaryPower = power.id;
                     item.name = $"{legendaryAdj[rng.Next(legendaryAdj.Length)]} {item.baseName} {power.name}";
-                    item.implicitValue = Mathf.Round(item.implicitValue * 1.25f);
+                    item.implicitValue = ScaleImplicit(item, 1.25f);
                     break;
                 case Rarity.Mythic:
                     // Mythic: a legendary power, five affixes rolled higher and a much stronger base.
@@ -209,12 +210,58 @@ namespace TWF
                     var mythPower = mythPowers.Count > 0 ? mythPowers[rng.Next(mythPowers.Count)] : ItemPowers.All[0];
                     item.legendaryPower = mythPower.id;
                     item.name = $"{mythicAdj[rng.Next(mythicAdj.Length)]} {item.baseName} {mythPower.name}";
-                    item.implicitValue = Mathf.Round(item.implicitValue * 1.5f);
-                    foreach (var a in item.affixes) a.value = a.kind == ModKind.Flat ? Mathf.Round(a.value * 1.3f) : a.value * 1.3f;
+                    item.implicitValue = ScaleImplicit(item, 1.5f);
+                    foreach (var a in item.affixes) a.value = AffixDefinition.Scale(a.stat, a.kind, a.value, 1.3f);
                     break;
             }
             return item;
         }
+
+        static StatType FractionImplicit(OffHandKind kind, int itemLevel, out float value)
+        {
+            switch (kind)
+            {
+                case OffHandKind.Orb: value = 0.04f + itemLevel * 0.004f; return StatType.SkillPower;
+                case OffHandKind.Tome: value = Mathf.Min(0.2f, 0.03f + itemLevel * 0.002f); return StatType.CooldownReduction;
+                case OffHandKind.Quiver: value = 0.06f + itemLevel * 0.004f; return StatType.AttackSpeed;
+                default: value = Mathf.Min(0.15f, 0.02f + itemLevel * 0.0012f); return StatType.CritChance;
+            }
+        }
+
+        static float RarityMult(Rarity r) => r == Rarity.Mythic ? 1.5f : r == Rarity.Legendary ? 1.25f : 1f;
+
+        // Repairs items saved while legendary and mythic bonuses rounded fraction stats (crit chance, attack speed...) to 0.
+        // Returns true when it changed something.
+        public static bool RepairZeroStats(ItemInstance item)
+        {
+            if (item == null) return false;
+            bool changed = false;
+            if (item.implicitValue == 0f && item.slot == ItemSlot.OffHand && !AffixDefinition.Whole(item.implicitStat, ModKind.Flat))
+            {
+                item.implicitStat = FractionImplicit((OffHandKind)item.offHandKind, item.itemLevel, out float v);
+                item.implicitValue = Mathf.Round(v * RarityMult(item.rarity) * 100f) / 100f;
+                changed = true;
+            }
+            var db = GameDatabase.Instance;
+            if (item.affixes == null || db == null) return changed;
+            var rng = new System.Random(item.seed);
+            foreach (var a in item.affixes)
+            {
+                if (a == null || a.value != 0f || AffixDefinition.Whole(a.stat, a.kind)) continue;
+                var def = db.affixes.Find(d => d != null && d.id == a.affixId);
+                if (def == null) continue;
+                float v = def.Roll(item.itemLevel, rng);
+                a.value = item.rarity == Rarity.Mythic ? AffixDefinition.Scale(def.stat, def.kind, v, 1.3f) : v;
+                changed = true;
+            }
+            return changed;
+        }
+
+        // Whole stats stay whole; fractions (crit, cooldown, attack speed...) keep two decimals instead of rounding to 0.
+        static float ScaleImplicit(ItemInstance item, float mult) =>
+            AffixDefinition.Whole(item.implicitStat, ModKind.Flat)
+                ? Mathf.Round(item.implicitValue * mult)
+                : Mathf.Round(item.implicitValue * mult * 100f) / 100f;
 
         static AffixDefinition PickWeighted(List<AffixDefinition> pool, System.Random rng)
         {

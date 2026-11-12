@@ -42,7 +42,7 @@ namespace TWF
                 var def = Pick(pool, rng);
                 pool.Remove(def);
                 float value = def.Roll(item.itemLevel, rng);
-                if (item.rarity == Rarity.Mythic) value = def.kind == ModKind.Flat ? Mathf.Round(value * 1.3f) : value * 1.3f;
+                if (item.rarity == Rarity.Mythic) value = AffixDefinition.Scale(def.stat, def.kind, value, 1.3f);
                 options.Add(new RolledAffix { affixId = def.id, stat = def.stat, kind = def.kind, value = value });
             }
             Profile.Save();

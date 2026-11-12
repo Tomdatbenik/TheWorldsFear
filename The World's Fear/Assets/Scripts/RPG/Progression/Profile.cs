@@ -148,6 +148,9 @@ namespace TWF
                 data.openedChests ??= new List<string>();
                 data.appearance ??= new Appearance();
                 if (data.lootByRarity == null || data.lootByRarity.Length < 5) data.lootByRarity = new int[5];
+                // Older legendary / mythic items could have crit chance and other fraction stats rounded to 0.
+                foreach (var list in new[] { data.inventory, data.equipment, data.shopStock })
+                    if (list != null) foreach (var it in list) ItemGenerator.RepairZeroStats(it);
                 ranks = null;
                 return true;
             }

@@ -27,11 +27,22 @@ namespace TWF
 
         public static int Mask(ElementPart e) => e == ElementPart.Physical ? 0 : 1 << (int)e;
 
+        // The first element of the list is the main one; with more than one, it is also kept in bits 8-11 (main + 1)
+        // so effects can show it first. Only bits 0-7 count for damage.
         public static int Mask(IEnumerable<ElementPart> list)
         {
-            int m = 0;
-            foreach (var e in list) m |= Mask(e);
+            int m = 0, count = 0;
+            ElementPart? main = null;
+            foreach (var e in list) { m |= Mask(e); main ??= e; count++; }
+            if (count > 1 && main.HasValue && main.Value != ElementPart.Physical) m |= ((int)main.Value + 1) << 8;
             return m;
+        }
+
+        // The main element stored by Mask(list), if any.
+        public static ElementPart? Main(int mask)
+        {
+            int k = (mask >> 8) & 0xF;
+            return k > 0 ? (ElementPart)(k - 1) : (ElementPart?)null;
         }
 
         public static IEnumerable<ElementPart> In(int mask)

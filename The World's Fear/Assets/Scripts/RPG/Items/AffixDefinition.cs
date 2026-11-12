@@ -37,9 +37,16 @@ namespace TWF
                 }
             }
             float v = Mathf.Lerp(min, max, (float)rng.NextDouble());
-            if (!StatInfo.IsFraction(stat) && kind == ModKind.Flat && stat != StatType.AttackSpeed && stat != StatType.MoveSpeed && stat != StatType.HPRegen)
-                v = Mathf.Round(v);
-            return v;
+            return Whole(stat, kind) ? Mathf.Round(v) : v;
         }
+
+        // Flat stats counted in whole numbers (damage, armor, life). Fractions such as crit chance must never be
+        // rounded, or 5% crit becomes 0.
+        public static bool Whole(StatType stat, ModKind kind) =>
+            kind == ModKind.Flat && !StatInfo.IsFraction(stat) && stat != StatType.AttackSpeed && stat != StatType.MoveSpeed && stat != StatType.HPRegen;
+
+        // A rolled value made stronger (mythic items), kept whole only where the stat is whole.
+        public static float Scale(StatType stat, ModKind kind, float value, float mult) =>
+            Whole(stat, kind) ? Mathf.Round(value * mult) : value * mult;
     }
 }

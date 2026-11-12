@@ -368,6 +368,7 @@ namespace TWF
                 Vector3 p = t.transform.position;
                 VFX.Burst(p + Vector3.back * 0.8f, hit.color, 14, 0.8f);
                 VFX.Ring(p, hit.color, 1f, 0.25f);
+                Fx.HitOn(t, hit.elements, hit.color);
                 Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, hit.knockback, -1f, hit.elements);
                 hit.OnHit(ctx, t);
             }
@@ -427,7 +428,7 @@ namespace TWF
         public override void Apply(SkillContext ctx)
         {
             float r = radius * ctx.Area;
-            Fx.Slash(ctx.caster.transform.position, ctx.direction, r, angle, Fx.Element(hit.elements, hit.color));
+            Fx.Slash(ctx.caster.transform.position, ctx.direction, r, angle, hit.elements, hit.color);
             foreach (var t in Combat.HostilesInArc(ctx.caster.team, ctx.caster.transform.position, ctx.direction, r, angle))
             {
                 Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, hit.knockback, -1f, hit.elements);
@@ -574,8 +575,12 @@ namespace TWF
                 Vector2 at = ctx.caster.transform.position;
                 float r = radius * ctx.Area;
                 VFX.Ring(at, hit.color, r, 0.3f);
+                // Each pulse shows the next element of the spell, so every element takes a turn.
+                var els = Fx.Parts(hit.elements, hit.color);
+                Fx.Shock(at, r, Fx.Name(els[i % els.Count]), 0.6f);
                 foreach (var t in Combat.HostilesInRadius(ctx.caster.team, at, r))
                 {
+                    Fx.HitOn(t, hit.elements, hit.color);
                     Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, 0f, -1f, hit.elements);
                     hit.Afflict(ctx, t);
                     hit.Pop(ctx, t);
@@ -609,6 +614,7 @@ namespace TWF
                 var mark = new Color(0.6f, 0.3f, 0.9f);
                 VFX.Ring(p, mark, 1.2f, 0.5f);
                 VFX.Burst(p + View.Up * (t.HeadHeight + 0.2f), Color.Lerp(mark, hit.color, 0.5f), 16, 0.7f);
+                Fx.HitOn(t, hit.elements, hit.color);
                 Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, 0f, -1f, hit.elements);
                 hit.OnHit(ctx, t);
             }
