@@ -313,7 +313,7 @@ namespace TWF
                 cam.distance = Mathf.Lerp(d0, d1, k);
                 var face = FacePoint();
                 float f = Mathf.Lerp(f0, f1, k);
-                var p = Vector3.Lerp(transform.position, face, f);
+                var p = Vector3.Lerp(transform.position + Vector3.back * TerrainHeight.At(transform.position), face, f);   // the feet stand on the ground's height
                 anchor.position = new Vector3(p.x, p.y, 0f);
                 cam.focusHeight = -p.z;
                 if (faceLight != null) faceLight.transform.position = face + (cam.transform.position - face).normalized * 2.5f;
@@ -377,6 +377,7 @@ namespace TWF
             yield return new WaitForSeconds(1.4f);
             if (cam != null) yield return CameraMove(cam, anchor, 12f, pitch0, 8.5f, dist0, 1f, 0f, 0.7f);
             Destroy(anchor.gameObject);
+            if (cam != null) cam.focusHeight = 0f;
 
             if (cam != null && heroT != null) cam.target = heroT;
             yield return new WaitForSeconds(0.6f);

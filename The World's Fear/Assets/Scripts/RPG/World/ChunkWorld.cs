@@ -205,6 +205,7 @@ namespace TWF
                         break;
                     case Cell.CastleWall:
                     case Cell.Tower:
+                    case Cell.Pillar:
                         groundTiles[i] = CastleFloorTile(wx, wy, h);
                         blockTiles[i] = tiles.blocker;
                         float top = HeightOf(cell);
@@ -319,7 +320,7 @@ namespace TWF
         const float RimWidth = 0.2f, ShadowWidth = 0.55f;
 
         static float HeightOf(Cell c) => c == Cell.Plateau ? WorldGen.PlateauHeight : c == Cell.Wall ? WallHeight
-            : c == Cell.CastleWall ? CastleWallHeight : c == Cell.Tower ? TowerHeight : 0f;
+            : c == Cell.CastleWall ? CastleWallHeight : c == Cell.Tower ? TowerHeight : c == Cell.Pillar ? WorldGen.PlateauHeight + 3.2f : 0f;
 
         // The four sides of a cell: offset to the neighbour, then (origin, along, inward) of the top-face strip at
         // that edge, and (origin, along, outward) of the ground strip just outside it. Each pair keeps the

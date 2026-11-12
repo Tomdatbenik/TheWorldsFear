@@ -4,7 +4,7 @@ using UnityEngine;
 namespace TWF
 {
     // CastleFloor/CastleWall/Tower: the open castles on the overworld (appended, so saved numbers keep their meaning).
-    public enum Cell : byte { Ground, Path, Water, Lava, Wall, Plateau, Hub, CastleFloor, CastleWall, Tower, Puddle, Stairs }
+    public enum Cell : byte { Ground, Path, Water, Lava, Wall, Plateau, Hub, CastleFloor, CastleWall, Tower, Puddle, Stairs, Pillar }
 
     // Deterministic infinite world: everything about a position comes from the hero's world seed.
     // Difficulty grows with distance from the village at the origin.
@@ -161,7 +161,7 @@ namespace TWF
         public static bool Walkable(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Hub || c == Cell.CastleFloor || c == Cell.Puddle;
 
         // Raised and blocking: drawn as blocks with a lit rim on top and a shadow at the foot.
-        public static bool Solid(Cell c) => c == Cell.Plateau || c == Cell.Wall || c == Cell.CastleWall || c == Cell.Tower;
+        public static bool Solid(Cell c) => c == Cell.Plateau || c == Cell.Wall || c == Cell.CastleWall || c == Cell.Tower || c == Cell.Pillar;
 
         // ---------- Regions (for monster species) ----------
 
@@ -259,7 +259,14 @@ namespace TWF
                 var a = Arena;
                 if (x < a.xMin || x >= a.xMax || y < a.yMin || y >= a.yMax) return false;
                 int cx = Mathf.Min(x - a.xMin, a.xMax - 1 - x), cy = Mathf.Min(y - a.yMin, a.yMax - 1 - y);
-                return cx + cy >= 5;                     // the four corners cut off
+                return cx + cy >= 5 && !IsPillar(x, y);  // the four corners cut off
+            }
+
+            // Six stone pillars in the arena: cover from the boss's waves, and something to keep the camera busy.
+            public bool IsPillar(int x, int y)
+            {
+                int dx = x - gate.x, dy = y - (gate.y + 11);
+                return (Mathf.Abs(dx) == 6 && (dy == -6 || dy == 5)) || (Mathf.Abs(dx) == 10 && dy == 0);
             }
 
             public bool High(int x, int y) => InArena(x, y) || Neck.Contains(new Vector2Int(x, y)) || Terrace.Contains(new Vector2Int(x, y));
@@ -328,7 +335,8 @@ namespace TWF
         {
             cell = Cell.Ground;
             if (!FortressAt(x, y, out var f)) return false;
-            if (f.High(x, y)) cell = Cell.Plateau;       // everything else inside its bounds is a clearing
+            if (f.IsPillar(x, y)) cell = Cell.Pillar;
+            else if (f.High(x, y)) cell = Cell.Plateau;       // everything else inside its bounds is a clearing
             return true;
         }
 

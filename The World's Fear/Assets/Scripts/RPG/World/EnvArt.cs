@@ -69,7 +69,7 @@ namespace TWF
                 written[t] = p.z;
             }
             if (gone.Count > 0) { foreach (var g in gone) { parts.Remove(g); written.Remove(g); } gone.Clear(); }
-            if (cam != null) cam.focusHeight = height;
+            if (cam != null) cam.groundHeight = height;
             if (hero) View.GroundHeight = height;
         }
     }
