@@ -8,7 +8,7 @@ namespace TWF
     // The codex: monsters you've slain, bosses you've faced, loot you've found and the element chart.
     public class CodexPanel : GamePanel
     {
-        enum Tab { Monsters, Bosses, Loot, Elements }
+        enum Tab { Monsters, Bosses, Loot, Elements, Stats }
 
         Tab tab;
         readonly Dictionary<Tab, Button> tabButtons = new Dictionary<Tab, Button>();
@@ -61,6 +61,7 @@ namespace TWF
                 case Tab.Monsters: Monsters(); break;
                 case Tab.Bosses: Bosses(); break;
                 case Tab.Loot: Loot(); break;
+                case Tab.Stats: StatList(); break;
                 default: ElementChart(); break;
             }
             scroll.verticalNormalizedPosition = 1f;
@@ -164,6 +165,42 @@ namespace TWF
                  "Weapons can carry an element too, and spells can combine elements once bosses unlock it: the best matchup counts.</color></size>", 130);
             foreach (ElementPart e in System.Enum.GetValues(typeof(ElementPart)))
                 Line(Matchup(e), 60);
+        }
+
+        // What every stat does, in plain words.
+        static string Explain(StatType s)
+        {
+            switch (s)
+            {
+                case StatType.MaxHP: return "How much damage you can take before you fall.";
+                case StatType.Damage: return "Adds to the damage of your attacks and skills.";
+                case StatType.Armor: return "Blocks part of every hit. Stronger against monsters of your level or lower. Your character sheet shows how much it blocks.";
+                case StatType.MoveSpeed: return "How fast you walk.";
+                case StatType.AttackSpeed: return "How many basic attacks you make per second.";
+                case StatType.CritChance: return "Chance for a hit to be critical. Capped at 95%.";
+                case StatType.CritDamage: return "Critical hits deal 150% damage, plus this.";
+                case StatType.CooldownReduction: return "Skills come back faster. Capped at 50%.";
+                case StatType.LifeSteal: return "Heals you for this part of the damage you deal. Capped at 50%.";
+                case StatType.HPRegen: return "Life you get back every second.";
+                case StatType.SkillRange: return "Skills and their targeting reach further. Capped at +150%.";
+                case StatType.AreaSize: return "Blasts, pools and other area effects get bigger. Capped at +150%.";
+                case StatType.ExtraProjectiles: return "Extra arrows, bolts and knives with each shot, fanned out. Up to 6.";
+                case StatType.ProjectileSpeed: return "Projectiles fly faster. Capped at +150%.";
+                case StatType.EffectDuration: return "Burns, poisons, slows, pools and other effects last longer. Capped at +200%.";
+                case StatType.ProjectileSpread: return "How wide extra projectiles fan out.";
+                case StatType.SkillPower: return "Crafted and equipped skills hit harder.";
+                case StatType.Handling: return "Ranged weapons: you stand still for less time on each shot. Melee weapons: your swings reach further. Capped at 75%.";
+                case StatType.ExtraSlashes: return "Extra swings with each melee basic attack. Up to 4.";
+            }
+            return "";
+        }
+
+        void StatList()
+        {
+            Rows();
+            Line("<b>Stats</b>  <size=75%><color=#ccc>What each stat on your gear and passives does. Your current totals are on the character sheet.</color></size>", 80);
+            foreach (StatType s in System.Enum.GetValues(typeof(StatType)))
+                Line($"<color=#8cf>{StatInfo.Name(s)}</color>  <size=80%><color=#ccc>{Explain(s)}</color></size>", 64);
         }
 
         void Line(string text, float height)
