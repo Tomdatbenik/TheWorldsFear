@@ -50,8 +50,39 @@ namespace TWF
             height = TerrainHeight.At(transform.position);
         }
 
+        // Low and high ground only meet on stairs. A knockback, a dash or a leap can carry a body through the thin
+        // wall along a plateau's edge; when that happens it is put back where it last stood.
+        public static bool KeepLevels = true;
+        Vector2 lastGood;
+        int lastLevel = -1;        // 0 low ground, 1 plateau, -1 anything else (stairs, pillars: no rule)
+        Rigidbody2D rb;
+
+        static int LevelOf(Vector2 p)
+        {
+            var c = WorldGen.CellAt(Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y));
+            return c == Cell.Plateau ? 1 : WorldGen.Walkable(c) ? 0 : -1;
+        }
+
+        void Guard()
+        {
+            if (!KeepLevels || TerrainHeight.World == null) return;
+            Vector2 p = transform.position;
+            int level = LevelOf(p);
+            if (level >= 0 && lastLevel >= 0 && level != lastLevel)
+            {
+                if (rb == null) rb = GetComponent<Rigidbody2D>();
+                if (rb != null) { rb.position = lastGood; rb.linearVelocity = Vector2.zero; }
+                transform.position = new Vector3(lastGood.x, lastGood.y, transform.position.z);
+                return;
+            }
+            // Stairs clear the memory: whoever comes off them may be on either level.
+            lastLevel = level;
+            if (level >= 0) lastGood = p;
+        }
+
         void LateUpdate()
         {
+            Guard();
             float target = TerrainHeight.At(transform.position);
             height = Mathf.MoveTowards(height, target, RiseSpeed * Time.deltaTime);
             // Children that turn up later (status flames, bars) join in at the height they were made for.
