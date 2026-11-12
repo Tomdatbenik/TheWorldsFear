@@ -147,6 +147,9 @@ namespace TWF
             var blockTiles = new TileBase[S * S];
             var rockFaces = new MeshBuilder();
             var brickFaces = new MeshBuilder();
+            var castleFaces = new MeshBuilder();
+            var rims = new MeshBuilder();          // a lit lip along every top edge: what is raised reads at a glance
+            var footShadows = new MeshBuilder();   // a dithered shadow on the ground at the foot of every wall
             var water = new MeshBuilder();
             var lava = new MeshBuilder();
             var decorRng = new System.Random((int)WorldGen.Hash(c.x, c.y));
@@ -184,13 +187,33 @@ namespace TWF
                     case Cell.Wall:
                         groundTiles[i] = EnvArt.GroundTile(biome, wx, wy) ?? GroundTile(biome, h);
                         blockTiles[i] = tiles.blocker;
-                        AddBox(wx, wy, 1.6f, brickFaces);
+                        AddBox(wx, wy, WallHeight, brickFaces);
+                        break;
+                    case Cell.CastleWall:
+                    case Cell.Tower:
+                        groundTiles[i] = CastleFloorTile(wx, wy, h);
+                        blockTiles[i] = tiles.blocker;
+                        float top = HeightOf(cell);
+                        AddBox(wx, wy, top, castleFaces);
+                        AddMerlons(cells, x, y, wx, wy, cell, top, castleFaces);
+                        break;
+                    case Cell.CastleFloor:
+                        groundTiles[i] = CastleFloorTile(wx, wy, h);
                         break;
                     default:
                         groundTiles[i] = EnvArt.GroundTile(biome, wx, wy) ?? GroundTile(biome, h);
                         if ((h & 0xFF) < 14) detailTiles[i] = DetailTile(biome, h);
                         break;
                 }
+            }
+
+            for (int y = 0; y < S; y++)
+            for (int x = 0; x < S; x++)
+            {
+                var cell = cells[x + 1, y + 1];
+                if (!WorldGen.Solid(cell)) continue;
+                AddRims(cells, x, y, x0 + x, y0 + y, rims);
+                AddFootShadows(cells, x, y, x0 + x, y0 + y, footShadows);
             }
 
             ground.SetTilesBlock(bounds, groundTiles);
@@ -202,6 +225,9 @@ namespace TWF
             var brickTex = art != null && art.brick != null ? art.brick : WorldTiles.BrickTexture();
             MeshObject(chunk.root, "Cliffs", rockFaces, WorldTiles.MeshMaterial("cliff" + chunkBiome, cliffTex), true);
             MeshObject(chunk.root, "Walls", brickFaces, WorldTiles.MeshMaterial("brick", brickTex), true);
+            MeshObject(chunk.root, "Castle", castleFaces, WorldTiles.MeshMaterial("castle", WorldTiles.CastleTexture()), true);
+            MeshObject(chunk.root, "Rims", rims, WorldTiles.MeshMaterial("rim" + chunkBiome, WorldTiles.RimTexture(chunkBiome)), false);
+            MeshObject(chunk.root, "FootShadows", footShadows, WorldTiles.FlatMaterial("footshadow", WorldTiles.FootShadowTexture()), false);
             MeshObject(chunk.root, "Water", water, RenderAssets.Instance.water, false);
             MeshObject(chunk.root, "Lava", lava, RenderAssets.Instance.lava, false);
             if (lava.Count > 0) PointLights.Attach(chunk.root.transform, new Color(1f, 0.45f, 0.15f), 10f, 1.4f, (Vector3)LavaCenter(cells, x0, y0) + new Vector3(0, 0, -1.5f), true);
@@ -250,6 +276,77 @@ namespace TWF
             if (!At(cells, x - 1, y, Cell.Plateau)) mb.Quad(new Vector3(wx, wy + 1, 0), Vector3.down, up / h, Vector3.left, 1, h);
             if (!At(cells, x + 1, y, Cell.Plateau)) mb.Quad(new Vector3(wx + 1, wy, 0), Vector3.up, up / h, Vector3.right, 1, h);
         }
+
+        // ---------- Raised blocks: heights, rims, foot shadows, battlements ----------
+
+        const float WallHeight = 1.6f, CastleWallHeight = 2.4f, TowerHeight = 3.6f;
+        const float RimWidth = 0.2f, ShadowWidth = 0.55f;
+
+        static float HeightOf(Cell c) => c == Cell.Plateau ? WorldGen.PlateauHeight : c == Cell.Wall ? WallHeight
+            : c == Cell.CastleWall ? CastleWallHeight : c == Cell.Tower ? TowerHeight : 0f;
+
+        // The four sides of a cell: offset to the neighbour, then (origin, along, inward) of the top-face strip at
+        // that edge, and (origin, along, outward) of the ground strip just outside it. Each pair keeps the
+        // winding of a face that looks up at the camera.
+        static readonly (int dx, int dy, Vector2 o, Vector2 u, Vector2 inward, Vector2 so, Vector2 su, Vector2 outward)[] Sides =
+        {
+            (0, -1, new Vector2(0, 0), Vector2.right, Vector2.up,    new Vector2(1, 0), Vector2.left,  Vector2.down),
+            (0, 1,  new Vector2(1, 1), Vector2.left,  Vector2.down,  new Vector2(0, 1), Vector2.right, Vector2.up),
+            (-1, 0, new Vector2(0, 1), Vector2.down,  Vector2.right, new Vector2(0, 0), Vector2.up,    Vector2.left),
+            (1, 0,  new Vector2(1, 0), Vector2.up,    Vector2.left,  new Vector2(1, 1), Vector2.down,  Vector2.right),
+        };
+
+        // A light lip with a dark outer line along each top edge that drops to something lower: from any camera
+        // angle a raised block's outline shows, even where its side face points away.
+        void AddRims(Cell[,] cells, int x, int y, int wx, int wy, MeshBuilder mb)
+        {
+            float top = HeightOf(cells[x + 1, y + 1]);
+            foreach (var s in Sides)
+            {
+                if (HeightOf(cells[x + s.dx + 1, y + s.dy + 1]) >= top - 0.01f) continue;
+                var o = new Vector3(wx + s.o.x, wy + s.o.y, -top - 0.012f);
+                mb.Quad(o, s.u, s.inward, Vector3.back, 1, RimWidth, 1f);
+            }
+        }
+
+        // A dithered shadow on walkable ground along each side of a block, darkest at the foot.
+        void AddFootShadows(Cell[,] cells, int x, int y, int wx, int wy, MeshBuilder mb)
+        {
+            foreach (var s in Sides)
+            {
+                var n = cells[x + s.dx + 1, y + s.dy + 1];
+                if (!WorldGen.Walkable(n) || n == Cell.Hub) continue;
+                var o = new Vector3(wx + s.so.x, wy + s.so.y, -0.015f);
+                mb.Quad(o, s.su, s.outward, Vector3.back, 1, ShadowWidth, 1f);
+            }
+        }
+
+        // Battlements: small blocks on every other tile along a castle wall's or tower's outer edges.
+        void AddMerlons(Cell[,] cells, int x, int y, int wx, int wy, Cell self, float top, MeshBuilder mb)
+        {
+            const float size = 0.42f, rise = 0.42f;
+            foreach (var s in Sides)
+            {
+                if (HeightOf(cells[x + s.dx + 1, y + s.dy + 1]) >= top - 0.01f) continue;
+                if (((wx + wy) & 1) != 0) continue;
+                var corner = new Vector2(wx, wy) + s.o + s.u * ((1 - size) / 2);
+                var min = Vector2.Min(corner, corner + s.u * size + s.inward * size);
+                AddBlock(min.x, min.y, size, size, top, rise, mb);
+            }
+        }
+
+        // A box from z = -z0 up to -(z0 + height), its footprint (x, y, sx, sy).
+        static void AddBlock(float x, float y, float sx, float sy, float z0, float height, MeshBuilder mb)
+        {
+            Vector3 up = Vector3.back;
+            mb.Quad(new Vector3(x, y, -z0), Vector3.right, up, Vector3.down, sx, height);
+            mb.Quad(new Vector3(x + sx, y + sy, -z0), Vector3.left, up, Vector3.up, sx, height);
+            mb.Quad(new Vector3(x, y + sy, -z0), Vector3.down, up, Vector3.left, sy, height);
+            mb.Quad(new Vector3(x + sx, y, -z0), Vector3.up, up, Vector3.right, sy, height);
+            mb.Quad(new Vector3(x, y, -z0 - height), Vector3.right, Vector3.up, Vector3.back, sx, sy);
+        }
+
+        TileBase CastleFloorTile(int wx, int wy, uint h) => EnvArt.PathTile(Biome.Ruins, wx, wy) ?? PathTile(Biome.Ruins, h);
 
         // A short drop from the ground down to the water/lava surface.
         void AddDrop(Cell[,] cells, int x, int y, int wx, int wy, Cell self, MeshBuilder mb)
@@ -503,7 +600,8 @@ namespace TWF
                 bool open = true;
                 for (int dx = -2; dx <= 2 && open; dx++)
                 for (int dy = -2; dy <= 2 && open; dy++)
-                    if (!WorldGen.Walkable(cells[x + dx + 1, y + dy + 1]) || cells[x + dx + 1, y + dy + 1] == Cell.Hub) open = false;
+                    if (!WorldGen.Walkable(cells[x + dx + 1, y + dy + 1]) || cells[x + dx + 1, y + dy + 1] == Cell.Hub
+                        || cells[x + dx + 1, y + dy + 1] == Cell.CastleFloor) open = false;   // castles place their own
                 if (!open) continue;
                 var pos = new Vector2(x0 + x + 0.5f, y0 + y + 0.5f);
                 if (pos.magnitude < WorldGen.SafeRadius) continue;
@@ -518,6 +616,7 @@ namespace TWF
 
         void PlacePointsOfInterest(Chunk chunk, Vector2Int c)
         {
+            PlaceCastle(chunk, c);
             if (WorldGen.HasWaypoint(c.x, c.y, out var wpCell))
             {
                 ClearAround(wpCell, 3);
@@ -560,6 +659,53 @@ namespace TWF
                 gate.areaLevel = WorldGen.LevelAt(dungeonCell);
                 gate.key = WorldManager.GateKey(dungeonCell);
             }
+        }
+
+        // The chunk holding a castle's centre fills it: packs across the courtyard, a stronger one in the keep, and the
+        // keep's chest, which opens once nothing hostile is left inside the keep.
+        void PlaceCastle(Chunk chunk, Vector2Int c)
+        {
+            int px = Mathf.FloorToInt(c.x / (float)WorldGen.CastleGrid), py = Mathf.FloorToInt(c.y / (float)WorldGen.CastleGrid);
+            if (!WorldGen.CastleInPatch(px, py, out var castle) || WorldGen.ChunkOf(castle.Center) != c) return;
+            var r = castle.rect;
+            int level = WorldGen.LevelAt(castle.Center) + 1;
+            var zone = WorldGen.RegionAt(castle.Center);
+            var spots = new[]
+            {
+                new Vector2(r.x + r.width * 0.25f, r.y + r.height * 0.22f), new Vector2(r.x + r.width * 0.75f, r.y + r.height * 0.22f),
+                new Vector2(r.x + r.width * 0.2f, r.y + r.height * 0.55f), new Vector2(r.x + r.width * 0.8f, r.y + r.height * 0.55f),
+                new Vector2(r.x + r.width * 0.5f, r.y + r.height * 0.38f),
+            };
+            for (int i = 0; i < spots.Length; i++)
+                Camp(chunk, spots[i], zone, level, (int)(castle.seed & 0x3FFFFFFF) + i * 977, 120f);
+            var k = castle.keep;
+            var keepCentre = new Vector2(k.x + k.width / 2f, k.y + k.height / 2f);
+            Camp(chunk, keepCentre + Vector2.down * 1f, zone, level + 2, (int)(castle.seed >> 2) + 31, 240f);
+
+            var go = new GameObject("CastleChest");
+            go.transform.SetParent(chunk.root.transform, false);
+            go.transform.position = new Vector2(keepCentre.x, k.yMax - 2f);
+            var chest = go.AddComponent<DungeonChest>();
+            chest.key = $"castle_{r.x}_{r.y}";
+            chest.level = level + 2;
+            var keepRect = new Rect(k.x, k.y, k.width, k.height);
+            chest.roomClear = () =>
+            {
+                foreach (var m in Combatant.All)
+                    if (m != null && !m.IsDead && m.team == Team.Enemy && keepRect.Contains(m.transform.position)) return false;
+                return true;
+            };
+        }
+
+        static void Camp(Chunk chunk, Vector2 pos, ZoneDefinition zone, int level, int seed, float respawn)
+        {
+            var camp = new GameObject("CastleCamp").AddComponent<MonsterCamp>();
+            camp.transform.SetParent(chunk.root.transform, false);
+            camp.transform.position = pos;
+            camp.zone = zone;
+            camp.fixedLevel = level;
+            camp.seed = seed;
+            camp.respawnTime = respawn;
         }
 
         // Opens the ground for a stairwell and clears anything that was placed on the spot.
@@ -607,7 +753,7 @@ namespace TWF
             public int Count => verts.Count;
 
             // A rectangle from origin along u (width w) and v (height h), facing normal.
-            public void Quad(Vector3 origin, Vector3 u, Vector3 v, Vector3 normal, float w, float h)
+            public void Quad(Vector3 origin, Vector3 u, Vector3 v, Vector3 normal, float w, float h, float uvH = -1f)
             {
                 int i = verts.Count;
                 verts.Add(origin);
@@ -615,10 +761,11 @@ namespace TWF
                 verts.Add(origin + v * h);
                 verts.Add(origin + u * w + v * h);
                 for (int k = 0; k < 4; k++) normals.Add(normal);
+                float vh = uvH < 0 ? h : uvH;
                 uvs.Add(new Vector2(0, 0));
                 uvs.Add(new Vector2(w, 0));
-                uvs.Add(new Vector2(0, h));
-                uvs.Add(new Vector2(w, h));
+                uvs.Add(new Vector2(0, vh));
+                uvs.Add(new Vector2(w, vh));
                 tris.Add(i); tris.Add(i + 2); tris.Add(i + 1);
                 tris.Add(i + 2); tris.Add(i + 3); tris.Add(i + 1);
             }

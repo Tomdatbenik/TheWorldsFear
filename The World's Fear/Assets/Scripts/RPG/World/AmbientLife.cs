@@ -48,7 +48,7 @@ namespace TWF
             {
                 int x = rng.Next(S), y = rng.Next(S);
                 var cell = cells[x + 1, y + 1];
-                if (cell == Cell.Plateau || cell == Cell.Wall || cell == Cell.Lava) continue;
+                if (WorldGen.Solid(cell) || cell == Cell.Lava) continue;
                 var p = new Vector2(x0 + x + (float)rng.NextDouble(), y0 + y + (float)rng.NextDouble());
                 var b = WorldGen.BiomeAt(p);
                 if (b == Biome.Forest && Mathf.PerlinNoise(p.x * 0.06f + 300f, p.y * 0.06f + 300f) < 0.42f && rng.NextDouble() < 0.6) continue;
@@ -86,7 +86,7 @@ namespace TWF
             {
                 int x = rng.Next(S), y = rng.Next(S);
                 var cell = cells[x + 1, y + 1];
-                if (cell == Cell.Plateau || cell == Cell.Wall || cell == Cell.Water || cell == Cell.Lava) continue;
+                if (WorldGen.Solid(cell) || cell == Cell.Water || cell == Cell.Lava) continue;
                 var p = new Vector2(x0 + x + 0.5f, y0 + y + 0.5f);
                 if (main == Biome.Forest && Mathf.PerlinNoise(p.x * 0.06f + 300f, p.y * 0.06f + 300f) < 0.45f) continue;
                 float seed = (float)rng.NextDouble();

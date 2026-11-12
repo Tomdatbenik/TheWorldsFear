@@ -3,7 +3,8 @@ using UnityEngine;
 
 namespace TWF
 {
-    public enum Cell : byte { Ground, Path, Water, Lava, Wall, Plateau, Hub }
+    // CastleFloor/CastleWall/Tower: the open castles on the overworld (appended, so saved numbers keep their meaning).
+    public enum Cell : byte { Ground, Path, Water, Lava, Wall, Plateau, Hub, CastleFloor, CastleWall, Tower }
 
     // Deterministic infinite world: everything about a position comes from the hero's world seed.
     // Difficulty grows with distance from the village at the origin.
@@ -27,6 +28,7 @@ namespace TWF
         {
             Seed = seed;
             regions.Clear();
+            castles.Clear();
             bool legacy = seed == LegacySeed;
             waypointShift = legacy ? Vector2Int.zero : GridShift(51, WaypointGrid);
             chestShift = legacy ? Vector2Int.zero : GridShift(53, ChestGrid);
@@ -111,6 +113,7 @@ namespace TWF
             var p = new Vector2(x + 0.5f, y + 0.5f);
             float d = p.magnitude;
             if (IsHub(x, y)) return Cell.Hub;
+            if (d > HubRadius && CastleCell(x, y, out var castleCell)) return castleCell;
 
             // Roads: ridges of low-frequency noise make long meandering trails.
             float r = Noise(x, y, 0.018f, 21);
@@ -136,7 +139,10 @@ namespace TWF
             return Cell.Ground;
         }
 
-        public static bool Walkable(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Hub;
+        public static bool Walkable(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Hub || c == Cell.CastleFloor;
+
+        // Raised and blocking: drawn as blocks with a lit rim on top and a shadow at the foot.
+        public static bool Solid(Cell c) => c == Cell.Plateau || c == Cell.Wall || c == Cell.CastleWall || c == Cell.Tower;
 
         // ---------- Regions (for monster species) ----------
 
@@ -259,6 +265,112 @@ namespace TWF
             if (((Vector2)c).magnitude < HubRadius + 40f) return false;
             if (HasWaypoint(cx, cy, out _) || HasBossGate(cx, cy, out _) || HasChest(cx, cy, out _, out _)) return false;
             cell = c;
+            return true;
+        }
+
+        // ---------- Castles: open dungeons on the overworld ----------
+        // About three patches in four hold a ruined castle: an outer wall with a main gate, two side gates and maybe a
+        // breach, a tower on each corner, broken walls in the courtyard and a keep against the north wall. Monster
+        // packs hold the courtyard and the keep; the keep's chest opens once the keep is clear. No loading screen:
+        // it is part of the world, walked into through its gates.
+        public const int CastleGrid = 9;     // chunks per patch
+        const int CastleMargin = 3;          // open ground kept round the walls so they are always reachable
+
+        public struct Castle
+        {
+            public RectInt rect, keep;
+            public uint seed;
+            public int breach;               // x of a 2-wide gap in the north wall, -1 for none
+            public Vector2Int Center => new Vector2Int(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        }
+
+        static readonly Dictionary<long, Castle?> castles = new Dictionary<long, Castle?>();
+
+        public static bool CastleInPatch(int px, int py, out Castle castle)
+        {
+            long key = ((long)px << 32) ^ (uint)py;
+            if (!castles.TryGetValue(key, out var found))
+            {
+                found = null;
+                uint h = Hash(px * 389 + 17, py * 743 - 29);
+                if ((h & 3) != 0)
+                {
+                    int span = CastleGrid * ChunkSize;
+                    int w = 24 + (int)((h >> 4) % 8u) * 2, ht = 20 + (int)((h >> 8) % 4u) * 2;
+                    int pad = CastleMargin + 6;
+                    var rect = new RectInt(px * span + pad + (int)((h >> 12) % (uint)(span - w - 2 * pad)),
+                                           py * span + pad + (int)((h >> 20) % (uint)(span - ht - 2 * pad)), w, ht);
+                    if (rect.center.magnitude > HubRadius + 90f && !CastleTouchesLandmark(rect))
+                    {
+                        int kw = Mathf.Max(8, w / 3) & ~1, kh = Mathf.Max(6, ht / 3);
+                        var keep = new RectInt(rect.x + (w - kw) / 2, rect.yMax - 3 - kh, kw, kh);
+                        uint h2 = Hash(px * 61 + 3, py * 83 + 5);
+                        int breach = (h2 & 1) == 0 ? -1 : rect.x + 4 + (int)((h2 >> 4) % (uint)(w / 2 - 6));
+                        found = new Castle { rect = rect, keep = keep, seed = h2, breach = breach };
+                    }
+                }
+                castles[key] = found;
+            }
+            castle = found ?? default;
+            return found.HasValue;
+        }
+
+        public static bool CastleAt(int x, int y, out Castle castle)
+        {
+            int span = CastleGrid * ChunkSize;
+            if (!CastleInPatch(Mathf.FloorToInt(x / (float)span), Mathf.FloorToInt(y / (float)span), out castle)) return false;
+            var r = castle.rect;
+            return x >= r.x - CastleMargin && x < r.xMax + CastleMargin && y >= r.y - CastleMargin && y < r.yMax + CastleMargin;
+        }
+
+        // A castle never covers a waypoint, boss gate, challenge chest or dungeon: it gives way to them.
+        static bool CastleTouchesLandmark(RectInt r)
+        {
+            var a = ChunkOf(new Vector2(r.x - CastleMargin - 7, r.y - CastleMargin - 7));
+            var b = ChunkOf(new Vector2(r.xMax + CastleMargin + 7, r.yMax + CastleMargin + 7));
+            for (int cx = a.x; cx <= b.x; cx++)
+            for (int cy = a.y; cy <= b.y; cy++)
+                if (HasWaypoint(cx, cy, out _) || HasBossGate(cx, cy, out _) || HasChest(cx, cy, out _, out _) || HasDungeon(cx, cy, out _))
+                    return true;
+            return false;
+        }
+
+        static bool CastleCell(int x, int y, out Cell cell)
+        {
+            cell = Cell.Ground;
+            if (!CastleAt(x, y, out var c)) return false;
+            var r = c.rect;
+            if (!r.Contains(new Vector2Int(x, y))) return true;                    // the clearing round the walls
+            int lx = x - r.x, ly = y - r.y, w = r.width, h = r.height;
+            bool cornerX = lx < 3 || lx >= w - 3, cornerY = ly < 3 || ly >= h - 3;
+            if (cornerX && cornerY) { cell = Cell.Tower; return true; }
+            if (lx == 0 || lx == w - 1 || ly == 0 || ly == h - 1)
+            {
+                bool mainGate = ly == 0 && Mathf.Abs(lx - w / 2) <= 1;
+                bool sideGate = (lx == 0 || lx == w - 1) && (ly == h / 2 || ly == h / 2 - 1);
+                bool breach = ly == h - 1 && c.breach >= 0 && (x == c.breach || x == c.breach + 1);
+                cell = mainGate || sideGate || breach ? Cell.CastleFloor : Cell.CastleWall;
+                return true;
+            }
+            var k = c.keep;
+            if (k.Contains(new Vector2Int(x, y)))
+            {
+                int kx = x - k.x, ky = y - k.y;
+                bool edge = kx == 0 || kx == k.width - 1 || ky == 0 || ky == k.height - 1;
+                bool door = ky == 0 && (kx == k.width / 2 || kx == k.width / 2 - 1);
+                bool corner = (kx < 2 || kx >= k.width - 2) && (ky < 2 || ky >= k.height - 2);
+                cell = corner ? Cell.Tower : edge && !door ? Cell.CastleWall : Cell.CastleFloor;
+                return true;
+            }
+            // Broken walls in the courtyard: short runs, never in front of a gate or the keep's door.
+            bool lane = Mathf.Abs(lx - w / 2) <= 3 || Mathf.Abs(ly - h / 2) <= 2;
+            bool nearKeep = x >= k.x - 2 && x < k.xMax + 2 && y >= k.y - 3;
+            if (!lane && !nearKeep && lx > 3 && lx < w - 4 && ly > 3 && ly < h - 4)
+            {
+                uint hh = Hash(x / 3 * 7 + 1, y * 5 + 2);
+                if ((hh % 23) == 0) { cell = Cell.Wall; return true; }
+            }
+            cell = Cell.CastleFloor;
             return true;
         }
 

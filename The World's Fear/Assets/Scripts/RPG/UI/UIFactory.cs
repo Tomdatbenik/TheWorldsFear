@@ -17,11 +17,38 @@ namespace TWF
             canvas.sortingOrder = sortingOrder;
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
             scaler.matchWidthOrHeight = 0.6f;
+            ApplyScale(scaler);
             go.AddComponent<GraphicRaycaster>();
             EnsureEventSystem();
             return canvas;
+        }
+
+        // ---------- UI size ----------
+        // The layout is made for a phone held at arm's length. On a monitor that reads far too large, so desktop
+        // builds draw it smaller (a larger reference resolution); the player can pick the size in Settings.
+        public static readonly float[] UiScales = { 0.6f, 0.7f, 0.8f, 0.9f, 1.0f };
+        const string UiScaleKey = "ui_scale";
+
+        public static float UiScale
+        {
+            get => MobaInput.Desktop ? PlayerPrefs.GetFloat(UiScaleKey, 0.7f) : 1f;
+            set
+            {
+                PlayerPrefs.SetFloat(UiScaleKey, value);
+                PlayerPrefs.Save();
+                foreach (var s in UnityEngine.Object.FindObjectsByType<CanvasScaler>(FindObjectsInactive.Include))
+                    if (s.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize) ApplyScale(s);
+            }
+        }
+
+        static void ApplyScale(CanvasScaler scaler) => scaler.referenceResolution = new Vector2(1920, 1080) / UiScale;
+
+        // The next size up, wrapping round to the smallest.
+        public static void CycleUiScale()
+        {
+            int i = Array.FindIndex(UiScales, v => Mathf.Approximately(v, UiScale));
+            UiScale = UiScales[(i + 1) % UiScales.Length];
         }
 
         public static void EnsureEventSystem()
