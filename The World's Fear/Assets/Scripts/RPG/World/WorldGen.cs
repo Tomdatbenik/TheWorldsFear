@@ -4,7 +4,7 @@ using UnityEngine;
 namespace TWF
 {
     // CastleFloor/CastleWall/Tower: the open castles on the overworld (appended, so saved numbers keep their meaning).
-    public enum Cell : byte { Ground, Path, Water, Lava, Wall, Plateau, Hub, CastleFloor, CastleWall, Tower }
+    public enum Cell : byte { Ground, Path, Water, Lava, Wall, Plateau, Hub, CastleFloor, CastleWall, Tower, Puddle, Stairs }
 
     // Deterministic infinite world: everything about a position comes from the hero's world seed.
     // Difficulty grows with distance from the village at the origin.
@@ -29,6 +29,8 @@ namespace TWF
             Seed = seed;
             regions.Clear();
             castles.Clear();
+            stairBlocks.Clear();
+            fortresses.Clear();
             bool legacy = seed == LegacySeed;
             waypointShift = legacy ? Vector2Int.zero : GridShift(51, WaypointGrid);
             chestShift = legacy ? Vector2Int.zero : GridShift(53, ChestGrid);
@@ -110,9 +112,17 @@ namespace TWF
 
         public static Cell CellAt(int x, int y)
         {
+            var c = BaseCell(x, y);
+            return (c == Cell.Ground || c == Cell.Path) && StairAt(x, y, out _, out _) ? Cell.Stairs : c;
+        }
+
+        // The cell before stairs are laid against the plateaus.
+        static Cell BaseCell(int x, int y)
+        {
             var p = new Vector2(x + 0.5f, y + 0.5f);
             float d = p.magnitude;
             if (IsHub(x, y)) return Cell.Hub;
+            if (d > HubRadius && FortressCell(x, y, out var fortCell)) return fortCell;
             if (d > HubRadius && CastleCell(x, y, out var castleCell)) return castleCell;
 
             // Roads: ridges of low-frequency noise make long meandering trails.
@@ -126,7 +136,16 @@ namespace TWF
             var biome = BiomeAt(p);
             float blob = Noise(x, y, 0.07f, 31);
             float height = Noise(x, y, 0.035f, 41);
-            if (d > HubRadius + 12f && height > 0.72f) return Cell.Plateau;
+            if (d > HubRadius + 12f && height > 0.72f) return NearLandmark(x, y) ? Cell.Ground : Cell.Plateau;
+            // Ponds and small lakes everywhere but the ash lands (deep water: blocks), and shallow puddles you
+            // splash through. The ponds keep away from the roads; puddles may lie on them.
+            if (biome != Biome.Ember && d > HubRadius + 8f)
+            {
+                float pond = Noise(x, y, 0.06f, 51) * 0.75f + Noise(x, y, 0.19f, 52) * 0.25f;
+                if (pond > (biome == Biome.Marsh ? 0.70f : 0.745f)) return Cell.Water;
+                if (pond > (biome == Biome.Marsh ? 0.66f : 0.715f)) return Cell.Puddle;          // a shallow rim round a pond
+                if (Noise(x, y, 0.33f, 53) > 0.83f && Noise(x, y, 0.05f, 54) > 0.5f) return Cell.Puddle;   // rain puddles
+            }
             switch (biome)
             {
                 case Biome.Marsh: if (blob > 0.64f) return Cell.Water; break;
@@ -139,7 +158,7 @@ namespace TWF
             return Cell.Ground;
         }
 
-        public static bool Walkable(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Hub || c == Cell.CastleFloor;
+        public static bool Walkable(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Hub || c == Cell.CastleFloor || c == Cell.Puddle;
 
         // Raised and blocking: drawn as blocks with a lit rim on top and a shadow at the foot.
         public static bool Solid(Cell c) => c == Cell.Plateau || c == Cell.Wall || c == Cell.CastleWall || c == Cell.Tower;
@@ -206,26 +225,110 @@ namespace TWF
             return true;
         }
 
+        // A boss gate is now the gate cell of the patch's fortress.
         public static bool HasBossGate(int cx, int cy, out Vector2Int cell)
         {
             cell = default;
-            Vector2Int center;
-            if (Seed == LegacySeed)
+            int px = Mathf.FloorToInt(cx / (float)BossGrid), py = Mathf.FloorToInt(cy / (float)BossGrid);
+            if (!FortressInPatch(px, py, out var f) || ChunkOf(f.gate) != new Vector2Int(cx, cy)) return false;
+            cell = f.gate;
+            return true;
+        }
+
+        // ---------- Boss fortresses ----------
+        // One per patch of the map, on high ground in the boss's own biome. Which boss holds it follows the distance
+        // from the village (WorldManager.KindForGate), so the order you meet them in stays the same.
+        //   arena (26 x 22, corners cut)   the boss's ground: it cannot leave it
+        //   neck  (4 x 2)                  the gate between them, opened by killing the generals
+        //   terrace (16 x 8)               where the generals stand
+        //   stairs (2 x 3)                 the only way up, sealed until the boss before has been slain
+        public struct Fortress
+        {
+            public Vector2Int gate;      // the first arena row, in the middle
+            public BossKind kind;
+            public RectInt Arena => new RectInt(gate.x - 13, gate.y, 26, 22);
+            public RectInt Neck => new RectInt(gate.x - 2, gate.y - 2, 4, 2);
+            public RectInt Terrace => new RectInt(gate.x - 8, gate.y - 10, 16, 8);
+            public Vector2Int StairA => new Vector2Int(gate.x - 1, gate.y - 10 - StairLength);
+            public RectInt Bounds => new RectInt(gate.x - 17, gate.y - 18, 34, 44);
+            public Vector2 ArenaCentre => new Vector2(gate.x, gate.y + 11f);
+            public Vector2 TerraceCentre => new Vector2(gate.x, gate.y - 6f);
+
+            public bool InArena(int x, int y)
             {
-                if (Mod(cx + 3, BossGrid) != 0 || Mod(cy + 5, BossGrid) != 0) return false;
-                center = new Vector2Int(cx * ChunkSize + ChunkSize / 2 + 4, cy * ChunkSize + ChunkSize / 2 - 3);
+                var a = Arena;
+                if (x < a.xMin || x >= a.xMax || y < a.yMin || y >= a.yMax) return false;
+                int cx = Mathf.Min(x - a.xMin, a.xMax - 1 - x), cy = Mathf.Min(y - a.yMin, a.yMax - 1 - y);
+                return cx + cy >= 5;                     // the four corners cut off
             }
-            else
+
+            public bool High(int x, int y) => InArena(x, y) || Neck.Contains(new Vector2Int(x, y)) || Terrace.Contains(new Vector2Int(x, y));
+        }
+
+        // Where each boss lives.
+        public static Biome BossBiome(BossKind k)
+        {
+            switch (k)
             {
-                // One gate per patch of the map, at its own random chunk and spot inside that patch.
-                int px = Mathf.FloorToInt(cx / (float)BossGrid), py = Mathf.FloorToInt(cy / (float)BossGrid);
-                uint h = Hash(px * 101 + bossSalt, py * 211 - bossSalt);
-                if (Mod(cx, BossGrid) != (h & 0xFF) % BossGrid || Mod(cy, BossGrid) != ((h >> 8) & 0xFF) % BossGrid) return false;
-                // Even cells only: gate keys round position + 0.5, which lands back on the cell only when it is even.
-                center = new Vector2Int(cx * ChunkSize + (4 + (int)((h >> 16) & 0xFF) % 16 & ~1), cy * ChunkSize + (4 + (int)(h >> 24) % 16 & ~1));
+                case BossKind.Spider: return Biome.Forest;
+                case BossKind.Zombie: return Biome.Marsh;
+                case BossKind.Skeleton: return Biome.Ruins;
+                case BossKind.WorldsFear: return Biome.Ember;
+                default: return Biome.Forest;            // the Slime, and anything else
             }
-            if (((Vector2)center).magnitude < 220f) return false;
-            cell = center;
+        }
+
+        static readonly Dictionary<long, Fortress?> fortresses = new Dictionary<long, Fortress?>();
+
+        public static bool FortressInPatch(int px, int py, out Fortress fortress)
+        {
+            long key = ((long)px << 32) ^ (uint)py;
+            if (!fortresses.TryGetValue(key, out var found))
+            {
+                fortresses[key] = null;                  // while searching, this patch has none (HasDungeon asks)
+                found = FindFortress(px, py, true) ?? FindFortress(px, py, false);
+                fortresses[key] = found;
+            }
+            fortress = found ?? default;
+            return found.HasValue;
+        }
+
+        // Tries spots across the patch in the seed's order: far enough out, in the right biome for the boss that the
+        // distance gives it, and with no waypoint, dungeon or challenge chest where it would stand.
+        static Fortress? FindFortress(int px, int py, bool matchBiome)
+        {
+            int span = BossGrid * ChunkSize;
+            const int inset = 30;
+            for (int k = 0; k < (matchBiome ? 60 : 12); k++)
+            {
+                uint h = Hash(px * 101 + bossSalt + k * 977, py * 211 - bossSalt - k * 131);
+                var gate = new Vector2Int(px * span + inset + (int)((h & 0xFFFF) % (uint)(span - 2 * inset)) & ~1,
+                                          py * span + inset + (int)((h >> 16) % (uint)(span - 2 * inset)) & ~1);
+                if (((Vector2)gate).magnitude < 220f) continue;
+                var f = new Fortress { gate = gate, kind = WorldManager.KindForGate(gate) };
+                if (matchBiome && (BiomeAt(f.ArenaCentre) != BossBiome(f.kind) || BiomeAt(f.TerraceCentre) != BossBiome(f.kind))) continue;
+                var b = f.Bounds;
+                var c0 = ChunkOf(new Vector2(b.xMin - 6, b.yMin - 6)); var c1 = ChunkOf(new Vector2(b.xMax + 6, b.yMax + 6));
+                bool clear = true;
+                for (int cx = c0.x; cx <= c1.x && clear; cx++)
+                for (int cy = c0.y; cy <= c1.y && clear; cy++)
+                    if (HasWaypoint(cx, cy, out _) || HasDungeon(cx, cy, out _)) clear = false;
+                if (clear) return f;
+            }
+            return null;
+        }
+
+        public static bool FortressAt(int x, int y, out Fortress f)
+        {
+            int span = BossGrid * ChunkSize;
+            return FortressInPatch(Mathf.FloorToInt(x / (float)span), Mathf.FloorToInt(y / (float)span), out f) && f.Bounds.Contains(new Vector2Int(x, y));
+        }
+
+        static bool FortressCell(int x, int y, out Cell cell)
+        {
+            cell = Cell.Ground;
+            if (!FortressAt(x, y, out var f)) return false;
+            if (f.High(x, y)) cell = Cell.Plateau;       // everything else inside its bounds is a clearing
             return true;
         }
 
@@ -233,7 +336,11 @@ namespace TWF
         // Waves 3-10, with long challenges rarer; further out they tend to be longer.
         public const int ChestGrid = 4;
 
-        public static bool HasChest(int cx, int cy, out Vector2Int cell, out int waves)
+        // A challenge chest that would stand inside a castle (or its clearing) is left out: the castle wins.
+        public static bool HasChest(int cx, int cy, out Vector2Int cell, out int waves) =>
+            HasChestRaw(cx, cy, out cell, out waves) && !CastleAt(cell.x, cell.y, out _) && !FortressAt(cell.x, cell.y, out _);
+
+        static bool HasChestRaw(int cx, int cy, out Vector2Int cell, out int waves)
         {
             cell = default;
             waves = 0;
@@ -263,9 +370,121 @@ namespace TWF
             uint spot = (uint)(ChunkSize - 2 * DungeonEdge);
             var c = new Vector2Int(cx * ChunkSize + DungeonEdge + (int)(((h >> 16) & 0xFF) % spot), cy * ChunkSize + DungeonEdge + (int)((h >> 24) % spot));
             if (((Vector2)c).magnitude < HubRadius + 40f) return false;
-            if (HasWaypoint(cx, cy, out _) || HasBossGate(cx, cy, out _) || HasChest(cx, cy, out _, out _)) return false;
+            if (HasWaypoint(cx, cy, out _) || HasBossGate(cx, cy, out _) || HasChestRaw(cx, cy, out _, out _)) return false;
             cell = c;
             return true;
+        }
+
+        // High ground stays clear of waypoints, gates and chests, so none of them ends up on a plateau with no way down.
+        static bool NearLandmark(int x, int y)
+        {
+            var c = ChunkOf(new Vector2(x, y));
+            return Near(HasWaypoint(c.x, c.y, out var a), a, x, y) || Near(HasBossGate(c.x, c.y, out var b), b, x, y)
+                || Near(HasChestRaw(c.x, c.y, out var e, out _), e, x, y) || Near(HasDungeon(c.x, c.y, out var g), g, x, y);
+        }
+
+        static bool Near(bool has, Vector2Int p, int x, int y) => has && Mathf.Abs(p.x - x) <= 9 && Mathf.Abs(p.y - y) <= 9;
+
+        // ---------- Heights: plateaus are walked on, stairs lead up to them ----------
+        // A flight of stairs is 2 tiles wide and StairLength long, on low ground against a plateau's edge, rising toward it.
+        // a = the footprint's lowest corner cell, d = the way up, r = across.
+        public struct Stair { public Vector2Int a, d, r; }
+
+        public const int StairLength = 3;
+        const int StairBlock = 16;
+        static readonly Dictionary<long, List<Stair>> stairBlocks = new Dictionary<long, List<Stair>>();
+        static readonly Vector2Int[] StairDirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
+
+        static bool Low(Cell c) => c == Cell.Ground || c == Cell.Path;
+
+        // Up to two flights per 16x16 block: every spot where one fits is found once, then picked by the world seed.
+        static List<Stair> StairsIn(int bx, int by)
+        {
+            long key = ((long)bx << 32) ^ (uint)by;
+            if (stairBlocks.TryGetValue(key, out var list)) return list;
+            list = new List<Stair>();
+            var found = new List<Stair>();
+            int x0 = bx * StairBlock, y0 = by * StairBlock;
+            for (int y = 3; y < StairBlock - 3; y++)
+            for (int x = 3; x < StairBlock - 3; x++)
+            foreach (var d in StairDirs)
+            {
+                var a = new Vector2Int(x0 + x, y0 + y);
+                if (FortressAt(a.x, a.y, out _)) continue;          // a fortress has one way up, its own
+                if (BaseCell(a.x + StairLength * d.x, a.y + StairLength * d.y) != Cell.Plateau) continue;
+                var r = new Vector2Int(Mathf.Abs(d.y), Mathf.Abs(d.x));
+                bool ok = true;
+                for (int i = 0; i < 2 && ok; i++)
+                {
+                    var q = a + r * i;
+                    ok = BaseCell(q.x + StairLength * d.x, q.y + StairLength * d.y) == Cell.Plateau;
+                    for (int k = -1; k < StairLength && ok; k++) ok = Low(BaseCell(q.x + k * d.x, q.y + k * d.y));
+                }
+                if (ok) found.Add(new Stair { a = a, d = d, r = r });
+            }
+            if (found.Count > 0)
+            {
+                var first = found[(int)(Hash(bx * 131 + 7, by * 173 - 3) % (uint)found.Count)];
+                list.Add(first);
+                Stair far = first;
+                int best = 0;
+                foreach (var f in found)
+                {
+                    int dist = Mathf.Abs(f.a.x - first.a.x) + Mathf.Abs(f.a.y - first.a.y);
+                    if (dist > best) { best = dist; far = f; }
+                }
+                if (best >= 7) list.Add(far);
+            }
+            stairBlocks[key] = list;
+            return list;
+        }
+
+        // The flight a cell belongs to, and which of its rows: 0 = the bottom, StairLength - 1 = against the plateau.
+        public static bool StairAt(int x, int y, out Stair stair, out int row)
+        {
+            if (FortressAt(x, y, out var fort))
+            {
+                var a = fort.StairA;
+                stair = new Stair { a = a, d = Vector2Int.up, r = Vector2Int.right };
+                row = y - a.y;
+                return x >= a.x && x <= a.x + 1 && row >= 0 && row < StairLength;
+            }
+            foreach (var st in StairsIn(Mathf.FloorToInt(x / (float)StairBlock), Mathf.FloorToInt(y / (float)StairBlock)))
+            {
+                int rx = x - st.a.x, ry = y - st.a.y;
+                int across = rx * st.r.x + ry * st.r.y, along = rx * st.d.x + ry * st.d.y;
+                if (across < 0 || across > 1 || along < 0 || along >= StairLength) continue;
+                stair = st; row = along;
+                return true;
+            }
+            stair = default; row = 0;
+            return false;
+        }
+
+        // How high the ground is at a point (0 on low ground, PlateauHeight on a plateau, in between on stairs).
+        public static float HeightAt(Vector2 p)
+        {
+            int x = Mathf.FloorToInt(p.x), y = Mathf.FloorToInt(p.y);
+            var c = CellAt(x, y);
+            if (c == Cell.Plateau) return PlateauHeight;
+            if (c != Cell.Stairs || !StairAt(x, y, out var st, out _)) return 0f;
+            float along = (p.x - st.a.x) * st.d.x + (p.y - st.a.y) * st.d.y + (st.d.x + st.d.y < 0 ? 1f : 0f);
+            return PlateauHeight * Mathf.Clamp01(along / StairLength);
+        }
+
+        // Can a walker go from one cell to the one next to it (not diagonal)? Low and high ground only meet on stairs,
+        // which are entered at the bottom and left at the top.
+        public static bool CanStep(int ax, int ay, int bx, int by)
+        {
+            var a = CellAt(ax, ay); var b = CellAt(bx, by);
+            bool aS = a == Cell.Stairs, bS = b == Cell.Stairs;
+            if (!aS && !bS) return (Walkable(a) && Walkable(b)) || (a == Cell.Plateau && b == Cell.Plateau);
+            if (aS && bS) return true;
+            int sx = aS ? ax : bx, sy = aS ? ay : by, ox = aS ? bx : ax, oy = aS ? by : ay;
+            var other = aS ? b : a;
+            if (!StairAt(sx, sy, out var st, out int row)) return false;
+            if (other == Cell.Plateau) return row == StairLength - 1 && ox == sx + st.d.x && oy == sy + st.d.y;
+            return Walkable(other) && row == 0 && ox == sx - st.d.x && oy == sy - st.d.y;
         }
 
         // ---------- Castles: open dungeons on the overworld ----------
@@ -300,7 +519,7 @@ namespace TWF
                     int pad = CastleMargin + 6;
                     var rect = new RectInt(px * span + pad + (int)((h >> 12) % (uint)(span - w - 2 * pad)),
                                            py * span + pad + (int)((h >> 20) % (uint)(span - ht - 2 * pad)), w, ht);
-                    if (rect.center.magnitude > HubRadius + 90f && !CastleTouchesLandmark(rect))
+                    if (rect.center.magnitude > HubRadius + 90f && !CastleTouchesLandmark(rect) && !CastleTouchesFortress(rect))
                     {
                         int kw = Mathf.Max(8, w / 3) & ~1, kh = Mathf.Max(6, ht / 3);
                         var keep = new RectInt(rect.x + (w - kw) / 2, rect.yMax - 3 - kh, kw, kh);
@@ -330,8 +549,22 @@ namespace TWF
             var b = ChunkOf(new Vector2(r.xMax + CastleMargin + 7, r.yMax + CastleMargin + 7));
             for (int cx = a.x; cx <= b.x; cx++)
             for (int cy = a.y; cy <= b.y; cy++)
-                if (HasWaypoint(cx, cy, out _) || HasBossGate(cx, cy, out _) || HasChest(cx, cy, out _, out _) || HasDungeon(cx, cy, out _))
+                if (HasWaypoint(cx, cy, out _) || HasBossGate(cx, cy, out _) || HasDungeon(cx, cy, out _))
                     return true;
+            return false;
+        }
+
+        static bool CastleTouchesFortress(RectInt r)
+        {
+            int span = BossGrid * ChunkSize, m = CastleMargin + 4;
+            for (int ix = 0; ix < 2; ix++)
+            for (int iy = 0; iy < 2; iy++)
+            {
+                int x = ix == 0 ? r.xMin : r.xMax, y = iy == 0 ? r.yMin : r.yMax;
+                if (!FortressInPatch(Mathf.FloorToInt(x / (float)span), Mathf.FloorToInt(y / (float)span), out var f)) continue;
+                var b = f.Bounds;
+                if (r.xMin - m < b.xMax && r.xMax + m > b.xMin && r.yMin - m < b.yMax && r.yMax + m > b.yMin) return true;
+            }
             return false;
         }
 

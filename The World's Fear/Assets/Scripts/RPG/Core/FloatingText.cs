@@ -7,6 +7,8 @@ namespace TWF
     // Pooled world-space popup text: damage numbers, heals, "Level Up!".
     public class FloatingText : MonoBehaviour
     {
+        void OnEnable() => HeightLift.On(gameObject);   // stands on plateaus and stairs too
+
         static readonly Stack<FloatingText> pool = new Stack<FloatingText>();
         static Transform root;
 

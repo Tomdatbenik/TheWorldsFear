@@ -32,6 +32,7 @@ namespace TWF
 
     public class Projectile : MonoBehaviour
     {
+
         ProjectileSpec spec;
         Combatant owner;
         Team team;
@@ -48,7 +49,7 @@ namespace TWF
         public float Speed => spec.speed;
         public float RangeLeft => spec.range - travelled;
 
-        void OnEnable() => Live.Add(this);
+        void OnEnable() { Live.Add(this); HeightLift.On(gameObject); }   // flies over plateaus and stairs too
         void OnDisable() => Live.Remove(this);
 
         public static Projectile Fire(Combatant owner, Vector2 origin, Vector2 direction, ProjectileSpec spec, Combatant homingTarget = null)
@@ -194,6 +195,8 @@ namespace TWF
     // A circle on the ground: telegraphed, then deals damage one or more times.
     public class AreaEffect : MonoBehaviour
     {
+        void OnEnable() => HeightLift.On(gameObject);   // stands on plateaus and stairs too
+
         AreaSpec spec;
         Combatant owner;
         Team team;
@@ -296,6 +299,8 @@ namespace TWF
     // Tiny sprite-based particle effects; no particle system assets required.
     public class VFX : MonoBehaviour
     {
+        void OnEnable() => HeightLift.On(gameObject);   // stands on plateaus and stairs too
+
         Vector3 velocity;
         float life, maxLife;
         SpriteRenderer sr;

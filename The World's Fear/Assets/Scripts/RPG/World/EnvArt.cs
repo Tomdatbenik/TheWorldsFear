@@ -18,9 +18,12 @@ namespace TWF
         // Rises along +Y from h0 at the rect's bottom edge to h1 at its top edge.
         public static void AddRamp(Rect r, float h0, float h1) => regions.Add(new Region { rect = r, h0 = h0, h1 = h1, ramp = true });
 
+        // The open world's own heights (plateaus and stairs), set by ChunkWorld while it is alive.
+        public static Func<Vector2, float> World;
+
         public static float At(Vector2 p)
         {
-            float best = 0f;
+            float best = World != null ? World(p) : 0f;
             foreach (var r in regions)
                 if (r.rect.Contains(p))
                     best = Mathf.Max(best, r.ramp ? Mathf.Lerp(r.h0, r.h1, Mathf.InverseLerp(r.rect.yMin, r.rect.yMax, p.y)) : r.h0);
@@ -32,28 +35,70 @@ namespace TWF
     public class GroundFollow : MonoBehaviour
     {
         const float RiseSpeed = 9f;
-        readonly List<(Transform t, float z)> parts = new List<(Transform, float)>();
+        readonly Dictionary<Transform, float> parts = new Dictionary<Transform, float>();   // each part's own height
+        readonly Dictionary<Transform, float> written = new Dictionary<Transform, float>(); // what was last set on it
+        readonly List<Transform> keys = new List<Transform>();
+        readonly List<Transform> gone = new List<Transform>();
         float height;
         CameraFollow cam;
+        bool hero;
 
         void Start()
         {
-            foreach (Transform c in transform) parts.Add((c, c.localPosition.z));
-            if (GetComponent<HeroController>() != null && Camera.main != null) cam = Camera.main.GetComponent<CameraFollow>();
+            hero = GetComponent<HeroController>() != null;
+            if (hero && Camera.main != null) cam = Camera.main.GetComponent<CameraFollow>();
+            height = TerrainHeight.At(transform.position);
         }
 
         void LateUpdate()
         {
             float target = TerrainHeight.At(transform.position);
             height = Mathf.MoveTowards(height, target, RiseSpeed * Time.deltaTime);
-            foreach (var (t, z) in parts)
+            // Children that turn up later (status flames, bars) join in at the height they were made for.
+            foreach (Transform c in transform)
+                if (!parts.ContainsKey(c)) parts[c] = c.localPosition.z;
+            keys.Clear(); keys.AddRange(parts.Keys);
+            foreach (var t in keys)
             {
-                if (t == null) continue;
+                if (t == null) { gone.Add(t); continue; }
                 var p = t.localPosition;
-                p.z = z - height;
+                // Moved by its own animation since last frame (a leap, a hop): that is its new height.
+                if (written.TryGetValue(t, out float w) && !Mathf.Approximately(p.z, w)) parts[t] = p.z;
+                p.z = parts[t] - height;
                 t.localPosition = p;
+                written[t] = p.z;
             }
+            if (gone.Count > 0) { foreach (var g in gone) { parts.Remove(g); written.Remove(g); } gone.Clear(); }
             if (cam != null) cam.focusHeight = height;
+            if (hero) View.GroundHeight = height;
+        }
+    }
+
+    // Lifts a whole loose object (a projectile, a pickup, an effect, floating text) to the terrain height under it.
+    public class HeightLift : MonoBehaviour
+    {
+        float baseZ;
+        bool skip, ready;
+
+        public static void On(GameObject go)
+        {
+            if (TerrainHeight.World != null && go.GetComponent<HeightLift>() == null) go.AddComponent<HeightLift>();
+        }
+
+        void LateUpdate()
+        {
+            if (!ready)
+            {
+                ready = true;
+                // Anything riding on a unit is lifted with it already.
+                skip = transform.parent != null && (transform.parent.GetComponentInParent<GroundFollow>() != null || transform.parent.GetComponentInParent<HeightLift>() != null);
+                float h0 = TerrainHeight.At(transform.position), z = transform.position.z;
+                baseZ = h0 > 0.5f && z < -h0 * 0.6f ? z + h0 : z;      // made at the lifted height already
+            }
+            if (skip) return;
+            var p = transform.position;
+            p.z = baseZ - TerrainHeight.At(p);
+            transform.position = p;
         }
     }
 

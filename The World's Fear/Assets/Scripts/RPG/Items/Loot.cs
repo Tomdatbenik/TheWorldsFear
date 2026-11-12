@@ -48,6 +48,8 @@ namespace TWF
     // Loot lying on the ground. Walk over it to collect.
     public class Pickup : MonoBehaviour
     {
+        void OnEnable() => HeightLift.On(gameObject);   // stands on plateaus and stairs too
+
         public ItemInstance item;
         public int gold;
         public bool potion;

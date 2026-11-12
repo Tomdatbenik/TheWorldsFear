@@ -19,6 +19,8 @@ void TWF_RevealClip(float3 positionWS, float3 groundWS, float4 positionCS)
     for (int i = 0; i < TWF_REVEAL_MAX && i < _TWF_RevealCount; i++)
     {
         float3 hero = _TWF_Reveal[i].xyz;
+        // What the hero stands on never fades: steps under the feet, the cliff below a plateau's edge (up is -Z).
+        if (positionWS.z > hero.z - 0.2) continue;
         // In front of the hero, along the view? Starts just before the hero is fully behind, so nothing pops.
         float front = saturate((dot(hero - groundWS, forward) + 0.1) / 0.2);
         if (front <= 0) continue;

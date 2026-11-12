@@ -464,14 +464,18 @@ namespace TWF
             }
         }
 
-        static bool InArena(Vector2 p, float margin) => BossArenaSetup.Instance == null || BossArenaSetup.Instance.Inside(p, margin);
-        static Vector2 ClampArena(Vector2 p, float margin) => BossArenaSetup.Instance != null ? BossArenaSetup.Instance.ClampInside(p, margin) : p;
+        // The arena is the boss scene's, or a fortress on the overworld.
+        static bool InArena(Vector2 p, float margin) => BossArenaSetup.Instance != null ? BossArenaSetup.Instance.Inside(p, margin)
+            : BossFortress.Active == null || BossFortress.Active.Inside(p, margin);
+        static Vector2 ClampArena(Vector2 p, float margin) => BossArenaSetup.Instance != null ? BossArenaSetup.Instance.ClampInside(p, margin)
+            : BossFortress.Active != null ? BossFortress.Active.ClampInside(p, margin) : p;
 
         Vector2 WallPoint()
         {
             // A point on the wall, preferring the far side from the hero.
             Vector2 hero = Hero != null ? (Vector2)Hero.transform.position : Vector2.zero;
             var arena = BossArenaSetup.Instance;
+            if (arena == null && BossFortress.Active != null) return BossFortress.Active.EdgePoint(hero);
             return arena != null ? arena.EdgePoint(hero) : -hero.normalized * 10f;
         }
 
@@ -1234,7 +1238,7 @@ namespace TWF
             Loot.Drop(self, transform.position);
             Pickup.SpawnGlyph((Vector2)transform.position + Vector2.right * 2f, SkillParts.Roll(new System.Random(), self.level, MonsterRank.Boss));
             Profile.Save();
-            GameUI.Instance?.Toast("Victory! Grab the loot, then step into the portal.", Palette.Gold, 4f);
+            GameUI.Instance?.Toast(BossArenaSetup.Instance != null ? "Victory! Grab the loot, then step into the portal." : "Victory! The fortress is yours.", Palette.Gold, 4f);
             if (System.Array.IndexOf(Guardians, kind) >= 0)
             {
                 var left = WorldManager.GuardiansLeft();
@@ -1246,7 +1250,7 @@ namespace TWF
             if (firstKill && kind != BossKind.WorldsFear && BossUnlocks.Describe(kind) != null) StartCoroutine(AnnounceUnlock(kind));
             // Beating the World's Fear the first time ends the story.
             if (firstKill && kind == BossKind.WorldsFear) StartCoroutine(WinScreen());
-            ExitPortal.Spawn(Vector2.zero, returnScene);
+            if (BossArenaSetup.Instance != null) ExitPortal.Spawn(Vector2.zero, returnScene);   // a fortress is walked out of
             visual.gameObject.SetActive(false);
             if (leftHand != null)
             {

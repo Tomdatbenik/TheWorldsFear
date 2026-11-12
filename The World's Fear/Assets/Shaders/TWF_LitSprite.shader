@@ -12,6 +12,7 @@ Shader "TWF/LitSprite"
         _Wind ("Wind Sway", Range(0,1)) = 0
         _Ambient ("Ambient Boost", Range(0,2)) = 1
         _FlatGround ("Ground (no self shading)", Float) = 0
+        _NoReveal ("Never fades in front of the hero (stairs)", Float) = 0
         _MeshNormals ("Use Mesh Normals (cliffs)", Float) = 0
         _NormalMap ("Normal Map (pixel art)", 2D) = "bump" {}
         _UseNormalMap ("Use Normal Map", Float) = 0
@@ -45,6 +46,7 @@ Shader "TWF/LitSprite"
             half _Wind;
             half _Ambient;
             half _FlatGround;
+            half _NoReveal;
             half _MeshNormals;
             half _UseNormalMap;
             half _Bands;
@@ -52,7 +54,7 @@ Shader "TWF/LitSprite"
         CBUFFER_END
 
         // Trees, bushes and 3D walls dither away in front of a hero; the ground and units never do.
-        bool RevealsHero() { return _FlatGround < 0.5 && (_Wind > 0.001 || _MeshNormals > 0.5); }
+        bool RevealsHero() { return _NoReveal < 0.5 && _FlatGround < 0.5 && (_Wind > 0.001 || _MeshNormals > 0.5); }
 
         // Sway the top of the sprite; the base (uv.y = 0) stays put.
         float3 ApplyWind(float3 positionWS, float2 uv)

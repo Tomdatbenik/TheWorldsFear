@@ -6,6 +6,8 @@ namespace TWF
     // Plays one sheet, then removes itself (or loops for `life` seconds, fading in and out).
     public class FxPlayer : MonoBehaviour
     {
+        void OnEnable() => HeightLift.On(gameObject);   // stands on plateaus and stairs too
+
         Fx.Sheet sheet;
         SpriteRenderer sr;
         Color tint;

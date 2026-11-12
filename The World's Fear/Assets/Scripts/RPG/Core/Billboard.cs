@@ -40,6 +40,8 @@ namespace TWF
         static Quaternion rotation = Quaternion.identity;
 
         public static float Yaw { get; private set; }
+        // How high the hero stands (a plateau, stairs): screen points are projected onto that level.
+        public static float GroundHeight;
         public static Quaternion Rotation => rotation;
         // "Up" on screen, used for text and bars floating above characters.
         public static Vector3 Up => rotation * Vector3.up;
@@ -70,7 +72,7 @@ namespace TWF
             if (cam == null) return null;
             var ray = cam.ScreenPointToRay(screen);
             if (Mathf.Abs(ray.direction.z) < 0.0001f) return null;
-            float t = -ray.origin.z / ray.direction.z;
+            float t = (-GroundHeight - ray.origin.z) / ray.direction.z;
             if (t < 0f) return null;
             return (Vector2)(ray.origin + ray.direction * t);
         }

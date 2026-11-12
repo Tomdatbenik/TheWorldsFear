@@ -78,6 +78,7 @@ namespace TWF
         {
             body = GetComponent<Rigidbody2D>();
             CacheRenderers();
+            if (GetComponent<GroundFollow>() == null) gameObject.AddComponent<GroundFollow>();
         }
 
         void OnEnable() => All.Add(this);

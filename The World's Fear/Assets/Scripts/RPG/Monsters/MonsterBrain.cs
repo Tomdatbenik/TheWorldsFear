@@ -20,7 +20,7 @@ namespace TWF
         public Warband Band { get; set; }
 
         public float aggroRange = 7.5f;
-        public float leashRange = 16f;
+        public float leashRange = 28f;
 
         enum State { Idle, Chase, Busy, Return }
         State state = State.Idle;
@@ -300,7 +300,9 @@ namespace TWF
                     break;
 
                 case State.Chase:
-                    if (!heroAlive || distHome > leashRange)
+                    // A monster in a fight keeps fighting: it only gives up when the hero is gone, it has strayed past its
+                    // leash with the hero out of reach, or twice the leash in any case.
+                    if (!heroAlive || (distHome > leashRange && distHero > 5f) || distHome > leashRange * 2f)
                     {
                         state = State.Return;
                         break;
@@ -329,9 +331,52 @@ namespace TWF
             }
             if (busy) return;
             float speed = Combatant.MoveSpeed * (state == State.Return ? 1.5f : state == State.Idle ? 0.4f : speedMult);
-            var move = state == State.Chase && DungeonSetup.Instance != null ? DungeonSetup.Instance.Route(transform.position, desired) : desired;
+            Vector2 pos = transform.position;
+            var move = desired;
+            if (state == State.Chase && DungeonSetup.Instance != null) move = DungeonSetup.Instance.Route(pos, desired);
+            else if (ChunkWorld.Instance != null && state != State.Idle)
+            {
+                // Open world: round walls, cliffs, water and lava toward the hero, or back home.
+                var hero = Hero;
+                Vector2 target = state == State.Chase && hero != null ? (Vector2)hero.transform.position : Home;
+                move = WorldRouter.Route(pos, target, desired);
+            }
+            move = Unstick(pos, move, speed);
             body.linearVelocity = move * speed;
         }
+
+        // Something the tile grid doesn't know about (a tree, a rock, another monster) can still pin a monster in
+        // place: when it barely moves while trying to, it slides off to one side for a moment. A monster stuck on its
+        // way home for long is simply put back home.
+        float stuckTime, sidestepUntil, sidestepSign = 1f;
+        Vector2 lastPos;
+
+        Vector2 Unstick(Vector2 pos, Vector2 move, float speed)
+        {
+            float dt = Time.fixedDeltaTime;
+            bool trying = move.sqrMagnitude > 0.01f && speed > 0.1f;
+            float moved = (pos - lastPos).magnitude;
+            lastPos = pos;
+            if (Time.time < sidestepUntil)
+                return (Vector2)(Quaternion.Euler(0f, 0f, 75f * sidestepSign) * move);
+            stuckTime = trying && moved < speed * dt * 0.25f ? stuckTime + dt : 0f;
+            if (stuckTime > 0.45f)
+            {
+                stuckTime = 0f;
+                sidestepSign = UnityEngine.Random.value < 0.5f ? -1f : 1f;
+                sidestepUntil = Time.time + 0.6f;
+                if (state == State.Return && ++stuckReturning >= 4)
+                {
+                    stuckReturning = 0;
+                    body.position = Home;
+                    transform.position = Home;
+                }
+            }
+            if (state != State.Return) stuckReturning = 0;
+            return move;
+        }
+
+        int stuckReturning;
 
         void Wander(float dt, Vector2 pos)
         {
