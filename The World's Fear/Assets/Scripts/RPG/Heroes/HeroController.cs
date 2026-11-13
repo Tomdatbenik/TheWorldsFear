@@ -209,7 +209,7 @@ namespace TWF
             if (tree != null)
                 foreach (var node in tree.nodes)
                 {
-                    int rank = Profile.RankOf(node.id);
+                    int rank = Profile.RankOf(node.id) + MythicPowers.BonusRanks(node.id);
                     if (rank > 0 && node.passive != null) passiveCleanups.Add(node.passive.Apply(Combatant, rank));
                 }
 
@@ -393,25 +393,28 @@ namespace TWF
 
             if (!w.ranged)
             {
-                if (mastery && w.type == WeaponType.Daggers) { ThrowKnives(w, dir); return; }
+                if (mastery && w.type == WeaponType.Daggers) { MythicPowers.OnBasicAttack(this, dir, target); ThrowKnives(w, dir); return; }
                 if (mastery && w.type == WeaponType.Spear && ++javelinCount >= WeaponMasteries.JavelinEvery)
                 {
                     javelinCount = 0;
+                    MythicPowers.OnBasicAttack(this, dir, target);
                     ThrowJavelin(w, dir);
                     return;
                 }
-                StartCoroutine(MeleeAttack(w, target, dir));
+                StartCoroutine(MeleeAttack(w, target, dir));   // every slash counts as its own hit for Convergence
                 return;
             }
+
+            MythicPowers.OnBasicAttack(this, dir, target);
 
             var spec = new ProjectileSpec
             {
                 speed = w.projectileSpeed * (1f + Combatant.Stats.Get(StatType.ProjectileSpeed)), range = w.range + 2f, hitRadius = 0.3f,
                 damageMult = w.damageMult, color = w.color, size = w.projectileSize, pierce = w.pierce, explodeRadius = w.explodeRadius,
                 sprite = w.arrow ? HeroVisuals.ArrowSprite : null, rotateSprite = true, homing = w.homing, status = WeaponStatus(w),
-                elements = Elements.Mask(Weapons.EquippedElement),
+                elements = MythicPowers.AttackMask,
             };
-            if (Weapons.EquippedElement != ElementPart.Physical && !w.arrow) spec.color = Elements.Color(Weapons.EquippedElement);
+            if (MythicPowers.AttackElement != ElementPart.Physical && !w.arrow) spec.color = Elements.Color(MythicPowers.AttackElement);
             if (mastery && w.type == WeaponType.Staff) spec.onHit = GravityOnHit;
             if (mastery && w.type == WeaponType.Wand) spec.onHit = ChainOnHit(spec, WeaponMasteries.ChainJumps, new HashSet<Combatant>());
             if (mastery && w.type == WeaponType.Crossbow)
@@ -434,6 +437,19 @@ namespace TWF
                 var s2 = spec;
                 s2.homing = false;
                 Projectile.Fire(Combatant, (Vector2)transform.position + d2 * 0.4f, d2, s2);
+            }
+            // Endless Volley: every fifth shot also fans out five arrows.
+            if (MythicPowers.VolleyShot())
+            {
+                var fan = spec;
+                fan.homing = false;
+                if (Weapon.arrow) fan.sprite = HeroVisuals.ArrowSprite;
+                if (MythicPowers.AttackElement != ElementPart.Physical) fan.color = Elements.Color(MythicPowers.AttackElement);
+                for (int k = -2; k <= 2; k++)
+                {
+                    var d3 = (Vector2)(Quaternion.Euler(0, 0, k * 11f) * dir);
+                    Projectile.Fire(Combatant, (Vector2)transform.position + d3 * 0.4f, d3, fan);
+                }
             }
             Shoot(dir, w.type == WeaponType.Bow || w.type == WeaponType.Crossbow);
             Sound.Play(Sfx.Swing, transform.position, 0.3f);
@@ -465,12 +481,12 @@ namespace TWF
         void ThrowKnives(WeaponProfile w, Vector2 dir)
         {
             var stats = Combatant.Stats;
-            int knives = w.hits + Mathf.RoundToInt(stats.Get(StatType.ExtraSlashes)) + Mathf.RoundToInt(stats.Get(StatType.ExtraProjectiles));
+            int knives = Mathf.Min(w.hits + FullSlashes, w.hits + Mathf.RoundToInt(stats.Get(StatType.ExtraSlashes))) + Mathf.RoundToInt(stats.Get(StatType.ExtraProjectiles));
             var spec = new ProjectileSpec
             {
                 speed = 18f * (1f + stats.Get(StatType.ProjectileSpeed)), range = WeaponMasteries.KnifeRange + 1f, hitRadius = 0.3f,
                 damageMult = w.damageMult, color = new Color(0.85f, 0.88f, 0.95f), size = 0.55f, sprite = HeroVisuals.ArrowSprite, look = "knife", rotateSprite = true,
-                status = WeaponStatus(w), elements = Elements.Mask(Weapons.EquippedElement),
+                status = WeaponStatus(w), elements = MythicPowers.AttackMask,
             };
             float spread = 9f * (1f + stats.Get(StatType.ProjectileSpread));
             for (int k = 0; k < knives; k++)
@@ -490,7 +506,7 @@ namespace TWF
                 speed = 22f * (1f + Combatant.Stats.Get(StatType.ProjectileSpeed)), range = WeaponMasteries.JavelinRange, hitRadius = 0.4f,
                 damageMult = w.damageMult * WeaponMasteries.JavelinDamage, pierce = -1, knockback = 0.5f,
                 color = new Color(0.9f, 0.8f, 0.6f), size = 1.1f, sprite = HeroVisuals.ArrowSprite, look = "spear", rotateSprite = true,
-                status = WeaponStatus(w), elements = Elements.Mask(Weapons.EquippedElement),
+                status = WeaponStatus(w), elements = MythicPowers.AttackMask,
             };
             FireVolley(w, spec, dir, null);
         }
@@ -538,7 +554,7 @@ namespace TWF
         // An elemental weapon sometimes applies its element's effect (burn, chill, ...).
         static StatusSpec WeaponStatus(WeaponProfile w)
         {
-            var e = Weapons.EquippedElement;
+            var e = MythicPowers.AttackElement;
             if (e == ElementPart.Physical || w.status.IsSet) return w.status;
             var st = SkillComposer.ElementStatus(e);
             if (st.IsSet) st.chance = st.type == StatusType.Stun ? st.chance : 0.25f;
@@ -549,15 +565,30 @@ namespace TWF
         static float MeleeMult(WeaponProfile w, Combatant c) =>
             w.damageMult * (w.executeBelow > 0f && c.HPFraction < w.executeBelow ? 1f + w.executeBonus : 1f);
 
+        public const int FullSlashes = 4;      // slashes per sword at full damage
+        public const float WeakSlash = 0.25f;  // damage of every slash past those
+
         IEnumerator MeleeAttack(WeaponProfile w, Combatant target, Vector2 dir)
         {
             float reach = MeleeReach(w);
-            int swings = w.hits + Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraSlashes)) + (w.type == WeaponType.Sword && WeaponMasteries.DualWielding ? 1 : 0);
+            // Slashes per sword: the first FullSlashes hit for full damage, every one after that for 25%.
+            // Dual-wielding swords gives each sword its own slashes, taking turns.
+            int perSword = w.hits + Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraSlashes));
+            int hands = w.type == WeaponType.Sword && WeaponMasteries.DualWielding ? 2 : 1;
+            int swings = perSword * hands;
+            float gap = Mathf.Clamp(0.5f / swings, 0.035f, 0.12f);
             bool spin = w.type == WeaponType.Axe && WeaponMasteries.Active(WeaponType.Axe);
             bool heavy = w.type == WeaponType.Hammer && WeaponMasteries.Active(WeaponType.Hammer);
-            string fx = Fx.Name(Weapons.EquippedElement);
             for (int h = 0; h < swings; h++)
             {
+                if (Combatant.IsDead) yield break;
+                MythicPowers.OnBasicAttack(this, dir, target);
+                string fx = Fx.Name(MythicPowers.AttackElement);
+                float slashMult = h / hands < FullSlashes ? 1f : WeakSlash;
+                // A flurry shouldn't shove the enemy out of reach: the full slashes share one hit's knockback, weak ones push nothing.
+                float push = slashMult < 1f ? 0f : w.knockback / Mathf.Min(swings, FullSlashes * hands);
+                // The off-hand sword swings from the other side.
+                Vector2 swingDir = hands == 2 && h % 2 == 1 ? (Vector2)(Quaternion.Euler(0, 0, 18f) * dir) : dir;
                 if (w.arc >= 360f)
                 {
                     // Hammer: slam a circle at the target: a shockwave with cracks and a puff of dust (or the weapon's element).
@@ -567,16 +598,16 @@ namespace TWF
                     CameraFollow.Shake(0.08f);
                     foreach (var c in Combat.HostilesInRadius(Team.Player, at, reach * 0.9f))
                     {
-                        Combat.Hit(Combatant, c, MeleeMult(w, c), WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
+                        Combat.Hit(Combatant, c, MeleeMult(w, c) * slashMult, WeaponStatus(w), true, push, -1f, MythicPowers.AttackMask);
                         Fx.HitOn(c, fx);
-                        Fx.Proc(c, Weapons.EquippedElement);
+                        Fx.Proc(c, MythicPowers.AttackElement);
                     }
                     if (heavy)
                         AreaEffect.Spawn(Combatant, at, new AreaSpec
                         {
                             radius = reach * 0.9f, delay = 0.35f, ticks = WeaponMasteries.HeavyTicks, interval = 0.45f,
                             damageMult = w.damageMult * WeaponMasteries.HeavyDamage, status = StatusSpec.Slow(0.4f, 1.2f),
-                            color = new Color(0.65f, 0.5f, 0.3f), elements = Elements.Mask(Weapons.EquippedElement),
+                            color = new Color(0.65f, 0.5f, 0.3f), elements = MythicPowers.AttackMask,
                         });
                 }
                 else if (spin)
@@ -585,24 +616,24 @@ namespace TWF
                     Fx.Slash(transform.position, dir, reach, 360f, fx);
                     foreach (var c in Combat.HostilesInRadius(Team.Player, transform.position, reach))
                     {
-                        Combat.Hit(Combatant, c, MeleeMult(w, c), WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
+                        Combat.Hit(Combatant, c, MeleeMult(w, c) * slashMult, WeaponStatus(w), true, push, -1f, MythicPowers.AttackMask);
                         Fx.HitOn(c, fx);
-                        Fx.Proc(c, Weapons.EquippedElement);
+                        Fx.Proc(c, MythicPowers.AttackElement);
                     }
                 }
                 else
                 {
-                    Fx.Slash(transform.position, dir, reach * 0.95f, w.arc, fx);
-                    foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, dir, reach, w.arc))
+                    Fx.Slash(transform.position, swingDir, reach * 0.95f, w.arc, fx);
+                    foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, swingDir, reach, w.arc))
                     {
-                        Combat.Hit(Combatant, c, MeleeMult(w, c), WeaponStatus(w), true, w.knockback, -1f, Elements.Mask(Weapons.EquippedElement));
+                        Combat.Hit(Combatant, c, MeleeMult(w, c) * slashMult, WeaponStatus(w), true, push, -1f, MythicPowers.AttackMask);
                         Fx.HitOn(c, fx);
-                        Fx.Proc(c, Weapons.EquippedElement);
+                        Fx.Proc(c, MythicPowers.AttackElement);
                     }
                 }
-                Swing(dir, w.arc >= 360f ? 90f : w.arc);
+                Swing(swingDir, w.arc >= 360f ? 90f : w.arc);
                 Sound.Play(Sfx.Swing, transform.position, 0.5f);
-                if (h < swings - 1) yield return new WaitForSeconds(0.12f);
+                if (h < swings - 1) yield return new WaitForSeconds(gap);
             }
         }
 
@@ -754,6 +785,20 @@ namespace TWF
             }
         }
 
+        // The crafted skill id behind a skill button ("craft:<uid>"), or null.
+        public string CraftIdIn(int slot) =>
+            slot == WeaponSlot ? null : slot >= FirstSocketSlot ? socketIds[slot - FirstSocketSlot] : Profile.Data.equippedSkills[slot];
+
+        // Time Fracture: every skill is ready again.
+        public void ResetCooldowns()
+        {
+            for (int i = 0; i < SlotCount; i++) cooldowns[i] = 0f;
+            for (int i = 0; i < autoCooldowns.Count; i++) autoCooldowns[i] = 0f;
+        }
+
+        // Casts a skill that isn't on a button (Echo's copy of a spell).
+        public void CastSkill(SkillDefinition skill, int rank, Vector2 dir, Vector2 point) => Cast(skill, rank, dir, point);
+
         void Cast(SkillDefinition skill, int rank, Vector2 dir, Vector2 point)
         {
             var ctx = new SkillContext
@@ -817,6 +862,7 @@ namespace TWF
             if (skill.targeting == Targeting.Dash) Sound.Play(Sfx.Dash, pos, 0.6f);
             else Sound.Play(Sfx.Cast, pos, 0.4f);
             SkillCast?.Invoke(slot);
+            MythicPowers.OnSpellCast(this, slot, dir.normalized, point);
             return true;
         }
     }

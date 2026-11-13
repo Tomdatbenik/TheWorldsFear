@@ -150,11 +150,18 @@ namespace TWF
             foreach (var w in d.codexWeapons) names.Add(Weapons.Name((WeaponType)w));
             sb.Append(names.Count > 0 ? string.Join(", ", names) : "none yet").Append("</size>");
             Line(sb.ToString(), 120);
-            Line($"<b>Legendary powers discovered</b>  <size=70%><color=#aaa>{d.codexPowers.Count} of {ItemPowers.All.Count}</color></size>", 56);
+            Line($"<b>Legendary powers discovered</b>  <size=70%><color=#aaa>{ItemPowers.All.FindAll(p => d.codexPowers.Contains(p.id)).Count} of {ItemPowers.All.Count}</color></size>", 56);
             foreach (var p in ItemPowers.All)
             {
                 bool found = d.codexPowers.Contains(p.id);
                 Line(found ? $"<color=#ff9a30>{p.name}</color>  <size=80%><color=#ccc>{ItemPowers.Describe(p.id)}</color></size>" : "<color=#666>??? — not found yet</color>", 64);
+            }
+            int mythFound = MythicPowers.All.FindAll(p => d.codexPowers.Contains(p.id)).Count;
+            Line($"<b>Mythic powers discovered</b>  <size=70%><color=#aaa>{mythFound} of {MythicPowers.All.Count}</color></size>", 56);
+            foreach (var p in MythicPowers.All)
+            {
+                bool found = d.codexPowers.Contains(p.id);
+                Line(found ? $"<color=#ff4d80>{p.name}</color> <size=70%><color=#999>({p.where})</color></size>  <size=80%><color=#ccc>{p.text}</color></size>" : "<color=#666>??? — not found yet</color>", 64);
             }
         }
 
@@ -191,7 +198,7 @@ namespace TWF
                 case StatType.SkillPower: return "Crafted and equipped skills hit harder.";
                 case StatType.SlashRange: return "Melee basic attacks reach further and sweep a wider area. Capped at 100%.";
                 case StatType.Handling: return "Ranged weapons: you stand still for less time on each shot. Melee weapons: your swings reach further. Capped at 75%.";
-                case StatType.ExtraSlashes: return "Extra swings with each melee basic attack. Up to 4.";
+                case StatType.ExtraSlashes: return "Extra swings with each melee basic attack. Each sword deals full damage with its first 4 slashes and 25% with every slash after that. Two swords each swing their own slashes. Every slash counts as a hit for Convergence.";
             }
             return "";
         }

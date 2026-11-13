@@ -302,8 +302,9 @@ namespace TWF
                 var state = tree.Check(v.node, Profile.Ranks, data.level, data.skillPoints);
                 bool locked = r == 0 && state != SkillTreeDefinition.CanRankUp.Yes && state != SkillTreeDefinition.CanRankUp.NoPoints;
                 v.lockOverlay.gameObject.SetActive(locked);
-                v.rank.text = $"{r}/{v.node.MaxRank}";
-                v.rank.color = r > 0 ? Palette.Gold : Palette.MutedText;
+                int bonus = MythicPowers.BonusRanks(v.node.id);
+                v.rank.text = $"{r}/{v.node.MaxRank}" + (bonus > 0 ? $" <color=#ff4d80>+{bonus}</color>" : "");
+                v.rank.color = r + bonus > 0 ? Palette.Gold : Palette.MutedText;
                 v.bg.transform.localScale = v.node == selected ? Vector3.one * 1.12f : Vector3.one;
                 int eq = Array.IndexOf(data.equippedSkills, v.node.id);
                 v.glyph.text = eq >= 0 ? $"<color=#ffd040>{(eq == 3 ? "ULT" : "#" + (eq + 1))}</color>" : "";
@@ -339,10 +340,13 @@ namespace TWF
 
             var tree = Profile.Class.skillTree;
             int rank = Profile.RankOf(selected.id);
+            int bonusRanks = MythicPowers.BonusRanks(selected.id);
             detailTitle.text = selected.DisplayName;
             detailTitle.color = selected.Color;
             string kind = selected.IsActive ? (selected.active.isUltimate ? "Ultimate skill" : "Active skill") : "Passive";
-            string body = $"<color=#aaa>{kind} · Rank {rank}/{selected.MaxRank}</color>\n\n{selected.Describe(Mathf.Max(1, rank))}";
+            string body = $"<color=#aaa>{kind} · Rank {rank}/{selected.MaxRank}</color>" +
+                (bonusRanks > 0 ? $" <color=#ff4d80>+{bonusRanks} from mythic gear (plays as rank {rank + bonusRanks})</color>" : "") +
+                $"\n\n{selected.Describe(Mathf.Max(1, rank + bonusRanks))}";
             if (rank > 0 && rank < selected.MaxRank)
                 body += $"\n\n<color=#7f7>Next rank:</color>\n<size=85%>{selected.Describe(rank + 1)}</size>";
             var state = tree.Check(selected, Profile.Ranks, data.level, data.skillPoints);

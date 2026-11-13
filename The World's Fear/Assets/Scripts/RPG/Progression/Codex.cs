@@ -45,6 +45,7 @@ namespace TWF
             if (d.lootByRarity == null || d.lootByRarity.Length < 5) d.lootByRarity = new int[5];
             d.lootByRarity[(int)item.rarity]++;
             if (!string.IsNullOrEmpty(item.legendaryPower) && !d.codexPowers.Contains(item.legendaryPower)) d.codexPowers.Add(item.legendaryPower);
+            if (!string.IsNullOrEmpty(item.mythicPower) && !d.codexPowers.Contains(item.mythicPower)) d.codexPowers.Add(item.mythicPower);
             if (item.slot == ItemSlot.Weapon && !d.codexWeapons.Contains(item.weaponType)) d.codexWeapons.Add(item.weaponType);
         }
 

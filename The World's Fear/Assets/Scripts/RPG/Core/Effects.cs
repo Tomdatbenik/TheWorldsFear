@@ -190,6 +190,7 @@ namespace TWF
         public float snapshotDamage;
         public System.Action<Combatant> onHit;
         public int elements;
+        public bool quiet;         // no telegraph ring or opening blast: just the lingering pool
     }
 
     // A circle on the ground: telegraphed, then deals damage one or more times.
@@ -214,7 +215,7 @@ namespace TWF
             a.team = owner != null ? owner.team : Team.Enemy;
             var c = spec.color;
             // Drawn at their real size so the warning stays crisp instead of turning into a blocky grid.
-            a.ringSr = GameAssets.CreateWorldSprite("ring", Fx.Ring(spec.radius), go.transform, new Color(c.r, c.g, c.b, 0.85f), SortOrder.Telegraph + 1, spec.radius * 2f);
+            a.ringSr = GameAssets.CreateWorldSprite("ring", Fx.Ring(spec.radius), go.transform, new Color(c.r, c.g, c.b, spec.quiet ? 0.2f : 0.85f), SortOrder.Telegraph + 1, spec.radius * 2f);
             a.fillSr = GameAssets.CreateWorldSprite("fill", Fx.Disc(spec.radius), go.transform, new Color(c.r, c.g, c.b, 0.3f), SortOrder.Telegraph, spec.radius * 2f);
             a.StartCoroutine(a.Run());
             return a;
@@ -245,7 +246,7 @@ namespace TWF
                 Follow();
                 fillSr.color = new Color(c.r, c.g, c.b, lingers ? 0.16f : 0.22f);
                 if (!lingers) Fx.Blast(transform.position, spec.radius, spec.elements, c);
-                else if (i == 0 && !spec.followOwner) Fx.Blast(transform.position, spec.radius * 0.8f, spec.elements, c);
+                else if (i == 0 && !spec.followOwner && !spec.quiet) Fx.Blast(transform.position, spec.radius * 0.8f, spec.elements, c);
                 else Fx.Shock(transform.position, spec.radius, Fx.Name(els[i % els.Count]), 0.55f);   // pulses take turns per element
                 foreach (var target in Combat.HostilesInRadius(team, transform.position, spec.radius).ToArray())
                 {

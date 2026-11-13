@@ -208,11 +208,13 @@ namespace TWF
                     item.implicitValue = ScaleImplicit(item, 1.25f);
                     break;
                 case Rarity.Mythic:
-                    // Mythic: a legendary power, five affixes rolled higher and a much stronger base.
-                    var mythPowers = ItemPowers.All.FindAll(p => (p.slots & RarityInfo.Mask(slot == ItemSlot.OffHand ? ItemSlot.Chest : slot)) != 0);
-                    var mythPower = mythPowers.Count > 0 ? mythPowers[rng.Next(mythPowers.Count)] : ItemPowers.All[0];
-                    item.legendaryPower = mythPower.id;
-                    item.name = $"{mythicAdj[rng.Next(mythicAdj.Length)]} {item.baseName} {mythPower.name}";
+                    // Mythic: a power only mythics roll, bonus passive ranks, five affixes rolled higher and a much stronger base.
+                    MythicPowers.Roll(item, rng);
+                    string powerName = MythicPowers.Find(item.mythicPower).name;
+                    string adj = mythicAdj[rng.Next(mythicAdj.Length)];
+                    // No "Worldbreaker's Blade of Worldbreaker": the adjective never repeats the power's name.
+                    while (powerName.StartsWith(adj.Substring(0, 5))) adj = mythicAdj[rng.Next(mythicAdj.Length)];
+                    item.name = $"{adj} {item.baseName} of {powerName}";
                     item.implicitValue = AffixDefinition.Mythic(item.implicitStat, ModKind.Flat, item.implicitValue, rng, 1.5f);
                     foreach (var a in item.affixes) a.value = AffixDefinition.Mythic(a.stat, a.kind, a.value, rng);
                     break;
@@ -302,8 +304,12 @@ namespace TWF
             if (item.slot == ItemSlot.Weapon && item.element != (int)ElementPart.Physical)
                 sb.Append($"Element: {Elements.Tag((ElementPart)item.element)}  <size=80%><color=#aaa>(basic attacks)</color></size>\n");
             foreach (var a in item.affixes) sb.Append($"<color=#8cf>{a.Describe()}</color>\n");
-            if (!string.IsNullOrEmpty(item.legendaryPower))
-                sb.Append($"<color=#ff9a30>{(item.rarity == Rarity.Mythic ? "Mythic power" : "Legendary")}: {ItemPowers.Describe(item.legendaryPower)}</color>\n");
+            if (!string.IsNullOrEmpty(item.bonusPassive) && item.bonusRanks > 0)
+                sb.Append($"<color=#6fd88f>+{item.bonusRanks} to {MythicPowers.PassiveName(item.bonusPassive)}</color> <size=80%><color=#999>(passive)</color></size>\n");
+            if (!string.IsNullOrEmpty(item.mythicPower))
+                sb.Append($"<color=#ff4d80>Mythic power: {MythicPowers.Describe(item)}</color>\n");
+            else if (!string.IsNullOrEmpty(item.legendaryPower))
+                sb.Append($"<color=#ff9a30>Legendary: {ItemPowers.Describe(item.legendaryPower)}</color>\n");
             if (compareTo != null && compareTo != item)
             {
                 float diff = item.Score() - compareTo.Score();

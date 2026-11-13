@@ -407,6 +407,7 @@ namespace TWF
         void Spawn(SkillContext ctx, Vector2 at, float r, float mult)
         {
             var c = ctx;
+            MythicPowers.OnSpellArea(ctx.caster, at, r);
             AreaEffect.Spawn(ctx.caster, at, new AreaSpec
             {
                 radius = r, delay = delay, ticks = ticks, interval = interval, damageMult = mult * ctx.power,

@@ -75,6 +75,11 @@ namespace TWF
         public float implicitValue;
         public List<RolledAffix> affixes = new List<RolledAffix>();
         public string legendaryPower;
+        // Mythics: a power only mythics roll, +1 to +3 ranks on a passive, and (Twin Edge) a second weapon element.
+        public string mythicPower;
+        public string bonusPassive;
+        public int bonusRanks;
+        public int secondElement = -1;
         public int weaponType; // WeaponType, for weapons
         public int offHandKind; // OffHandKind, for off-hand items
         public int element = (int)ElementPart.Physical;   // weapons: the element of basic attacks
@@ -101,6 +106,8 @@ namespace TWF
             float s = 0f;
             foreach (var m in Modifiers(null)) s += StatWeight(m.stat, m.kind) * m.value;
             if (!string.IsNullOrEmpty(legendaryPower)) s += 25f;
+            if (!string.IsNullOrEmpty(mythicPower)) s += 45f;
+            s += bonusRanks * 12f;
             return s;
         }
 

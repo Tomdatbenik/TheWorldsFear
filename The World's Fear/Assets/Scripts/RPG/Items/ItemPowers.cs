@@ -61,6 +61,7 @@ namespace TWF
                 var p = Find(item.legendaryPower);
                 if (p != null) active.Add(p.proc.Attach(hero.Combatant, p.rank));
             }
+            MythicPowers.Refresh(hero);
         }
 
         public static string Describe(string id)

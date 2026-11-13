@@ -46,6 +46,8 @@ namespace TWF
         public event Action<Combatant> Died;                    // killer (may be null)
         public event Action<Combatant> Killed;                  // on the attacker: victim
         public event Action<float> Healed;
+        // Asked when a hit would kill: return true to survive it (Phoenix Heart).
+        public Func<DamageInfo, bool> CheatDeath;
 
         class ActiveStatus
         {
@@ -283,7 +285,7 @@ namespace TWF
 
             Damaged?.Invoke(info, amount);
 
-            if (HP <= 0f) Die(info.source);
+            if (HP <= 0f && !(CheatDeath != null && CheatDeath(info))) Die(info.source);
             return amount;
         }
 

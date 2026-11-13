@@ -191,7 +191,7 @@ namespace TWF
                 case StatType.ProjectileSpread: return Mathf.Clamp(v, -0.6f, 2f);
                 case StatType.SkillPower: return Mathf.Clamp(v, 0f, 5f);
                 case StatType.Handling: return Mathf.Clamp(v, 0f, 0.75f);
-                case StatType.ExtraSlashes: return Mathf.Clamp(Mathf.Round(v), 0f, 4f);
+                case StatType.ExtraSlashes: return Mathf.Clamp(Mathf.Round(v), 0f, 12f);
                 case StatType.SlashRange: return Mathf.Clamp(v, 0f, 1f);
                 default: return Mathf.Max(0f, v);
             }
