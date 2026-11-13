@@ -497,6 +497,8 @@ namespace TWF
             float k = strength * ctx.power;
             float dur = duration * ctx.Duration;
             Vector3 head = c.transform.position + View.Up * (c.HeadHeight + 0.5f);
+            // One blessing per element: casting the same one again refreshes it, a different one runs beside it.
+            string key = "bless_" + element;
             string text;
             switch (element)
             {
@@ -505,7 +507,7 @@ namespace TWF
                     text = null;
                     break;
                 case ElementPart.Fire:
-                    c.AddTimedModifiers("bless", dur, (StatType.Damage, ModKind.Percent, 0.3f * k));
+                    c.AddTimedModifiers(key, dur, (StatType.Damage, ModKind.Percent, 0.3f * k));
                     text = "Burning fury";
                     break;
                 case ElementPart.Frost:
@@ -513,23 +515,23 @@ namespace TWF
                     text = "Ice armor";
                     break;
                 case ElementPart.Lightning:
-                    c.AddTimedModifiers("bless", dur, (StatType.MoveSpeed, ModKind.Percent, 0.3f * k), (StatType.AttackSpeed, ModKind.Percent, 0.3f * k));
+                    c.AddTimedModifiers(key, dur, (StatType.MoveSpeed, ModKind.Percent, 0.3f * k), (StatType.AttackSpeed, ModKind.Percent, 0.3f * k));
                     text = "Storm speed";
                     break;
                 case ElementPart.Poison:
-                    c.AddTimedModifiers("bless", dur, (StatType.CritChance, ModKind.Flat, 0.15f * k), (StatType.CritDamage, ModKind.Flat, 0.3f * k));
+                    c.AddTimedModifiers(key, dur, (StatType.CritChance, ModKind.Flat, 0.15f * k), (StatType.CritDamage, ModKind.Flat, 0.3f * k));
                     text = "Venom edge";
                     break;
                 case ElementPart.Arcane:
-                    c.AddTimedModifiers("bless", dur, (StatType.CooldownReduction, ModKind.Flat, 0.25f * k), (StatType.SkillPower, ModKind.Flat, 0.15f * k));
+                    c.AddTimedModifiers(key, dur, (StatType.CooldownReduction, ModKind.Flat, 0.25f * k), (StatType.SkillPower, ModKind.Flat, 0.15f * k));
                     text = "Arcane focus";
                     break;
                 case ElementPart.Shadow:
-                    c.AddTimedModifiers("bless", dur, (StatType.LifeSteal, ModKind.Flat, 0.12f * k));
+                    c.AddTimedModifiers(key, dur, (StatType.LifeSteal, ModKind.Flat, 0.12f * k));
                     text = "Shadow thirst";
                     break;
                 default:
-                    c.AddTimedModifiers("bless", dur, (StatType.Armor, ModKind.Percent, 0.5f * k));
+                    c.AddTimedModifiers(key, dur, (StatType.Armor, ModKind.Percent, 0.5f * k));
                     text = "Stoneskin";
                     break;
             }
