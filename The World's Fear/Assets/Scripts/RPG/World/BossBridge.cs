@@ -79,6 +79,8 @@ namespace TWF
                 Profile.AddItem(ItemGenerator.Generate(level + 2, rarity, ItemGenerator.RandomSlot(rng), rng));
             }
             Profile.Data.bossDefeated = true;
+            Legacy.OnBossKilled(BossKind.WorldsFear);
+            Legacy.FinishRun();
             Profile.Data.bossesKilled++;
             Profile.Save();
 

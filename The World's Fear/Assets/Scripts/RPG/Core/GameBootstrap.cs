@@ -55,6 +55,12 @@ namespace TWF
 
         void OnMonsterDied(MonsterBrain monster, Combatant killer) => Loot.Drop(monster.Combatant, monster.transform.position);
 
+        // The run's own clock: lairs grow by it, so a lair keeps its age across a restart.
+        void Update()
+        {
+            if (Hero != null && !Hero.Combatant.IsDead) Profile.Data.playTime += Time.deltaTime;
+        }
+
         void Start()
         {
             if (!string.IsNullOrEmpty(arenaZoneId)) StartCoroutine(ArenaLoop());
@@ -78,6 +84,8 @@ namespace TWF
                 $"Furthest journey: {Mathf.RoundToInt(d.farthest)}m from the village\n" +
                 $"Monsters slain: {d.kills}   ·   Bosses slain: {d.bossesKilled}\n" +
                 $"Gold: {d.gold}</color></size>";
+            string unlocked = Legacy.FinishRun();
+            if (unlocked.Length > 0) summary += $"\n\n<size=50%><color=#ffd040>{unlocked}</color></size>";
             Profile.DeleteSave();
             yield return new WaitForSeconds(1.2f);
             GameUI.Instance.ShowDeath(summary);

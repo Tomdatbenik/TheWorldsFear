@@ -12,6 +12,18 @@ namespace TWF
         public int rank;
     }
 
+    // A monster lair the hero has come across: when it was founded (in play time), how big it began, and whether
+    // it has been destroyed. The world is endless, so only lairs actually found are written down.
+    [Serializable]
+    public class LairRecord
+    {
+        public string key;
+        public float born;
+        public int startSize;
+        public bool destroyed;
+        public int destroyedSize;
+    }
+
     [Serializable]
     public class SaveData
     {
@@ -58,6 +70,9 @@ namespace TWF
         public List<string> defeatedGates = new List<string>();
         public bool hasReturn;          // come back to this spot after a boss fight
         public float returnX, returnY;
+        public bool runCounted;
+        public float playTime;          // seconds played in this run, the clock lairs grow by
+        public List<LairRecord> lairs = new List<LairRecord>();         // this run has been added to the legacy's finished runs
     }
 
     // The player's persistent progress: level, XP, gold, skills, items.
@@ -76,8 +91,73 @@ namespace TWF
         public static event Action ItemsChanged;
         public static void NotifyItems() { ItemsChanged?.Invoke(); Changed?.Invoke(); }
 
-        public static string SavePath => Path.Combine(Application.persistentDataPath, "save.json");
+        // ---------- Hero slots ----------
+        // Up to three heroes, each in a file of their own with their own world. Unlocks and achievements (Legacy)
+        // are shared by all of them.
+        public const int Slots = 3;
+
+        public static int Slot
+        {
+            get => Mathf.Clamp(PlayerPrefs.GetInt("twf_slot", 0), 0, Slots - 1);
+            set { PlayerPrefs.SetInt("twf_slot", Mathf.Clamp(value, 0, Slots - 1)); PlayerPrefs.Save(); }
+        }
+
+        public static string SlotPath(int slot)
+        {
+            MoveOldSave();
+            return Path.Combine(Application.persistentDataPath, $"hero_{slot + 1}.json");
+        }
+
+        public static string SavePath => SlotPath(Slot);
         public static bool HasSave => File.Exists(SavePath);
+        public static bool SlotUsed(int slot) => File.Exists(SlotPath(slot));
+
+        // Saves from before the slots lived in save.json: that hero becomes the first slot.
+        static bool moved;
+        static void MoveOldSave()
+        {
+            if (moved) return;
+            moved = true;
+            try
+            {
+                string old = Path.Combine(Application.persistentDataPath, "save.json");
+                string first = Path.Combine(Application.persistentDataPath, "hero_1.json");
+                if (File.Exists(old) && !File.Exists(first)) File.Move(old, first);
+            }
+            catch (Exception e) { Debug.LogWarning("Could not move the old save: " + e.Message); }
+        }
+
+        // A slot's hero read for the title screen, without making it the current one. Null when empty or unreadable.
+        public static SaveData Peek(int slot)
+        {
+            try
+            {
+                var path = SlotPath(slot);
+                if (!File.Exists(path)) return null;
+                var d = JsonUtility.FromJson<SaveData>(File.ReadAllText(path));
+                return d != null && d.classId == "adventurer" ? d : null;
+            }
+            catch { return null; }
+        }
+
+        // Switches to another slot: whatever hero was loaded is let go, so nothing of it carries over.
+        public static void UseSlot(int slot)
+        {
+            if (slot == Slot && data != null && !RunOver) return;
+            Slot = slot;
+            data = null;
+            ranks = null;
+            exploredSet = null;
+            lairIndex = null;
+            RunOver = false;
+        }
+
+        public static void DeleteSlot(int slot)
+        {
+            try { if (File.Exists(SlotPath(slot))) File.Delete(SlotPath(slot)); }
+            catch (Exception e) { Debug.LogWarning("Could not delete hero: " + e.Message); }
+            if (slot == Slot) { data = null; ranks = null; exploredSet = null; lairIndex = null; }
+        }
 
         public static SaveData Data
         {
@@ -107,6 +187,7 @@ namespace TWF
         public static void NewGame(WeaponType starterWeapon, Appearance look = null)
         {
             RunOver = false;
+            lairIndex = null;
             data = new SaveData { classId = "adventurer", appearance = look ?? new Appearance(), worldSeed = new System.Random().Next(1, int.MaxValue) };
             WorldGen.SetSeed(data.worldSeed);
             ranks = null;
@@ -117,10 +198,34 @@ namespace TWF
             var weapon = ItemGenerator.Generate(1, Rarity.Common, ItemSlot.Weapon, new System.Random(), starterWeapon);
             data.equipment.Add(weapon);
             Crafting.GiveStarterKit(data);
+            Legacy.ApplyStartBonuses(data);
+        }
+
+        static Dictionary<string, LairRecord> lairIndex;
+
+        // The saved record of a lair, or null when it has never been found.
+        public static LairRecord Lair(string key)
+        {
+            if (lairIndex == null)
+            {
+                lairIndex = new Dictionary<string, LairRecord>();
+                if (Data.lairs == null) Data.lairs = new List<LairRecord>();
+                foreach (var l in Data.lairs) if (l != null && l.key != null) lairIndex[l.key] = l;
+            }
+            return lairIndex.TryGetValue(key, out var r) ? r : null;
+        }
+
+        public static void AddLair(LairRecord r)
+        {
+            Lair(r.key);
+            Data.lairs.Add(r);
+            lairIndex[r.key] = r;
         }
 
         public static bool Load()
         {
+            lairIndex = null;
+            RunOver = false;
             try
             {
                 if (!File.Exists(SavePath)) return false;
@@ -246,6 +351,7 @@ namespace TWF
                 Data.skillPoints++;
                 Data.attributePoints += 3;
                 LeveledUp?.Invoke(Data.level);
+                Legacy.OnLevel(Data.level);
             }
             if (Data.level >= MaxLevel) Data.xp = 0;
             Changed?.Invoke();

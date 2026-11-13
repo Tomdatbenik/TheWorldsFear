@@ -553,7 +553,8 @@ namespace TWF
             for (int y = 1; y < S - 1; y++)
             for (int x = 1; x < S - 1; x++)
             {
-                if (!At(cells, x, y, Cell.Ground)) continue;
+                bool high = OpenHighGround(cells, x, y, x0, y0, 1);
+                if (!high && !At(cells, x, y, Cell.Ground)) continue;
                 if (NearPath(cells, x, y)) continue;
                 int wx = x0 + x, wy = y0 + y;
                 var biome = WorldGen.BiomeAt(new Vector2(wx, wy));
@@ -564,8 +565,19 @@ namespace TWF
                 if (rng.NextDouble() > chance) continue;
                 var sprite = DecorSprite(biome, rng);
                 bool solid = !sprite.name.StartsWith("bush") && !sprite.name.StartsWith("fern");
-                Decor(chunk.root.transform, sprite, new Vector2(wx + 0.5f, wy + 0.3f), biome, solid, rng);
+                Decor(chunk.root.transform, sprite, new Vector3(wx + 0.5f, wy + 0.3f, high ? -WorldGen.PlateauHeight : 0f), biome, solid, rng);
             }
+        }
+
+        // High ground with room round it: plateau cells r tiles from any edge, outside the boss fortresses.
+        static bool OpenHighGround(Cell[,] cells, int x, int y, int x0, int y0, int r)
+        {
+            int n = cells.GetLength(0) - 2;
+            if (x - r < -1 || y - r < -1 || x + r > n || y + r > n) return false;
+            for (int dx = -r; dx <= r; dx++)
+            for (int dy = -r; dy <= r; dy++)
+                if (!At(cells, x + dx, y + dy, Cell.Plateau)) return false;
+            return !WorldGen.FortressAt(x0 + x, y0 + y, out _);
         }
 
         static bool NearPath(Cell[,] cells, int x, int y)
@@ -613,7 +625,7 @@ namespace TWF
             }
         }
 
-        void Decor(Transform parent, Sprite sprite, Vector2 pos, Biome biome, bool solid, System.Random rng)
+        void Decor(Transform parent, Sprite sprite, Vector3 pos, Biome biome, bool solid, System.Random rng)
         {
             var go = new GameObject(sprite.name);
             go.transform.SetParent(parent, false);
@@ -646,8 +658,9 @@ namespace TWF
             for (int i = 0; i < count; i++)
             {
                 int x = rng.Next(S), y = rng.Next(S);
-                if (!At(cells, x, y, Cell.Ground)) continue;
-                var p = new Vector3(x0 + x + (float)rng.NextDouble(), y0 + y + (float)rng.NextDouble(), 0f);
+                bool high = OpenHighGround(cells, x, y, x0, y0, 0);
+                if (!high && !At(cells, x, y, Cell.Ground)) continue;
+                var p = new Vector3(x0 + x + (float)rng.NextDouble(), y0 + y + (float)rng.NextDouble(), high ? -WorldGen.PlateauHeight : 0f);
                 float sc = 0.7f + (float)rng.NextDouble() * 0.6f;
                 // Store position + scale; rotation is applied each frame from the camera.
                 chunk.grass.Add(Matrix4x4.TRS(p, Quaternion.identity, new Vector3(sc, sc, 1f)));
@@ -714,9 +727,19 @@ namespace TWF
                 for (int dy = -2; dy <= 2 && open; dy++)
                     if (!WorldGen.Walkable(cells[x + dx + 1, y + dy + 1]) || cells[x + dx + 1, y + dy + 1] == Cell.Hub
                         || cells[x + dx + 1, y + dy + 1] == Cell.CastleFloor) open = false;   // castles place their own
+                // Packs live up on the high ground too, with room so none of them spawns over the edge.
+                if (!open) open = OpenHighGround(cells, x, y, x0, y0, 3);
                 if (!open) continue;
                 var pos = new Vector2(x0 + x + 0.5f, y0 + y + 0.5f);
                 if (pos.magnitude < WorldGen.SafeRadius) continue;
+                // Lairs (a goblin camp, a spider nest, a den) stand in every other chunk each way, at most one per chunk,
+                // so two of them are never side by side.
+                int cx = Mathf.FloorToInt(x0 / (float)S), cy = Mathf.FloorToInt(y0 / (float)S);
+                if (k == 0 && (cx & 1) == 0 && (cy & 1) == 0 && ((h >> 24) & 3) != 0 && pos.magnitude > WorldGen.SafeRadius + 15f && LairFits(cells, x, y, x0, y0))
+                {
+                    PlaceLair(chunk, pos, h);
+                    continue;
+                }
                 var camp = new GameObject("Camp").AddComponent<MonsterCamp>();
                 camp.transform.SetParent(chunk.root.transform, false);
                 camp.transform.position = pos;
@@ -724,6 +747,36 @@ namespace TWF
                 camp.fixedLevel = WorldGen.LevelAt(pos);
                 camp.seed = (int)(h & 0x7FFFFFFF);
             }
+        }
+
+        // A lair needs open ground 4 tiles round its centre, all low or all high.
+        static bool LairFits(Cell[,] cells, int x, int y, int x0, int y0)
+        {
+            if (OpenHighGround(cells, x, y, x0, y0, 4)) return true;
+            for (int dx = -4; dx <= 4; dx++)
+            for (int dy = -4; dy <= 4; dy++)
+            {
+                var cl = cells[x + dx + 1, y + dy + 1];
+                if (!WorldGen.Walkable(cl) || cl == Cell.Hub || cl == Cell.CastleFloor) return false;
+            }
+            return true;
+        }
+
+        void PlaceLair(Chunk chunk, Vector2 pos, uint h)
+        {
+            // Trees, rocks and grass make way for it.
+            const float Clear = 5f;
+            for (int i = chunk.root.transform.childCount - 1; i >= 0; i--)
+            {
+                var t = chunk.root.transform.GetChild(i);
+                if (t.gameObject.layer != LayerMask.NameToLayer("Walls") || t.Find("Visual") == null || t.GetComponent<EnvSprite>() != null) continue;
+                if (((Vector2)t.position - pos).sqrMagnitude < Clear * Clear) Destroy(t.gameObject);
+            }
+            chunk.grass.RemoveAll(m => ((Vector2)(Vector3)m.GetColumn(3) - pos).sqrMagnitude < 3.5f * 3.5f);
+            var go = new GameObject("Lair");
+            go.transform.SetParent(chunk.root.transform, false);
+            go.transform.position = pos;
+            go.AddComponent<MonsterLair>().Init(MonsterLair.KindFor(WorldGen.BiomeAt(pos), h >> 7), WorldGen.RegionAt(pos), WorldGen.LevelAt(pos), (int)(h & 0x7FFFFFFF));
         }
 
         void PlacePointsOfInterest(Chunk chunk, Vector2Int c)

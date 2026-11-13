@@ -464,6 +464,7 @@ namespace TWF
         public struct Stair { public Vector2Int a, d, r; }
 
         public const int StairLength = 3;
+        const int StairApron = 3;
         const int StairBlock = 16;
         static readonly Dictionary<long, List<Stair>> stairBlocks = new Dictionary<long, List<Stair>>();
         static readonly Vector2Int[] StairDirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
@@ -493,6 +494,11 @@ namespace TWF
                     ok = BaseCell(q.x + StairLength * d.x, q.y + StairLength * d.y) == Cell.Plateau;
                     for (int k = -1; k < StairLength && ok; k++) ok = Low(BaseCell(q.x + k * d.x, q.y + k * d.y));
                 }
+                // Room to walk past the foot: open low ground 3 deep behind it and a tile wider on each side, so a flight
+                // never fills a narrow gap between two plateaus and blocks the way through.
+                for (int k = -StairApron; k <= -1 && ok; k++)
+                for (int i = -1; i <= 2 && ok; i++)
+                    ok = Low(BaseCell(a.x + r.x * i + k * d.x, a.y + r.y * i + k * d.y));
                 if (ok) found.Add(new Stair { a = a, d = d, r = r });
             }
             if (found.Count > 0)

@@ -175,6 +175,7 @@ namespace TWF
         Vector2 aim;
         SkillDefinition shownSkill;
         float readyFlash;
+        CanvasGroup group;
 
         public static bool AnyAiming { get; private set; }
 
@@ -183,14 +184,11 @@ namespace TWF
             var hero = HeroController.Instance;
             if (hero == null) return;
             var skill = hero.SkillIn(slot);
-            // Socket buttons only show while a unique armor piece fills them.
-            if (slot >= HeroController.FirstSocketSlot)
-            {
-                var group = GetComponent<CanvasGroup>();
-                if (group == null) group = gameObject.AddComponent<CanvasGroup>();
-                group.alpha = skill != null ? 1f : 0f;
-                group.blocksRaycasts = skill != null;
-            }
+            // A button only shows once something fills its slot: no empty circles for skills you don't have yet.
+            if (group == null) group = GetComponent<CanvasGroup>();
+            if (group == null) group = gameObject.AddComponent<CanvasGroup>();
+            group.alpha = skill != null ? 1f : 0f;
+            group.blocksRaycasts = skill != null;
             if (skill != shownSkill)
             {
                 shownSkill = skill;

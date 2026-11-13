@@ -186,6 +186,8 @@ namespace TWF
             if (weaponProfile.critDamage > 0f) stats.AddModifier(new StatModifier(StatType.CritDamage, ModKind.Flat, weaponProfile.critDamage, weaponSource));
             if (weaponProfile.lifeSteal > 0f) stats.AddModifier(new StatModifier(StatType.LifeSteal, ModKind.Flat, weaponProfile.lifeSteal, weaponSource));
             if (weaponProfile.skillPower > 0f) stats.AddModifier(new StatModifier(StatType.SkillPower, ModKind.Flat, weaponProfile.skillPower, weaponSource));
+            float legend = Legacy.WeaponDamageBonus(weaponProfile.type);
+            if (legend > 0f) stats.AddModifier(new StatModifier(StatType.Damage, ModKind.Percent, legend, weaponSource));
             var weaponItem = Profile.Equipped(ItemSlot.Weapon);
             float guard = weaponItem != null ? Weapons.GuardArmor(weaponProfile.type, weaponItem.itemLevel) : 0f;
             if (guard > 0f) stats.AddModifier(new StatModifier(StatType.Armor, ModKind.Flat, guard, weaponSource));
@@ -295,6 +297,7 @@ namespace TWF
             for (int i = 0; i < SlotCount; i++)
                 if (cooldowns[i] > 0f) cooldowns[i] = Mathf.Max(0f, cooldowns[i] - dt);
             UpdateAutoCasts(dt);
+            UpdateCasualCasts(dt);
             // The weapon skill follows whatever weapon is in your hands.
             var weaponSkill = WeaponSkills.Current();
             if (slotSkills[WeaponSlot] != weaponSkill)
@@ -714,6 +717,35 @@ namespace TWF
                 Vector2 to = (Vector2)target.transform.position - (Vector2)transform.position;
                 Cast(skill, 1, to.normalized, (Vector2)transform.position + Vector2.ClampMagnitude(to, SkillRange(skill)));
                 autoCooldowns[i] = skill.Cooldown(1, Combatant.Stats.Get(StatType.CooldownReduction)) * 1.5f;
+            }
+        }
+
+        // The "Auto-cast skills" setting, for casual play: your normal skills fire by themselves as soon as they are ready
+        // and an enemy is in reach. The ultimate and dashes stay in your hands. One skill at a time, a moment apart.
+        public static bool AutoCastSetting
+        {
+            get => PlayerPrefs.GetInt("twf_autocast", 0) == 1;
+            set { PlayerPrefs.SetInt("twf_autocast", value ? 1 : 0); PlayerPrefs.Save(); }
+        }
+
+        float casualGap;
+
+        void UpdateCasualCasts(float dt)
+        {
+            casualGap -= dt;
+            if (casualGap > 0f || !AutoCastSetting || Combatant.IsDead || Combatant.IsStunned || Panels.AnyOpen || castLock > 0f) return;
+            for (int slot = 0; slot < SlotCount; slot++)
+            {
+                if (slot == UltimateSlot || !CanCast(slot)) continue;
+                var skill = slotSkills[slot];
+                if (skill.targeting == Targeting.Dash) continue;
+                float range = skill.targeting == Targeting.Self ? 6f : SkillRange(skill) + 0.5f;
+                if (Combat.NearestHostile(Team.Player, transform.position, range) == null) continue;
+                if (TryCast(slot, Vector2.zero, false))
+                {
+                    casualGap = 0.35f;
+                    return;
+                }
             }
         }
 

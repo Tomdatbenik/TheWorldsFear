@@ -11,7 +11,8 @@ namespace TWF
         public Sprite background;
         public string worldScene = "World";
 
-        RectTransform root, mainMenu, classMenu;
+        RectTransform root, mainMenu, classMenu, legacyMenu, heroesMenu;
+        Button beginButton;
         WeaponType pickedWeapon = WeaponType.Sword;
         static readonly WeaponType[] starters =
         {
@@ -49,6 +50,10 @@ namespace TWF
 
             BuildMain();
             BuildClassSelect();
+            BuildLegacy();
+            heroesMenu = UIFactory.Rect("Heroes", root).Stretch();
+            heroesMenu.offsetMax = new Vector2(-60, -200);
+            heroesMenu.offsetMin = new Vector2(60, 40);
             ShowMain();
             if (OpenNewHero)
             {
@@ -66,14 +71,12 @@ namespace TWF
             if (Profile.HasSave && Profile.Load())
             {
                 var d = Profile.Data;
-                UIFactory.Button("Continue", mainMenu, $"Continue\n<size=60%>Level {d.level}</size>", () => SceneManager.LoadScene(worldScene), new Color(0.2f, 0.4f, 0.15f, 1f), 46);
+                UIFactory.Button("Continue", mainMenu, $"Continue\n<size=60%>Hero {Profile.Slot + 1}  ·  Level {d.level}</size>", () => SceneManager.LoadScene(worldScene), new Color(0.2f, 0.4f, 0.15f, 1f), 46);
             }
-            UIFactory.Button("NewGame", mainMenu, "New Hero", () =>
-            {
-                // New heroes start in the character creator, which comes back here for the weapon pick.
-                if (Profile.HasSave) ConfirmDialog.Show("Start a new hero?\n<size=70%>Your current hero will be lost.</size>", "New hero", () => SceneManager.LoadScene("CharacterCreator"));
-                else SceneManager.LoadScene("CharacterCreator");
-            }, null, 46);
+            int used = 0;
+            for (int i = 0; i < Profile.Slots; i++) if (Profile.SlotUsed(i)) used++;
+            UIFactory.Button("Heroes", mainMenu, $"Heroes<size=60%><br>{used} of {Profile.Slots} slots used</size>", ShowHeroes, null, 46);
+            UIFactory.Button("Achievements", mainMenu, "Achievements", ShowLegacy, new Color(0.35f, 0.27f, 0.1f, 1f), 46);
             if (MobaInput.Desktop) UIFactory.Button("Quit", mainMenu, "Quit", Application.Quit, null, 46);
         }
 
@@ -104,10 +107,13 @@ namespace TWF
                 var w = starters[i];
                 var card = UIFactory.Panel(w.ToString(), cardRow, new Color(0.1f, 0.08f, 0.1f, 0.95f));
                 cards.Add(card);
-                var img = UIFactory.Image("Weapon", card.transform, Weapons.Sprite(w), Color.white);
+                bool open = Legacy.WeaponUnlocked(w);
+                var img = UIFactory.Image("Weapon", card.transform, Weapons.Sprite(w), open ? Color.white : new Color(0.2f, 0.2f, 0.2f, 0.8f));
                 img.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(14, 0), new Vector2(104, 104));
                 img.preserveAspect = true;
-                var name = UIFactory.Text("Name", card.transform, Weapons.Name(w), 34, Palette.Gold, TextAlignmentOptions.Left);
+                int runs = Legacy.RunsUntil(w);
+                string label = open ? Weapons.Name(w) : $"<color=#888>{Weapons.Name(w)}</color>\n<size=55%><color=#c88>Locked: {runs} more run{(runs == 1 ? "" : "s")}</color></size>";
+                var name = UIFactory.Text("Name", card.transform, label, 34, Palette.Gold, TextAlignmentOptions.Left);
                 name.fontStyle = FontStyles.Bold;
                 name.rectTransform.Place(new Vector2(0, 0.5f), new Vector2(128, 0), new Vector2(200, 60));
                 card.gameObject.AddComponent<Button>().onClick.AddListener(() => Pick(w));
@@ -121,6 +127,7 @@ namespace TWF
             classInfo.rectTransform.Stretch(26);
             classInfo.rectTransform.offsetMin = new Vector2(26, 130);
             var start = UIFactory.Button("Start", info.transform, "Begin", StartNew, new Color(0.2f, 0.4f, 0.15f, 1f), 44);
+            beginButton = start;
             ((RectTransform)start.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 26), new Vector2(420, 90));
 
             var previewPanel = UIFactory.Panel("Preview", classMenu, new Color(0.1f, 0.08f, 0.1f, 0.6f));
@@ -148,6 +155,15 @@ namespace TWF
             sb.Append("\n\n<color=#aaa>There are no classes: find any of 9 weapon types, spend attribute points as you level, " +
                       "and craft your own skills from elements, deliveries and modifiers at the Arcane Forge.</color>");
             sb.Append("\n\n<color=#f88>One life. If you fall, the run is over.</color>");
+            bool open = Legacy.WeaponUnlocked(w);
+            if (!open)
+            {
+                int runs = Legacy.RunsUntil(w);
+                sb.Append($"\n\n<color=#f99><b>Locked.</b> Finish {runs} more run{(runs == 1 ? "" : "s")} to unlock it. A run is finished when your hero falls or defeats the World's Fear.</color>");
+            }
+            string bonus = Legacy.StartBonusText();
+            if (bonus.Length > 0) sb.Append($"\n\n<color=#ffd040>{bonus}</color>");
+            if (beginButton != null) beginButton.interactable = open;
             classInfo.text = sb.ToString();
             for (int i = 0; i < cards.Count; i++)
                 cards[i].color = starters[i] == w ? new Color(0.3f, 0.22f, 0.12f, 1f) : new Color(0.1f, 0.08f, 0.1f, 0.95f);
@@ -221,12 +237,157 @@ namespace TWF
         {
             mainMenu.gameObject.SetActive(true);
             classMenu.gameObject.SetActive(false);
+            legacyMenu.gameObject.SetActive(false);
+            heroesMenu.gameObject.SetActive(false);
+        }
+
+        void ShowHeroes()
+        {
+            mainMenu.gameObject.SetActive(false);
+            classMenu.gameObject.SetActive(false);
+            legacyMenu.gameObject.SetActive(false);
+            heroesMenu.gameObject.SetActive(true);
+            BuildHeroes();
+        }
+
+        // The three hero slots: play or delete a hero, or start a new one in an empty slot.
+        void BuildHeroes()
+        {
+            foreach (Transform c in heroesMenu) Destroy(c.gameObject);
+            var row = UIFactory.Rect("Row", heroesMenu).Stretch();
+            row.offsetMin = new Vector2(0, 110);
+            var h = row.gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.spacing = 24;
+            h.childForceExpandWidth = h.childForceExpandHeight = true;
+            h.childControlWidth = h.childControlHeight = true;
+            for (int i = 0; i < Profile.Slots; i++) HeroCard(row, i);
+            var back = UIFactory.Button("Back", heroesMenu, "Back", ShowMain, null, 30);
+            ((RectTransform)back.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 20), new Vector2(260, 70));
+        }
+
+        void HeroCard(RectTransform row, int slot)
+        {
+            var d = Profile.Peek(slot);
+            bool last = slot == Profile.Slot && d != null;
+            var card = UIFactory.Panel("Slot" + slot, row, last ? new Color(0.2f, 0.16f, 0.08f, 0.97f) : new Color(0.1f, 0.08f, 0.1f, 0.95f));
+            var head = UIFactory.Text("Head", card.transform, $"Hero {slot + 1}", 30, new Color(0.7f, 0.65f, 0.6f));
+            head.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -36), new Vector2(400, 44));
+
+            if (d == null)
+            {
+                var empty = UIFactory.Text("Empty", card.transform, "<color=#888>Empty slot</color>", 36, Palette.Text);
+                empty.rectTransform.Place(new Vector2(0.5f, 0.5f), new Vector2(0, 40), new Vector2(400, 60));
+                var make = UIFactory.Button("New", card.transform, "New Hero", () =>
+                {
+                    // New heroes start in the character creator, which comes back here for the weapon pick.
+                    Profile.UseSlot(slot);
+                    SceneManager.LoadScene("CharacterCreator");
+                }, new Color(0.2f, 0.4f, 0.15f, 1f), 36);
+                ((RectTransform)make.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(360, 90));
+                return;
+            }
+
+            var weapon = WeaponType.Fists;
+            foreach (var it in d.equipment)
+                if (it != null && it.slot == ItemSlot.Weapon) { weapon = (WeaponType)it.weaponType; break; }
+            var icon = UIFactory.Image("Weapon", card.transform, Weapons.Sprite(weapon), Color.white);
+            icon.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -150), new Vector2(130, 130));
+            icon.preserveAspect = true;
+            string bosses = d.guardiansSlain.Count > 0 ? $"<br>Guardians slain: {d.guardiansSlain.Count}" : "";
+            var info = UIFactory.Text("Info", card.transform,
+                $"<b><color=#ffd040>Level {d.level}</color></b><br><size=80%>{Weapons.Name(weapon)}<br>" +
+                $"<color=#bbb>Play time: {SettingsPanel.PlayTime(d.playTime)}<br>Furthest: {Mathf.RoundToInt(d.farthest)}m{bosses}</color></size>",
+                42, Palette.Text, TextAlignmentOptions.Top);
+            info.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -360), new Vector2(420, 260));
+
+            var play = UIFactory.Button("Play", card.transform, "Play", () =>
+            {
+                Profile.UseSlot(slot);
+                if (Profile.Load()) SceneManager.LoadScene(worldScene);
+            }, new Color(0.2f, 0.4f, 0.15f, 1f), 36);
+            ((RectTransform)play.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 120), new Vector2(360, 84));
+            var del = UIFactory.Button("Delete", card.transform, "Delete", () =>
+                ConfirmDialog.Show($"Delete Hero {slot + 1}?<br><size=70%>Level {d.level}. This can't be undone.</size>", "Delete", () =>
+                {
+                    Profile.DeleteSlot(slot);
+                    BuildHeroes();
+                }), new Color(0.4f, 0.15f, 0.1f, 1f), 28);
+            ((RectTransform)del.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(240, 66));
+        }
+
+        void ShowLegacy()
+        {
+            mainMenu.gameObject.SetActive(false);
+            classMenu.gameObject.SetActive(false);
+            legacyMenu.gameObject.SetActive(true);
+            heroesMenu.gameObject.SetActive(false);
+        }
+
+        // Achievements and unlocks: what every new hero carries over from the ones before.
+        void BuildLegacy()
+        {
+            legacyMenu = UIFactory.Rect("Legacy", root).Stretch();
+            legacyMenu.offsetMax = new Vector2(-60, -200);
+            legacyMenu.offsetMin = new Vector2(60, 40);
+            var panel = UIFactory.Panel("Panel", legacyMenu, new Color(0.1f, 0.08f, 0.1f, 0.95f));
+            panel.rectTransform.Stretch();
+
+            var ld = Legacy.Data;
+            int got = 0;
+            foreach (var a in Legacy.All) if (Legacy.Has(a.id)) got++;
+            var open = Legacy.UnlockedWeapons();
+            string next = Legacy.TiersOpen < Legacy.WeaponTiers.Length
+                ? "  ·  Next run unlocks: " + string.Join(" and ", System.Array.ConvertAll(Legacy.WeaponTiers[Legacy.TiersOpen], Weapons.Name))
+                : "";
+            var head = UIFactory.Text("Head", panel.transform,
+                $"<b>Achievements {got}/{Legacy.All.Count}</b>\n<size=70%><color=#ccc>Runs finished: {ld.runsFinished}  ·  Lairs destroyed: {ld.lairsDestroyed}  ·  Weapons: {open.Count}/9{next}</color></size>",
+                38, Palette.Gold, TextAlignmentOptions.TopLeft);
+            head.rectTransform.anchorMin = new Vector2(0, 1);
+            head.rectTransform.anchorMax = new Vector2(1, 1);
+            head.rectTransform.pivot = new Vector2(0.5f, 1);
+            head.rectTransform.offsetMin = new Vector2(28, -128);
+            head.rectTransform.offsetMax = new Vector2(-28, -18);
+
+            var viewport = UIFactory.Rect("Viewport", panel.transform).Stretch();
+            viewport.offsetMin = new Vector2(24, 110);
+            viewport.offsetMax = new Vector2(-24, -140);
+            viewport.gameObject.AddComponent<RectMask2D>();
+            var scroll = viewport.gameObject.AddComponent<ScrollRect>();
+            scroll.horizontal = false;
+            var list = UIFactory.Rect("List", viewport);
+            list.anchorMin = new Vector2(0, 1);
+            list.anchorMax = new Vector2(1, 1);
+            list.pivot = new Vector2(0.5f, 1);
+            list.sizeDelta = Vector2.zero;
+            var grid = list.gameObject.AddComponent<GridLayoutGroup>();
+            grid.cellSize = new Vector2(860, 96);
+            grid.spacing = new Vector2(16, 10);
+            grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+            grid.constraintCount = 2;
+            list.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            scroll.content = list;
+
+            foreach (var a in Legacy.All)
+            {
+                bool has = Legacy.Has(a.id);
+                var row = UIFactory.Panel(a.id, list, has ? new Color(0.24f, 0.19f, 0.08f, 1f) : new Color(0.13f, 0.11f, 0.13f, 1f), has);
+                var t = UIFactory.Text("Text", row.transform,
+                    $"<b>{(has ? "<color=#ffd040>" : "<color=#999>")}{a.title}</color></b>  <size=75%><color=#bbb>{a.how}</color></size>\n" +
+                    $"<size=80%>{(has ? "<color=#cfe8a0>" : "<color=#777>")}{a.bonus}</color></size>",
+                    28, Palette.Text, TextAlignmentOptions.Left);
+                t.rectTransform.Stretch(14);
+            }
+
+            var back = UIFactory.Button("Back", panel.transform, "Back", ShowMain, null, 30);
+            ((RectTransform)back.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 22), new Vector2(260, 70));
         }
 
         void ShowClasses()
         {
             mainMenu.gameObject.SetActive(false);
             classMenu.gameObject.SetActive(true);
+            heroesMenu.gameObject.SetActive(false);
+            legacyMenu.gameObject.SetActive(false);
             Pick(pickedWeapon);
         }
 

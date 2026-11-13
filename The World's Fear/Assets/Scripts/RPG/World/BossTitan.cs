@@ -1202,11 +1202,13 @@ namespace TWF
         {
             yield return new WaitForSeconds(4f);
             var d = Profile.Data;
+            string unlocked = Legacy.FinishRun();
+            if (unlocked.Length > 0) unlocked = $"\n<color=#ffd040>{unlocked}</color>";
             GameUI.Instance?.ShowVictory(
                 "VICTORY\n<size=45%><color=#fff>The World's Fear is vanquished. The world can breathe again.</color>\n\n" +
                 $"<color=#ddd>Level {d.level}  ·  Monsters slain: {d.kills}  ·  Bosses slain: {d.bossesKilled}\n" +
                 $"Furthest journey: {Mathf.RoundToInt(d.farthest)}m  ·  Codex entries: {d.codexMonsters.Count}</color>\n\n" +
-                $"<color=#ffd040>Unlocked: {BossUnlocks.Describe(BossKind.WorldsFear)}</color></size>",
+                $"<color=#ffd040>Unlocked: {BossUnlocks.Describe(BossKind.WorldsFear)}</color>{unlocked}</size>",
                 () => GameUI.Instance?.Toast("Your legend continues. Step into the portal to return.", Palette.Gold, 3f),
                 () => ConfirmDialog.Show("Start a new hero?\n<size=70%>This hero's journey ends here.</size>", "New hero", () =>
                 {
@@ -1235,6 +1237,7 @@ namespace TWF
             Profile.Data.bossesKilled++;
             bool firstKill = !Profile.Data.guardiansSlain.Contains(kind.ToString());
             if (firstKill && kind != BossKind.Titan) Profile.Data.guardiansSlain.Add(kind.ToString());
+            Legacy.OnBossKilled(kind);
             Profile.Data.defeatedGates.Add(WorldManager.PendingGateKey);
             Loot.Drop(self, transform.position);
             Pickup.SpawnGlyph((Vector2)transform.position + Vector2.right * 2f, SkillParts.Roll(new System.Random(), self.level, MonsterRank.Boss));

@@ -29,7 +29,7 @@ namespace TWF
 
         public static bool Buy(WeaponType w)
         {
-            if (w == WeaponType.Fists || Has(w) || Profile.Data.gold < Price(w)) return false;
+            if (w == WeaponType.Fists || Has(w) || !Legacy.MasteryUnlocked(w) || Profile.Data.gold < Price(w)) return false;
             Profile.AddGold(-Price(w));
             Profile.Data.masteriesOwned.Add((int)w);
             Profile.Save();

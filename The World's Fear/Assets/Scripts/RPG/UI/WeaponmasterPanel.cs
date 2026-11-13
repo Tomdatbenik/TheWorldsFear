@@ -98,8 +98,10 @@ namespace TWF
             body.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -210), new Vector2(520, 220));
 
             bool owned = WeaponMasteries.Has(w);
+            bool locked = !owned && !Legacy.MasteryUnlocked(w);
             int price = WeaponMasteries.Price(w);
-            var btn = UIFactory.Button("Action", card.transform, owned ? "Learned" : $"Learn  {price}g", () =>
+            if (locked) body.text += $"\n\n<color=#f99>Locked. Achievement needed: defeat a guardian with {Legacy.With(w)}.</color>";
+            var btn = UIFactory.Button("Action", card.transform, owned ? "Learned" : locked ? "Locked" : $"Learn  {price}g", () =>
             {
                 if (WeaponMasteries.Buy(w))
                 {
@@ -109,7 +111,7 @@ namespace TWF
                 Refresh();
             }, owned ? new Color(0.3f, 0.26f, 0.1f, 1f) : Profile.Data.gold >= price ? new Color(0.2f, 0.4f, 0.15f, 1f) : new Color(0.25f, 0.2f, 0.2f, 1f), 30);
             ((RectTransform)btn.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 30), new Vector2(420, 84));
-            btn.interactable = !owned && Profile.Data.gold >= price;
+            btn.interactable = !owned && !locked && Profile.Data.gold >= price;
         }
 
         void Card(WeaponSkillId id)

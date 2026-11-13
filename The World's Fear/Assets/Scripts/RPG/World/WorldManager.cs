@@ -130,7 +130,7 @@ namespace TWF
 
             Vector2 pos = hero.transform.position;
             float dist = pos.magnitude;
-            if (dist > Profile.Data.farthest) Profile.Data.farthest = dist;
+            if (dist > Profile.Data.farthest) { Profile.Data.farthest = dist; Legacy.OnTravel(dist); }
 
             var zone = WorldGen.RegionAt(pos);
             if (zone == null || zone.id == currentRegion) return;

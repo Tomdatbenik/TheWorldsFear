@@ -73,11 +73,14 @@ namespace TWF
 
         public static WeaponType RandomWeaponType(System.Random rng, int itemLevel)
         {
-            const int Types = 9;   // every WeaponType but Fists
-            if (itemLevel < LateGameItemLevel || !Profile.RunWeapon(out var own)) return (WeaponType)rng.Next(Types);
-            if (rng.NextDouble() < LateOwnWeaponChance) return own;
-            int other = rng.Next(Types - 1);
-            return (WeaponType)(other >= (int)own ? other + 1 : other);
+            // Only the weapons the legacy has opened drop, plus whatever you are holding.
+            var open = Legacy.UnlockedWeapons();
+            bool holding = Profile.RunWeapon(out var own);
+            if (holding && !open.Contains(own)) open.Add(own);
+            if (itemLevel < LateGameItemLevel || !holding) return open[rng.Next(open.Count)];
+            if (rng.NextDouble() < LateOwnWeaponChance || open.Count == 1) return own;
+            open.Remove(own);
+            return open[rng.Next(open.Count)];
         }
 
         public static Rarity RollRarity(System.Random rng, MonsterRank source, float magicFind = 0f)
