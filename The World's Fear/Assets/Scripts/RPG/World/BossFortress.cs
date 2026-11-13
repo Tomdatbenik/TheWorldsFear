@@ -58,12 +58,94 @@ namespace TWF
             label.sortingOrder = SortOrder.Text - 5;
             label.rectTransform.sizeDelta = new Vector2(12, 2);
 
+            Dress();
+
             for (int x = f.Arena.xMin; x < f.Arena.xMax; x++)
             for (int y = f.Arena.yMin; y < f.Arena.yMax; y++)
             {
                 var p = new Vector2(x + 0.5f, y + 0.5f);
                 if (Inside(p, 2f) && !Inside(p, 3.2f)) edgePoints.Add(p);
             }
+        }
+
+        // ---------- What grows and stands in the arena ----------
+        // Cover that blocks (trees, dead trees, boulders, broken columns) and smaller plants round it, by boss.
+        void Dress()
+        {
+            var art = ArtSet.Instance;
+            if (art == null) return;
+            var rng = new System.Random(f.gate.x * 131 + f.gate.y * 17 + (int)kind);
+            Sprite[][] cover, small;
+            int nCover, nSmall;
+            switch (kind)
+            {
+                case BossKind.Spider: cover = new[] { art.oak, art.oak, art.pine, art.birch }; small = new[] { art.bush, art.fern, art.fern, art.rockSmall }; nCover = 9; nSmall = 26; break;
+                case BossKind.Zombie: cover = new[] { art.deadTree, art.willow, art.deadTree }; small = new[] { art.mushroomPurple, art.rockMossy, art.fern }; nCover = 7; nSmall = 18; break;
+                case BossKind.Slime: cover = new[] { art.rockLarge, art.rockMossy }; small = new[] { art.fern, art.bush, art.rockSmall }; nCover = 5; nSmall = 16; break;
+                case BossKind.Skeleton: cover = new[] { art.brokenPillar }; small = new[] { art.rockSmall, art.brokenPillar }; nCover = 4; nSmall = 8; break;
+                default: cover = new[] { art.rockLarge }; small = new[] { art.charredTree, art.rockSmall, art.mushroomRed }; nCover = 3; nSmall = 10; break;
+            }
+            var taken = new List<Vector2>();
+            Place(cover, nCover, 3f, 4.2f, true, rng, taken);
+            Place(small, nSmall, 1.2f, 1.6f, false, rng, taken);
+            // The terrace gets a little of the same, off to its sides.
+            for (int i = 0; i < 6; i++)
+            {
+                var p = new Vector2(f.Terrace.xMin + 1f + (float)rng.NextDouble() * (f.Terrace.width - 2f), f.Terrace.yMin + 1f + (float)rng.NextDouble() * (f.Terrace.height - 2f));
+                if (Mathf.Abs(p.x - f.gate.x) < 3.5f) continue;                  // the path from the stairs to the gate stays clear
+                Decor(Pick(small, rng), p, false, rng);
+            }
+        }
+
+        static Sprite Pick(Sprite[][] sets, System.Random rng)
+        {
+            for (int t = 0; t < 6; t++)
+            {
+                var set = sets[rng.Next(sets.Length)];
+                if (set != null && set.Length > 0) return set[rng.Next(set.Length)];
+            }
+            return null;
+        }
+
+        void Place(Sprite[][] sets, int count, float edge, float apart, bool solid, System.Random rng, List<Vector2> taken)
+        {
+            var bossAt = f.ArenaCentre + Vector2.up * 4f;
+            for (int i = 0; i < count; i++)
+            for (int tries = 0; tries < 40; tries++)
+            {
+                var p = new Vector2(f.Arena.xMin + (float)rng.NextDouble() * f.Arena.width, f.Arena.yMin + (float)rng.NextDouble() * f.Arena.height);
+                if (!Inside(p, solid ? edge : 1.2f)) continue;
+                if (solid && (Vector2.Distance(p, bossAt) < 5f || (Mathf.Abs(p.x - f.gate.x) < 3f && p.y < f.gate.y + 8f))) continue;
+                bool clash = false;
+                foreach (var q in taken) if (Vector2.Distance(p, q) < apart) { clash = true; break; }
+                if (clash) continue;
+                var s = Pick(sets, rng);
+                if (s == null) break;
+                Decor(s, p, solid, rng);
+                taken.Add(p);
+                break;
+            }
+        }
+
+        void Decor(Sprite sprite, Vector2 pos, bool solid, System.Random rng)
+        {
+            if (sprite == null) return;
+            var go = new GameObject(sprite.name);
+            go.transform.SetParent(transform, false);
+            go.transform.position = new Vector3(pos.x, pos.y, 0f);
+            go.layer = LayerMask.NameToLayer("Walls");
+            float s = 0.95f + (float)rng.NextDouble() * 0.3f;
+            var visual = new GameObject("Visual");
+            visual.transform.SetParent(go.transform, false);
+            visual.transform.localPosition = new Vector3(0f, 0f, -WorldGen.PlateauHeight);   // it stands on the high ground
+            visual.transform.localScale = new Vector3(rng.NextDouble() < 0.5 ? -s : s, s, 1f);
+            visual.AddComponent<Billboard>();
+            var sr = visual.AddComponent<SpriteRenderer>();
+            sr.sprite = sprite;
+            string n = sprite.name;
+            bool sways = n.StartsWith("tree") || n.StartsWith("bush") || n.StartsWith("fern") || n.StartsWith("oak") || n.StartsWith("pine") || n.StartsWith("birch") || n.StartsWith("willow");
+            RenderAssets.MakeLit(sr, true, sways ? RenderAssets.Instance.litWind : null);
+            if (solid) go.AddComponent<CircleCollider2D>().radius = Mathf.Clamp(sprite.bounds.size.x * s * 0.18f, 0.35f, 1.2f);
         }
 
         // A glowing wall across a passage: blocks while it is active.

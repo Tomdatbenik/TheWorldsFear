@@ -189,8 +189,16 @@ namespace TWF
                         break;
                     case Cell.Plateau:
                         groundTiles[i] = EnvArt.GroundTile(biome, wx, wy) ?? GroundTile(biome, h);
-                        plateauTiles[i] = WorldGen.FortressAt(wx, wy, out _) ? CastleFloorTile(wx, wy, h)
-                            : EnvArt.GroundTile(biome, wx, wy) ?? GroundTile(biome, h >> 3);
+                        if (WorldGen.FortressAt(wx, wy, out var fortHere))
+                        {
+                            // A fortress is floored in its boss's own biome: stone only for the Bone King's hall.
+                            var fb = WorldGen.BossBiome(fortHere.kind);
+                            plateauTiles[i] = fortHere.kind == BossKind.Skeleton ? CastleFloorTile(wx, wy, h)
+                                : EnvArt.GroundTile(fb, wx, wy) ?? GroundTile(fb, h >> 3);
+                            if (fortHere.IsPuddle(wx, wy))
+                                puddles.Quad(new Vector3(wx, wy, -WorldGen.PlateauHeight - 0.006f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1);
+                        }
+                        else plateauTiles[i] = EnvArt.GroundTile(biome, wx, wy) ?? GroundTile(biome, h >> 3);
                         AddCliffs(cells, x, y, wx, wy, rockFaces);
                         AddPlateauEdges(cells, x, y, wx, wy, edges);
                         break;

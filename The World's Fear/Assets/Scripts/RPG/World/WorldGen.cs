@@ -97,6 +97,10 @@ namespace TWF
         {
             float d = p.magnitude;
             if (d < HubRadius) return Biome.Village;
+            // A boss's fortress stands in that boss's own land: its biome reaches about 40 tiles round it.
+            int span = BossGrid * ChunkSize;
+            if (d > 150f && FortressInPatch(Mathf.FloorToInt(p.x / span), Mathf.FloorToInt(p.y / span), out var fort)
+                && (p - new Vector2(fort.gate.x, fort.gate.y + 4f)).sqrMagnitude < 40f * 40f) return BossBiome(fort.kind);
             if (d < 130f) return Biome.Forest; // a gentle first ring
             float heat = Noise(p.x, p.y, 0.0035f, 11) + (d - 130f) * 0.0006f;
             float wet = Noise(p.x, p.y, 0.0042f, 12);
@@ -254,19 +258,79 @@ namespace TWF
             public Vector2 ArenaCentre => new Vector2(gate.x, gate.y + 11f);
             public Vector2 TerraceCentre => new Vector2(gate.x, gate.y - 6f);
 
-            public bool InArena(int x, int y)
+            // Every boss has its own arena, cut from the same 26 x 22 block of high ground:
+            //   Slime     a round basin with a ring of shallow puddles
+            //   Spider    an irregular forest clearing
+            //   Zombie    a wide bog with two sunken pools
+            //   Skeleton  a stone hall with cut corners and six pillars
+            //   Fear      a cross-shaped throne floor, lava in the four corners, eight tall pillars
+            public bool InArena(int x, int y) => Floor(x, y) && !IsPillar(x, y) && Pool(x, y) == Cell.Ground;
+
+            bool InRect(int x, int y) { var a = Arena; return x >= a.xMin && x < a.xMax && y >= a.yMin && y < a.yMax; }
+
+            // -1..1 across the block
+            float U(int x) => (x + 0.5f - gate.x) / 13f;
+            float V(int y) => (y + 0.5f - (gate.y + 11f)) / 11f;
+
+            // The way in from the gate is always floor.
+            bool Entry(int x, int y) => x >= gate.x - 2 && x < gate.x + 2 && y >= gate.y && y < gate.y + 5;
+
+            bool Floor(int x, int y)
             {
-                var a = Arena;
-                if (x < a.xMin || x >= a.xMax || y < a.yMin || y >= a.yMax) return false;
-                int cx = Mathf.Min(x - a.xMin, a.xMax - 1 - x), cy = Mathf.Min(y - a.yMin, a.yMax - 1 - y);
-                return cx + cy >= 5 && !IsPillar(x, y);  // the four corners cut off
+                if (!InRect(x, y)) return false;
+                if (Entry(x, y)) return true;
+                float u = U(x), v = V(y);
+                switch (kind)
+                {
+                    case BossKind.Slime: return u * u + v * v < 0.93f * 0.93f;
+                    case BossKind.Spider:
+                    {
+                        float ang = Mathf.Atan2(v, u);
+                        float r = 0.84f + 0.11f * Mathf.Sin(3f * ang + 1.3f) + 0.06f * Mathf.Sin(5f * ang + 0.4f);
+                        return u * u + v * v < r * r;
+                    }
+                    case BossKind.Zombie: return Mathf.Pow(Mathf.Abs(u), 3f) + Mathf.Pow(Mathf.Abs(v), 3f) < 0.9f;
+                    case BossKind.WorldsFear: return Mathf.Abs(u) < 0.4f || Mathf.Abs(v) < 0.42f;
+                    default:
+                    {
+                        var a = Arena;
+                        int cx = Mathf.Min(x - a.xMin, a.xMax - 1 - x), cy = Mathf.Min(y - a.yMin, a.yMax - 1 - y);
+                        return cx + cy >= 5;
+                    }
+                }
             }
 
-            // Six stone pillars in the arena: cover from the boss's waves, and something to keep the camera busy.
+            // Sunken pools inside the block (low ground again, below the arena's edge): water for the bog, lava
+            // round the throne floor. Cell.Ground = no pool here.
+            public Cell Pool(int x, int y)
+            {
+                if (!InRect(x, y) || Entry(x, y)) return Cell.Ground;
+                float u = U(x), v = V(y);
+                if (kind == BossKind.WorldsFear) return Mathf.Abs(u) < 0.4f || Mathf.Abs(v) < 0.42f ? Cell.Ground : Cell.Lava;
+                if (kind == BossKind.Zombie)
+                {
+                    float a = (Mathf.Abs(u) - 0.5f) / 0.17f, b = (v - 0.1f) / 0.36f;
+                    return a * a + b * b < 1f ? Cell.Water : Cell.Ground;
+                }
+                return Cell.Ground;
+            }
+
+            // Shallow water on the arena floor (walked through).
+            public bool IsPuddle(int x, int y)
+            {
+                if (!InArena(x, y)) return false;
+                float u = U(x), v = V(y), r = Mathf.Sqrt(u * u + v * v);
+                if (kind == BossKind.Slime) return r > 0.5f && r < 0.66f && (Hash(x * 3 + 1, y * 7 + 5) % 5) < 3;
+                if (kind == BossKind.Zombie) return (Hash(x / 2 * 5 + 3, y / 2 * 11 + 1) % 9) == 0;
+                return false;
+            }
+
             public bool IsPillar(int x, int y)
             {
                 int dx = x - gate.x, dy = y - (gate.y + 11);
-                return (Mathf.Abs(dx) == 6 && (dy == -6 || dy == 5)) || (Mathf.Abs(dx) == 10 && dy == 0);
+                if (kind == BossKind.Skeleton) return (Mathf.Abs(dx) == 6 && (dy == -6 || dy == 5)) || (Mathf.Abs(dx) == 10 && dy == 0);
+                if (kind == BossKind.WorldsFear) return (dx == -4 || dx == 3) && (dy == -8 || dy == -3 || dy == 2 || dy == 7);
+                return false;
             }
 
             public bool High(int x, int y) => InArena(x, y) || Neck.Contains(new Vector2Int(x, y)) || Terrace.Contains(new Vector2Int(x, y));
@@ -336,7 +400,8 @@ namespace TWF
             cell = Cell.Ground;
             if (!FortressAt(x, y, out var f)) return false;
             if (f.IsPillar(x, y)) cell = Cell.Pillar;
-            else if (f.High(x, y)) cell = Cell.Plateau;       // everything else inside its bounds is a clearing
+            else if (f.High(x, y)) cell = Cell.Plateau;
+            else if (f.Pool(x, y) != Cell.Ground) cell = f.Pool(x, y);       // everything else inside its bounds is a clearing
             return true;
         }
 
