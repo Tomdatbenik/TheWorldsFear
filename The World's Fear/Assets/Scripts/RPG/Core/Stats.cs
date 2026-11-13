@@ -26,6 +26,7 @@ namespace TWF
         SkillPower,
         Handling,          // less standing still with ranged weapons, more reach with melee
         ExtraSlashes,   // extra swings on melee basic attacks
+        SlashRange,     // melee basic attacks reach further
     }
 
     public enum ModKind { Flat, Percent }
@@ -159,6 +160,7 @@ namespace TWF
                 case StatType.SkillPower: return "Skill Power";
                 case StatType.Handling: return "Weapon Handling";
                 case StatType.ExtraSlashes: return "Slashes";
+                case StatType.SlashRange: return "Slash Range";
             }
             return stat.ToString();
         }
@@ -169,7 +171,7 @@ namespace TWF
             return stat == StatType.CritChance || stat == StatType.CritDamage ||
                    stat == StatType.CooldownReduction || stat == StatType.LifeSteal ||
                    stat == StatType.SkillRange || stat == StatType.AreaSize || stat == StatType.ProjectileSpeed ||
-                   stat == StatType.EffectDuration || stat == StatType.ProjectileSpread || stat == StatType.SkillPower || stat == StatType.Handling;
+                   stat == StatType.EffectDuration || stat == StatType.ProjectileSpread || stat == StatType.SkillPower || stat == StatType.Handling || stat == StatType.SlashRange;
         }
 
         public static float Clamp(StatType stat, float v)
@@ -190,6 +192,7 @@ namespace TWF
                 case StatType.SkillPower: return Mathf.Clamp(v, 0f, 5f);
                 case StatType.Handling: return Mathf.Clamp(v, 0f, 0.75f);
                 case StatType.ExtraSlashes: return Mathf.Clamp(Mathf.Round(v), 0f, 4f);
+                case StatType.SlashRange: return Mathf.Clamp(v, 0f, 1f);
                 default: return Mathf.Max(0f, v);
             }
         }

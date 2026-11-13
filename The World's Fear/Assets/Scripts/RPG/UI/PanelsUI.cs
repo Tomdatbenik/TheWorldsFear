@@ -386,7 +386,7 @@ namespace TWF
     {
         RectTransform equipArea, bagArea;
         TextMeshProUGUI statsText, detailText, goldText;
-        Button equipButton, sellButton, sellJunkButton, socketButton, socketModeButton;
+        Button equipButton, sellButton, sellJunkButton, socketButton, socketModeButton, handButton;
         ItemInstance selected;
         readonly Dictionary<ItemSlot, RectTransform> slotRects = new Dictionary<ItemSlot, RectTransform>();
 
@@ -470,6 +470,9 @@ namespace TWF
             socketModeButton = UIFactory.Button("SocketMode", detail.transform, "Extra button", OnSocketMode, new Color(0.25f, 0.2f, 0.3f, 1f), 22);
             ((RectTransform)socketModeButton.transform).Place(new Vector2(1, 0), new Vector2(-22, 196), new Vector2(230, 60));
 
+            // Dual Wield: put a sword in the other hand.
+            handButton = UIFactory.Button("OtherHand", detail.transform, "Equip in off hand", OnOtherHand, new Color(0.2f, 0.32f, 0.4f, 1f), 24);
+            handButton.gameObject.SetActive(false);
             equipButton = UIFactory.Button("Equip", detail.transform, "Equip", OnEquip, new Color(0.2f, 0.4f, 0.15f, 1f));
             ((RectTransform)equipButton.transform).Place(new Vector2(0, 0), new Vector2(22, 110), new Vector2(260, 76));
             sellButton = UIFactory.Button("Sell", detail.transform, "Sell", OnSell, new Color(0.45f, 0.3f, 0.1f, 1f));
@@ -563,6 +566,7 @@ namespace TWF
                 sellButton.gameObject.SetActive(false);
                 socketButton.gameObject.SetActive(false);
                 socketModeButton.gameObject.SetActive(false);
+                handButton.gameObject.SetActive(false);
             }
             else
             {
@@ -574,6 +578,13 @@ namespace TWF
                 sellButton.gameObject.SetActive(!equipped);
                 socketButton.gameObject.SetActive(selected.socket);
                 socketModeButton.gameObject.SetActive(selected.socket && !string.IsNullOrEmpty(selected.socketSkill));
+                bool canSwitch = !equipped && Profile.CanSwitchHand(selected);
+                handButton.gameObject.SetActive(canSwitch);
+                if (canSwitch)
+                {
+                    handButton.GetComponentInChildren<TextMeshProUGUI>().text = selected.slot == ItemSlot.Weapon ? "Equip in off hand" : "Equip in main hand";
+                    ((RectTransform)handButton.transform).Place(new Vector2(1, 0), new Vector2(-22, socketModeButton.gameObject.activeSelf ? 266 : 196), new Vector2(300, 60));
+                }
                 if (selected.socket)
                 {
                     var sk = Crafting.Find(selected.socketSkill);
@@ -602,6 +613,13 @@ namespace TWF
             selected.socketAuto = !selected.socketAuto;
             Profile.NotifyItems();
             Profile.Save();
+            Refresh();
+        }
+
+        void OnOtherHand()
+        {
+            if (selected == null) return;
+            if (!Profile.EquipInOtherHand(selected)) GameUI.Instance?.Toast("Bag full: no room for the item this replaces", Palette.MutedText);
             Refresh();
         }
 

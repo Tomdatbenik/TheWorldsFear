@@ -447,6 +447,34 @@ namespace TWF
             return true;
         }
 
+        // With Dual Wield learned, a sword can go in either hand: a main-hand sword becomes an off-hand blade (half its
+        // damage, as off-hand swords have) and an off-hand sword becomes a main-hand one. Only from the bag.
+        public static bool CanSwitchHand(ItemInstance item) =>
+            item != null && Data.inventory.Contains(item) && WeaponMasteries.Has(WeaponType.Sword) &&
+            ((item.slot == ItemSlot.Weapon && item.weaponType == (int)WeaponType.Sword) || WeaponMasteries.IsOffHandSword(item));
+
+        public static bool EquipInOtherHand(ItemInstance item)
+        {
+            if (!CanSwitchHand(item)) return false;
+            float main = Weapons.Get(WeaponType.Sword).implicitDamage, off = 0.5f;
+            var before = (item.slot, item.weaponType, item.offHandKind, item.implicitValue);
+            if (item.slot == ItemSlot.Weapon)
+            {
+                item.slot = ItemSlot.OffHand;
+                item.offHandKind = (int)OffHandKind.Sword;
+                item.implicitValue = Mathf.Round(item.implicitValue * off / main);
+            }
+            else
+            {
+                item.slot = ItemSlot.Weapon;
+                item.weaponType = (int)WeaponType.Sword;
+                item.implicitValue = Mathf.Round(item.implicitValue * main / off);
+            }
+            if (EquipItem(item)) return true;
+            (item.slot, item.weaponType, item.offHandKind, item.implicitValue) = before;   // bag full: leave it as it was
+            return false;
+        }
+
         public static void UnequipItem(ItemInstance item)
         {
             if (Data.inventory.Count >= InventorySize) return;

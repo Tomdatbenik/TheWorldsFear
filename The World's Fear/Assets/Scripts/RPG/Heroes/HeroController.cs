@@ -444,7 +444,12 @@ namespace TWF
         int javelinCount;
 
         // How close an enemy must be before the basic attack starts: thrown knives reach further than a stab.
-        float AttackRange => WeaponMasteries.Active(WeaponType.Daggers) && Weapon.type == WeaponType.Daggers ? WeaponMasteries.KnifeRange : Weapon.range;
+        float AttackRange => WeaponMasteries.Active(WeaponType.Daggers) && Weapon.type == WeaponType.Daggers ? WeaponMasteries.KnifeRange
+            : Weapon.ranged ? Weapon.range : MeleeReach(Weapon);
+
+        // How far a melee swing reaches: the weapon's range, longer with Weapon Handling and Slash Range.
+        float MeleeReach(WeaponProfile w) =>
+            w.range * (1f + 0.4f * Combatant.Stats.Get(StatType.Handling) + Combatant.Stats.Get(StatType.SlashRange));
 
         IEnumerator RepeaterBurst(WeaponProfile w, ProjectileSpec spec, Vector2 dir, Combatant target)
         {
@@ -546,7 +551,7 @@ namespace TWF
 
         IEnumerator MeleeAttack(WeaponProfile w, Combatant target, Vector2 dir)
         {
-            float reach = w.range * (1f + 0.4f * Combatant.Stats.Get(StatType.Handling));
+            float reach = MeleeReach(w);
             int swings = w.hits + Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraSlashes)) + (w.type == WeaponType.Sword && WeaponMasteries.DualWielding ? 1 : 0);
             bool spin = w.type == WeaponType.Axe && WeaponMasteries.Active(WeaponType.Axe);
             bool heavy = w.type == WeaponType.Hammer && WeaponMasteries.Active(WeaponType.Hammer);
