@@ -209,6 +209,14 @@ namespace TWF
             }
         }
 
+        // Effects a melee slash sets off grow with Slash Range, the same way the slash itself does.
+        public static float SlashScale(Combatant owner)
+        {
+            var h = HeroController.Instance;
+            if (h == null || h.Combatant != owner || h.Weapon.ranged) return 1f;
+            return 1f + owner.Stats.Get(StatType.SlashRange);
+        }
+
         // Called at the start of every basic attack.
         public static void OnBasicAttack(HeroController h, Vector2 dir, Combatant target)
         {
@@ -216,7 +224,7 @@ namespace TWF
             attackCount++;
             if (attackCount % 8 != 0) return;
             Vector2 at = target != null ? (Vector2)target.transform.position : (Vector2)h.transform.position + dir * 2.5f;
-            const float r = 2.4f;
+            float r = 2.4f * SlashScale(h.Combatant);
             Fx.Blast(at, r, AllElements | (((int)ElementPart.Fire + 1) << 8), Elements.Color(ElementPart.Fire));
             CameraFollow.Shake(0.12f);
             FloatingText.Spawn(at + (Vector2)View.Up * 1.5f, "Convergence", new Color(1f, 0.3f, 0.5f), 1f);
@@ -278,11 +286,12 @@ namespace TWF
             if (Has("m_worldbreaker") && info.isBasicAttack && (info.isCrit || Weapons.Equipped == WeaponType.Hammer) && Time.time >= fissureReady)
             {
                 fissureReady = Time.time + 1.2f;
-                Fx.Shock(at, 1.6f, "physical");
+                float fs = SlashScale(owner);
+                Fx.Shock(at, 1.6f * fs, "physical");
                 CameraFollow.Shake(0.06f);
                 AreaEffect.Spawn(owner, at, new AreaSpec
                 {
-                    radius = 1.5f, delay = 0.05f, ticks = 6, interval = 0.5f, damageMult = 0.4f,
+                    radius = 1.5f * fs, delay = 0.05f, ticks = 6, interval = 0.5f, damageMult = 0.4f,
                     color = new Color(0.62f, 0.46f, 0.3f), elements = AttackMask,
                 });
             }
