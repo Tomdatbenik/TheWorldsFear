@@ -76,8 +76,11 @@ namespace TWF
             return corner ? Color.clear : Color.white;
         }, 8, FilterMode.Point);
 
-        // 9-sliced rounded rectangle for UI panels and buttons.
-        public static Sprite RoundedRect
+        // 9-sliced box for UI panels and buttons: pixel art with stepped corners (PixelUI.Box).
+        public static Sprite RoundedRect => PixelUI.Box;
+
+        // The old smooth rounded rectangle.
+        public static Sprite SmoothRoundedRect
         {
             get
             {
@@ -101,6 +104,22 @@ namespace TWF
         }
 
         public static TMP_FontAsset Font => TMP_Settings.defaultFontAsset;
+
+        // The pixel font (Pixelify Sans, SIL OFL: Resources/TWF/Fonts) for titles, headings and buttons. Its pixels
+        // need room: below PixelFontMinSize small gaps close up (a C reads as an O), so small text keeps Font.
+        public const float PixelFontMinSize = 30f;
+        static TMP_FontAsset pixelFont;
+        public static TMP_FontAsset PixelFont
+        {
+            get
+            {
+                if (pixelFont == null) pixelFont = Resources.Load<TMP_FontAsset>("TWF/Fonts/PixelifySans SDF");
+                return pixelFont != null ? pixelFont : TMP_Settings.defaultFontAsset;
+            }
+        }
+
+        // The font for UI text of this size.
+        public static TMP_FontAsset FontFor(float size) => size >= PixelFontMinSize ? PixelFont : Font;
 
         public static Texture2D NewTexture(int w, int h, FilterMode filter = FilterMode.Point)
         {

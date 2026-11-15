@@ -15,6 +15,7 @@ namespace TWF
             var canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = sortingOrder;
+            canvas.pixelPerfect = true;   // the pixel-art frames and icons stay crisp
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.matchWidthOrHeight = 0.6f;
@@ -107,7 +108,7 @@ namespace TWF
         {
             var rt = Rect(name, parent);
             var t = rt.gameObject.AddComponent<TextMeshProUGUI>();
-            t.font = GameAssets.Font;
+            t.font = GameAssets.FontFor(size);   // pixel font for titles and buttons, the plain one for small text
             t.text = text;
             t.fontSize = size;
             t.color = color;
@@ -115,27 +116,20 @@ namespace TWF
             t.raycastTarget = false;
             t.textWrappingMode = TextWrappingModes.Normal;
             t.richText = true;
+            if (t.font == GameAssets.PixelFont) t.gameObject.AddComponent<PixelFontGuard>();
             return t;
         }
 
         public static Image Panel(string name, Transform parent, Color? bg = null, bool border = true)
         {
             var img = Image(name, parent, GameAssets.RoundedRect, bg ?? Palette.PanelBg, true);
-            if (border)
-            {
-                var outline = img.gameObject.AddComponent<Outline>();
-                outline.effectColor = Palette.PanelBorder;
-                outline.effectDistance = new Vector2(2, -2);
-            }
+            if (border) PixelUI.AddFrame(img.transform);   // a gilded pixel frame instead of a smooth outline
             return img;
         }
 
         public static Button Button(string name, Transform parent, string label, Action onClick, Color? color = null, float fontSize = 30f)
         {
-            var img = Image(name, parent, GameAssets.RoundedRect, color ?? new Color(0.25f, 0.2f, 0.15f, 0.95f), true);
-            var outline = img.gameObject.AddComponent<Outline>();
-            outline.effectColor = Palette.PanelBorder;
-            outline.effectDistance = new Vector2(2, -2);
+            var img = Image(name, parent, PixelUI.Button, color ?? new Color(0.38f, 0.29f, 0.2f, 1f), true);
             var b = img.gameObject.AddComponent<Button>();
             var colors = b.colors;
             colors.highlightedColor = new Color(1.15f, 1.15f, 1.15f);
@@ -145,6 +139,11 @@ namespace TWF
             if (onClick != null) b.onClick.AddListener(() => onClick());
             var t = Text("label", img.transform, label, fontSize, Palette.Text);
             t.rectTransform.Stretch(6f);
+            t.rectTransform.offsetMin += new Vector2(0f, PixelUI.Scale);   // above the button's lip
+            // A one-pixel ink shadow under the label, like lettering on pixel-art buttons.
+            var sh = t.gameObject.AddComponent<Shadow>();
+            sh.effectColor = new Color(0.06f, 0.04f, 0.05f, 0.9f);
+            sh.effectDistance = new Vector2(0f, -PixelUI.Scale * 0.5f);
             return b;
         }
 
@@ -169,11 +168,11 @@ namespace TWF
 
         public static Image Bar(string name, Transform parent, Color fill, out Image fillImage)
         {
-            var bg = Image(name, parent, GameAssets.RoundedRect, new Color(0, 0, 0, 0.7f));
+            var bg = Image(name, parent, PixelUI.Trough, Color.white);
             fillImage = Image("fill", bg.transform, GameAssets.Pixel, fill);
             fillImage.type = UnityEngine.UI.Image.Type.Filled;
             fillImage.fillMethod = UnityEngine.UI.Image.FillMethod.Horizontal;
-            fillImage.rectTransform.Stretch(4f);
+            fillImage.rectTransform.Stretch(PixelUI.Scale * 2f);
             return bg;
         }
     }
