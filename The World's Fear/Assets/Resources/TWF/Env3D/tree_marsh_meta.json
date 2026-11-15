@@ -1,0 +1,12 @@
+{
+ "name": "tree_marsh",
+ "kind": "tree3d",
+ "mesh": true,
+ "footprint": [
+  0.5,
+  0.5
+ ],
+ "height": 7.9224181276798245,
+ "verts": 2348,
+ "tris": 814
+}

@@ -36,6 +36,14 @@ namespace TWF
             plaster = new MB(); planks = new MB(); timber = new MB(); stone = new MB();
             door = new MB(); window = new MB(); glow = new MB(); iron = new MB(); cloth = new MB();
 
+            // The walled town (Town) replaces the old village when it is on.
+            if (Town.On && EnvVillage.Available)
+            {
+                area = Town.HubRect;
+                BuildGround();
+                Town.Build(transform);
+                return;
+            }
             BuildGround();
             if (EnvVillage.Available)
             {

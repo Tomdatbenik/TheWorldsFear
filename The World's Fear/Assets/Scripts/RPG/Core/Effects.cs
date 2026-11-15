@@ -174,6 +174,17 @@ namespace TWF
             var hit = Physics2D.Linecast(from, to, Mask);
             return hit.collider != null && !hit.collider.isTrigger;
         }
+
+        // The same, but the thin edges between levels of land don't count (for climbers and flyers).
+        static readonly RaycastHit2D[] hits = new RaycastHit2D[8];
+        public static bool BlockedIgnoringLevels(Vector2 from, Vector2 to)
+        {
+            var filter = new ContactFilter2D { useLayerMask = true, layerMask = Mask, useTriggers = false };
+            int n = Physics2D.Linecast(from, to, filter, hits);
+            for (int i = 0; i < n; i++)
+                if (!LevelPass.IsEdge(hits[i].collider)) return true;
+            return false;
+        }
     }
 
     public struct AreaSpec

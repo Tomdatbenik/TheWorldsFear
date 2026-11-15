@@ -667,6 +667,60 @@
    ]
   },
   {
+   "id": "field_rat",
+   "name": "Field Rat",
+   "biome": "Forest",
+   "role": "Swarmling",
+   "body": "quadruped",
+   "size": "small",
+   "w": 96,
+   "h": 72,
+   "pivotY": 0.2777777777777778,
+   "heightUnits": 0.6080000367429521,
+   "walkPerFrame": 0.024997521182708822,
+   "runPerFrame": 0.055351654047426674,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "farm",
+   "leader": false,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    },
+    {
+     "name": "run",
+     "frames": 8
+    }
+   ]
+  },
+  {
    "id": "fire_slime",
    "name": "Fire Slime",
    "biome": "Ember",
@@ -1121,6 +1175,56 @@
     {
      "name": "run",
      "frames": 8
+    }
+   ]
+  },
+  {
+   "id": "hill_giant",
+   "name": "Hill Giant",
+   "biome": "Ruins",
+   "role": "Brute",
+   "body": "humanoid",
+   "size": "huge",
+   "w": 576,
+   "h": 472,
+   "pivotY": 0.22245762711864406,
+   "heightUnits": 3.1666666666666665,
+   "walkPerFrame": 0.17859999999999998,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "giant",
+   "leader": false,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
     }
    ]
   },

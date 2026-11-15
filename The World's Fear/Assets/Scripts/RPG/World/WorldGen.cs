@@ -8,12 +8,12 @@ namespace TWF
 
     // Deterministic infinite world: everything about a position comes from the hero's world seed.
     // Difficulty grows with distance from the village at the origin.
-    public static class WorldGen
+    public static partial class WorldGen
     {
         public const int ChunkSize = 24;
         public const float HubRadius = 48f;     // the village; no monsters inside
         public const float SafeRadius = 62f;    // no camps this close
-        public const float PlateauHeight = 2.4f; // cliffs rise toward -Z
+        public const float PlateauHeight = 2.4f; // the old single plateau: level 2 (cliffs rise toward -Z)
 
         // Saves from before each hero had their own world all live in this one.
         public const int LegacySeed = 20261028;
@@ -27,6 +27,7 @@ namespace TWF
         public static void SetSeed(int seed)
         {
             Seed = seed;
+            ClearTerrainCache();
             regions.Clear();
             castles.Clear();
             stairBlocks.Clear();
@@ -53,7 +54,7 @@ namespace TWF
         }
 
         // The copied village's area; generated terrain stays out of it.
-        public static RectInt HubRect = new RectInt(-45, -30, 90, 90);
+        public static RectInt HubRect = new RectInt(-48, -48, 96, 96);
 
         // ---------- Difficulty ----------
 
@@ -117,17 +118,25 @@ namespace TWF
         public static Cell CellAt(int x, int y)
         {
             var c = BaseCell(x, y);
-            return (c == Cell.Ground || c == Cell.Path) && StairAt(x, y, out _, out _) ? Cell.Stairs : c;
+            return (c == Cell.Ground || c == Cell.Path || c == Cell.Plateau) && StairAt(x, y, out _, out _) ? Cell.Stairs : c;
         }
 
-        // The cell before stairs are laid against the plateaus.
+        // The cell before stairs are laid against the plateaus (cached per chunk, see WorldGenTerrain).
         static Cell BaseCell(int x, int y)
+        {
+            var c = CacheFor(x, y, out int i);
+            if (c.cell[i] == 255) c.cell[i] = (byte)BaseCellRaw(x, y);
+            return (Cell)c.cell[i];
+        }
+
+        static Cell BaseCellRaw(int x, int y)
         {
             var p = new Vector2(x + 0.5f, y + 0.5f);
             float d = p.magnitude;
             if (IsHub(x, y)) return Cell.Hub;
             if (d > HubRadius && FortressCell(x, y, out var fortCell)) return fortCell;
             if (d > HubRadius && CastleCell(x, y, out var castleCell)) return castleCell;
+            if (InFarmland(x, y)) return Cell.Ground;   // farms: flat and clear (WorldGenTerrain)
 
             // Roads: ridges of low-frequency noise make long meandering trails.
             float r = Noise(x, y, 0.018f, 21);
@@ -135,15 +144,17 @@ namespace TWF
             bool path = Mathf.Abs(r - 0.5f) < 0.022f || Mathf.Abs(r2 - 0.5f) < 0.016f;
             // Four roads leave the village so you never start lost.
             if (d < 140f && (Mathf.Abs(x) < 2 || Mathf.Abs(y) < 2)) path = true;
-            if (path) return Cell.Path;
 
+            // Raised land: hills, mesas, volcanoes and mountain ranges (see WorldGenTerrain).
+            int elev = ElevRaw(x, y);
+            if (elev > 0) return RaisedCell(x, y, elev, path);
+            if (path) return Cell.Path;
+            if (PlungePool(x, y)) return Cell.Water;
             var biome = BiomeAt(p);
             float blob = Noise(x, y, 0.07f, 31);
-            float height = Noise(x, y, 0.035f, 41);
-            if (d > HubRadius + 12f && height > 0.72f) return NearLandmark(x, y) ? Cell.Ground : Cell.Plateau;
             // Ponds and small lakes everywhere but the ash lands (deep water: blocks), and shallow puddles you
             // splash through. The ponds keep away from the roads; puddles may lie on them.
-            if (biome != Biome.Ember && d > HubRadius + 8f)
+            if (biome != Biome.Ember && d > HubRadius + 8f && !InFarmland(x, y))
             {
                 float pond = Noise(x, y, 0.06f, 51) * 0.75f + Noise(x, y, 0.19f, 52) * 0.25f;
                 if (pond > (biome == Biome.Marsh ? 0.70f : 0.745f)) return Cell.Water;
@@ -449,7 +460,7 @@ namespace TWF
         }
 
         // High ground stays clear of waypoints, gates and chests, so none of them ends up on a plateau with no way down.
-        static bool NearLandmark(int x, int y)
+        internal static bool NearLandmark(int x, int y)
         {
             var c = ChunkOf(new Vector2(x, y));
             return Near(HasWaypoint(c.x, c.y, out var a), a, x, y) || Near(HasBossGate(c.x, c.y, out var b), b, x, y)
@@ -458,20 +469,24 @@ namespace TWF
 
         static bool Near(bool has, Vector2Int p, int x, int y) => has && Mathf.Abs(p.x - x) <= 9 && Mathf.Abs(p.y - y) <= 9;
 
-        // ---------- Heights: plateaus are walked on, stairs lead up to them ----------
-        // A flight of stairs is 2 tiles wide and StairLength long, on low ground against a plateau's edge, rising toward it.
-        // a = the footprint's lowest corner cell, d = the way up, r = across.
-        public struct Stair { public Vector2Int a, d, r; }
+        // ---------- Heights: up to 20 levels of land, stairs lead from one to the next ----------
+        // A flight of stairs is 2 tiles wide and StairLength long, on ground at level lo against higher ground at level
+        // hi (one or two levels up), rising toward it. a = the footprint's lowest corner cell, d = the way up, r = across.
+        public struct Stair { public Vector2Int a, d, r; public int lo, hi, w, len; public bool natural, path; }
 
         public const int StairLength = 3;
-        const int StairApron = 3;
+        const int StairApron = 2;
         const int StairBlock = 16;
+        const int MaxFlights = 8;
+        const int MaxWidth = 8;
         static readonly Dictionary<long, List<Stair>> stairBlocks = new Dictionary<long, List<Stair>>();
         static readonly Vector2Int[] StairDirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
 
-        static bool Low(Cell c) => c == Cell.Ground || c == Cell.Path;
+        // Flat open ground a flight may stand on (not water, not a wall).
+        static bool Floor(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Plateau;
 
-        // Up to two flights per 16x16 block: every spot where one fits is found once, then picked by the world seed.
+        // Every spot where a flight fits is found once, then the world seed picks: one flight for each level that
+        // has a way up in this 16x16 block (so a mountain is climbed terrace by terrace), plus one far from the first.
         static List<Stair> StairsIn(int bx, int by)
         {
             long key = ((long)bx << 32) ^ (uint)by;
@@ -479,52 +494,123 @@ namespace TWF
             list = new List<Stair>();
             var found = new List<Stair>();
             int x0 = bx * StairBlock, y0 = by * StairBlock;
-            for (int y = 3; y < StairBlock - 3; y++)
-            for (int x = 3; x < StairBlock - 3; x++)
+            for (int y = 2; y < StairBlock - 2; y++)
+            for (int x = 2; x < StairBlock - 2; x++)
             foreach (var d in StairDirs)
             {
                 var a = new Vector2Int(x0 + x, y0 + y);
                 if (FortressAt(a.x, a.y, out _)) continue;          // a fortress has one way up, its own
-                if (BaseCell(a.x + StairLength * d.x, a.y + StairLength * d.y) != Cell.Plateau) continue;
                 var r = new Vector2Int(Mathf.Abs(d.y), Mathf.Abs(d.x));
-                bool ok = true;
-                for (int i = 0; i < 2 && ok; i++)
+                foreach (int len in new[] { StairLength, 2 })
                 {
-                    var q = a + r * i;
-                    ok = BaseCell(q.x + StairLength * d.x, q.y + StairLength * d.y) == Cell.Plateau;
-                    for (int k = -1; k < StairLength && ok; k++) ok = Low(BaseCell(q.x + k * d.x, q.y + k * d.y));
+                var top = a + d * len;
+                if (!Floor(BaseCell(top.x, top.y))) continue;
+                int lo = ElevAt(a.x, a.y), hi = ElevAt(top.x, top.y);
+                if (hi - lo < 1 || hi - lo > 2) continue;
+                bool onPath = CrossesPath(a, d, r, 1, len);
+                // Short flights are only for paths that would otherwise run into a cliff.
+                if (len < StairLength && !onPath) continue;
+                // As wide as the ground allows, up to MaxWidth: a broad grassy slope rather than a narrow stair.
+                int w = 0;
+                while (w < MaxWidth && InBlock(a + r * w + d * (len - 1), x0, y0) && InBlock(a + r * w, x0, y0) && Column(a + r * w, d, lo, hi, len)) w++;
+                onPath = w > 0 && CrossesPath(a, d, r, w, len);
+                bool ok = w >= (onPath ? 1 : 2);
+                // Room to walk past the foot: open ground at the same level behind it and a tile wider on each side,
+                // so a flight never fills a narrow gap between two rises and blocks the way through.
+                // (A path's own flight needs no run-up: the path leads to it.)
+                for (int k = -StairApron; k <= -1 && ok && !onPath; k++)
+                for (int i = -1; i <= w && ok; i++)
+                {
+                    int qx = a.x + r.x * i + k * d.x, qy = a.y + r.y * i + k * d.y;
+                    ok = Floor(BaseCell(qx, qy)) && ElevAt(qx, qy) == lo;
                 }
-                // Room to walk past the foot: open low ground 3 deep behind it and a tile wider on each side, so a flight
-                // never fills a narrow gap between two plateaus and blocks the way through.
-                for (int k = -StairApron; k <= -1 && ok; k++)
-                for (int i = -1; i <= 2 && ok; i++)
-                    ok = Low(BaseCell(a.x + r.x * i + k * d.x, a.y + r.y * i + k * d.y));
-                if (ok) found.Add(new Stair { a = a, d = d, r = r });
+                if (ok) { found.Add(new Stair { a = a, d = d, r = r, lo = lo, hi = hi, w = w, len = len, natural = BiomeAt(new Vector2(a.x, a.y)) != Biome.Ruins, path = onPath }); break; }
+                }
             }
             if (found.Count > 0)
             {
-                var first = found[(int)(Hash(bx * 131 + 7, by * 173 - 3) % (uint)found.Count)];
+                uint pick = Hash(bx * 131 + 7, by * 173 - 3);
+                // The widest first (ties broken by the seed).
+                found.Sort((p, q) => p.path != q.path ? q.path.CompareTo(p.path) : q.w != p.w ? q.w.CompareTo(p.w) : (Hash(p.a.x, p.a.y) & 0xFFFF).CompareTo(Hash(q.a.x, q.a.y) & 0xFFFF));
+                var first = found[0];
                 list.Add(first);
+                // One more for every other level that has a way up here.
+                var levels = new HashSet<int> { first.lo };
+                for (int pass = 0; pass < 2; pass++)
+                    for (int n = 0; n < found.Count && list.Count < MaxFlights; n++)
+                    {
+                        var f = found[n];
+                        if ((pass == 0 && levels.Contains(f.lo) && !f.path) || Overlaps(list, f)) continue;
+                        levels.Add(f.lo);
+                        list.Add(f);
+                    }
                 Stair far = first;
                 int best = 0;
                 foreach (var f in found)
                 {
                     int dist = Mathf.Abs(f.a.x - first.a.x) + Mathf.Abs(f.a.y - first.a.y);
-                    if (dist > best) { best = dist; far = f; }
+                    if (dist > best && !Overlaps(list, f)) { best = dist; far = f; }
                 }
-                if (best >= 7) list.Add(far);
+                if (best >= 7 && list.Count < MaxFlights) list.Add(far);
             }
             stairBlocks[key] = list;
             return list;
         }
 
-        // The flight a cell belongs to, and which of its rows: 0 = the bottom, StairLength - 1 = against the plateau.
+        static bool Overlaps(List<Stair> list, Stair f)
+        {
+            var rf = Footprint(f, 3);
+            foreach (var o in list)
+                if (Footprint(o, 0).Overlaps(rf)) return true;
+            return false;
+        }
+
+        static RectInt Footprint(Stair f, int pad)
+        {
+            var b = f.a + f.r * (f.w - 1) + f.d * (f.len - 1);
+            return new RectInt(Mathf.Min(f.a.x, b.x) - pad, Mathf.Min(f.a.y, b.y) - pad, Mathf.Abs(b.x - f.a.x) + 1 + pad * 2, Mathf.Abs(b.y - f.a.y) + 1 + pad * 2);
+        }
+
+        // A road or trail runs up through this flight: the path crosses its foot and its top.
+        static bool CrossesPath(Vector2Int a, Vector2Int d, Vector2Int r, int w, int len)
+        {
+            bool foot = false, top = false;
+            for (int i = 0; i < w; i++)
+            {
+                var q = a + r * i;
+                foot |= OnPath(q.x - d.x, q.y - d.y) || OnPath(q.x, q.y);
+                top |= OnPath(q.x + d.x * len, q.y + d.y * len);
+            }
+            return foot && top;
+        }
+
+        // A road or trail runs over this tile (whatever level it is on).
+        public static bool OnPath(int x, int y)
+        {
+            float r = Noise(x, y, 0.018f, 21), r2 = Noise(x, y, 0.011f, 22);
+            return Mathf.Abs(r - 0.5f) < 0.022f || Mathf.Abs(r2 - 0.5f) < 0.016f;
+        }
+
+        // Flights stay inside their own 16x16 block, so StairAt finds every tile of them there.
+        static bool InBlock(Vector2Int q, int x0, int y0) => q.x - x0 >= 0 && q.x - x0 < StairBlock && q.y - y0 >= 0 && q.y - y0 < StairBlock;
+
+        // One column of a flight: StairLength tiles of open ground at level lo (and one before it), high ground at hi after.
+        static bool Column(Vector2Int q, Vector2Int d, int lo, int hi, int len)
+        {
+            var t = q + d * len;
+            if (!Floor(BaseCell(t.x, t.y)) || ElevAt(t.x, t.y) != hi) return false;
+            for (int k = -1; k < len; k++)
+                if (!Floor(BaseCell(q.x + k * d.x, q.y + k * d.y)) || ElevAt(q.x + k * d.x, q.y + k * d.y) != lo) return false;
+            return true;
+        }
+
+        // The flight a cell belongs to, and which of its rows: 0 = the bottom, StairLength - 1 = against the high ground.
         public static bool StairAt(int x, int y, out Stair stair, out int row)
         {
             if (FortressAt(x, y, out var fort))
             {
                 var a = fort.StairA;
-                stair = new Stair { a = a, d = Vector2Int.up, r = Vector2Int.right };
+                stair = new Stair { a = a, d = Vector2Int.up, r = Vector2Int.right, lo = 0, hi = PlateauLevel, w = 2, len = StairLength };
                 row = y - a.y;
                 return x >= a.x && x <= a.x + 1 && row >= 0 && row < StairLength;
             }
@@ -532,7 +618,7 @@ namespace TWF
             {
                 int rx = x - st.a.x, ry = y - st.a.y;
                 int across = rx * st.r.x + ry * st.r.y, along = rx * st.d.x + ry * st.d.y;
-                if (across < 0 || across > 1 || along < 0 || along >= StairLength) continue;
+                if (across < 0 || across >= st.w || along < 0 || along >= st.len) continue;
                 stair = st; row = along;
                 return true;
             }
@@ -540,30 +626,45 @@ namespace TWF
             return false;
         }
 
-        // How high the ground is at a point (0 on low ground, PlateauHeight on a plateau, in between on stairs).
+        // Something can stand here (at the cell's level).
+        public static bool Standable(Cell c) => Walkable(c) || c == Cell.Plateau;
+
+        // How high the ground is at a point: its level times LevelHeight, in between on stairs.
         public static float HeightAt(Vector2 p)
         {
             int x = Mathf.FloorToInt(p.x), y = Mathf.FloorToInt(p.y);
             var c = CellAt(x, y);
-            if (c == Cell.Plateau) return PlateauHeight;
-            if (c != Cell.Stairs || !StairAt(x, y, out var st, out _)) return 0f;
+            if (c != Cell.Stairs || !StairAt(x, y, out var st, out _)) return ElevAt(x, y) * LevelHeight;
             float along = (p.x - st.a.x) * st.d.x + (p.y - st.a.y) * st.d.y + (st.d.x + st.d.y < 0 ? 1f : 0f);
-            return PlateauHeight * Mathf.Clamp01(along / StairLength);
+            return (st.lo + (st.hi - st.lo) * Mathf.Clamp01(along / st.len)) * LevelHeight;
         }
 
-        // Can a walker go from one cell to the one next to it (not diagonal)? Low and high ground only meet on stairs,
-        // which are entered at the bottom and left at the top.
-        public static bool CanStep(int ax, int ay, int bx, int by)
+        // Can a walker go from one cell to the one next to it (not diagonal)? Different levels only meet on stairs,
+        // which are entered at the bottom and left at the top. Climbers and flyers go anywhere they can stand;
+        // leapers also drop down a few levels.
+        public static bool CanStep(int ax, int ay, int bx, int by) => CanStep(ax, ay, bx, by, Mobility.Walk);
+
+        public static bool CanStep(int ax, int ay, int bx, int by, Mobility how)
         {
             var a = CellAt(ax, ay); var b = CellAt(bx, by);
             bool aS = a == Cell.Stairs, bS = b == Cell.Stairs;
-            if (!aS && !bS) return (Walkable(a) && Walkable(b)) || (a == Cell.Plateau && b == Cell.Plateau);
+            if (how == Mobility.Climb || how == Mobility.Fly)
+                return (Standable(a) || aS) && (Standable(b) || bS);
+            if (!aS && !bS)
+            {
+                if (!Standable(a) || !Standable(b)) return false;
+                int ea = ElevAt(ax, ay), eb = ElevAt(bx, by);
+                if (ea == eb) return true;
+                return how == Mobility.Leap && eb < ea && ea - eb <= LeapDrop;
+            }
             if (aS && bS) return true;
             int sx = aS ? ax : bx, sy = aS ? ay : by, ox = aS ? bx : ax, oy = aS ? by : ay;
             var other = aS ? b : a;
             if (!StairAt(sx, sy, out var st, out int row)) return false;
-            if (other == Cell.Plateau) return row == StairLength - 1 && ox == sx + st.d.x && oy == sy + st.d.y;
-            return Walkable(other) && row == 0 && ox == sx - st.d.x && oy == sy - st.d.y;
+            if (!Standable(other)) return false;
+            if (row == st.len - 1 && ox == sx + st.d.x && oy == sy + st.d.y) return ElevAt(ox, oy) == st.hi;
+            if (row == 0 && ox == sx - st.d.x && oy == sy - st.d.y) return ElevAt(ox, oy) == st.lo;
+            return false;
         }
 
         // ---------- Castles: open dungeons on the overworld ----------

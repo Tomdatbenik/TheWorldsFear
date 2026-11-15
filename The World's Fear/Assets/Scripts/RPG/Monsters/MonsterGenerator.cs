@@ -137,6 +137,21 @@ namespace TWF
             }
         }
 
+        // The farmland's creatures: field rats and the forest's spiders.
+        static List<MonsterSpecies> farmRoster;
+        public static List<MonsterSpecies> FarmRoster()
+        {
+            if (farmRoster != null) return farmRoster;
+            farmRoster = new List<MonsterSpecies>();
+            foreach (var id in new[] { "field_rat", "field_rat", "forest_spider", "thicket_skitter" })
+            {
+                var d = MobCatalog.Get(id);
+                if (d != null) farmRoster.Add(CreateMob(d));
+            }
+            if (farmRoster.Count == 0) farmRoster.AddRange(SpeciesFor(GameDatabase.Instance.FindZone("forest")));
+            return farmRoster;
+        }
+
         public static List<MonsterSpecies> SpeciesFor(ZoneDefinition zone)
         {
             if (zone == null) return new List<MonsterSpecies>();

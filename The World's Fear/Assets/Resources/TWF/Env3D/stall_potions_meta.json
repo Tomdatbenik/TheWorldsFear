@@ -1,0 +1,12 @@
+{
+ "name": "stall_potions",
+ "kind": "stall",
+ "mesh": true,
+ "footprint": [
+  3.6,
+  2.2
+ ],
+ "height": 3.5487046241760254,
+ "verts": 2424,
+ "tris": 1212
+}

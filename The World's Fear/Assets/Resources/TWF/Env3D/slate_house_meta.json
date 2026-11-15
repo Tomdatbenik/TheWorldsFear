@@ -1,0 +1,12 @@
+{
+ "name": "slate_house",
+ "kind": "house",
+ "mesh": true,
+ "footprint": [
+  6.4399999999999995,
+  4.8999999999999995
+ ],
+ "height": 7.627199649810791,
+ "verts": 28686,
+ "tris": 14342
+}

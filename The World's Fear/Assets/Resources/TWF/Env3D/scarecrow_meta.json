@@ -1,0 +1,12 @@
+{
+ "name": "scarecrow",
+ "kind": "scarecrow",
+ "mesh": true,
+ "footprint": [
+  0.3,
+  0.3
+ ],
+ "height": 3.69599986076355,
+ "verts": 696,
+ "tris": 308
+}

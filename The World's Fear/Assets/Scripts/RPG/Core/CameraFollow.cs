@@ -33,10 +33,17 @@ namespace TWF
 
         public static float RotateInput; // -1..1 from UI buttons
 
+        // A cinematic flight (Cinematic) takes the camera over: free yaw, its own focus, view size and pitch.
+        public static bool CinematicActive;
+        public static Vector3 CinematicFocus;
+        public static float CinematicYaw, CinematicSize = 12f, CinematicPitch = 52f;
+
         // What the old perspective view showed from top to bottom per unit of distance (fov 38), kept so zoom feels the same.
         const float ZoomScale = 0.344f;
         const float ViewStep = 22.5f;
         const float ArtPPU = 72f;
+        // How far behind its focus the camera sits; fog distances were made for 17, so they add the difference.
+        public const float Back = 70f, FogShift = Back - 17f;
         const float MinViewSize = 7.5f;   // never closer than 15 units top to bottom
 
         // Keeps the camera on whole art pixels so the world never shimmers as it scrolls.
@@ -165,6 +172,13 @@ namespace TWF
 
         void LateUpdate()
         {
+            if (CinematicActive)
+            {
+                focus = CinematicFocus;
+                yaw = targetYaw = CinematicYaw;
+                Apply(0f);
+                return;
+            }
             if (target == null)
             {
                 if (HeroController.Instance != null) target = HeroController.Instance.transform;
@@ -193,13 +207,15 @@ namespace TWF
             {
                 // Whole screen pixels per art pixel, leaning zoomed-out; a small window still shows at least MinViewSize.
                 int k = Mathf.Max(1, Mathf.FloorToInt(Screen.height / (2f * distance * ZoomScale * ArtPPU)));
-                cam.orthographicSize = Mathf.Max(Screen.height / (2f * ArtPPU * k), MinViewSize);
+                cam.orthographicSize = CinematicActive ? CinematicSize : Mathf.Max(Screen.height / (2f * ArtPPU * k), MinViewSize);
             }
             // The world art has a baked view every 22.5 degrees; the camera stops on those so ground and buildings always match.
-            float shownYaw = Mathf.Round(yaw / ViewStep) * ViewStep;
+            float shownYaw = CinematicActive ? yaw : Mathf.Round(yaw / ViewStep) * ViewStep;
+            float shownPitch = CinematicActive ? CinematicPitch : pitch;
             var orbit = Quaternion.Euler(0f, 0f, shownYaw);
-            Vector3 back = orbit * new Vector3(0f, -Mathf.Cos(pitch * Mathf.Deg2Rad), -Mathf.Sin(pitch * Mathf.Deg2Rad));
-            Vector3 pos = focus + back * distance;
+            Vector3 back = orbit * new Vector3(0f, -Mathf.Cos(shownPitch * Mathf.Deg2Rad), -Mathf.Sin(shownPitch * Mathf.Deg2Rad));
+            // Orthographic: how far back only matters for clipping; far enough that a mountain between camera and hero still shows.
+            Vector3 pos = focus + back * Back;
             Vector3 forward = (focus - pos).normalized;
             var rot = Quaternion.LookRotation(forward, Vector3.back);
             pos += (Vector3)(Random.insideUnitCircle * shakeAmount);

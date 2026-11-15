@@ -11,11 +11,12 @@ namespace TWF
     {
         const int Window = 72;          // tiles across the window a field covers (the target in its middle)
         const int Limit = 2600;         // tiles a field may spread over before it stops
-        const int MaxFields = 12;       // fields kept (the hero's, and the homes monsters walk back to)
+        const int MaxFields = 20;       // fields kept (the hero's, and the homes monsters walk back to)
 
         class Field
         {
             public Vector2Int target, origin;
+            public Mobility how;
             public readonly int[] dist = new int[Window * Window];
             public float lastUsed;
         }
@@ -26,10 +27,14 @@ namespace TWF
 
         // The direction to move from `from` toward `target` (same length as desired), or desired itself when the way is
         // open, the target is out of reach of a field, or the monster is already in the target's tile.
-        public static Vector2 Route(Vector2 from, Vector2 target, Vector2 desired)
+        public static Vector2 Route(Vector2 from, Vector2 target, Vector2 desired) => Route(from, target, desired, Mobility.Walk);
+
+        // Climbers and flyers aren't stopped by the edges between levels, only by real walls and water.
+        public static Vector2 Route(Vector2 from, Vector2 target, Vector2 desired, Mobility how)
         {
-            if (desired == Vector2.zero || !Walls.Blocked(from, target)) return desired;
-            var f = FieldFor(Cell(target));
+            bool overLevels = how == Mobility.Climb || how == Mobility.Fly;
+            if (desired == Vector2.zero || !(overLevels ? Walls.BlockedIgnoringLevels(from, target) : Walls.Blocked(from, target))) return desired;
+            var f = FieldFor(Cell(target), how);
             if (f == null) return desired;
             var c = Cell(from);
             int here = Dist(f, c.x, c.y);
@@ -46,10 +51,10 @@ namespace TWF
                 {
                     // no wall corners, and no cutting across a plateau's edge
                     if (Dist(f, c.x + dx, c.y) <= 0 || Dist(f, c.x, c.y + dy) <= 0) continue;
-                    if (!WorldGen.CanStep(c.x, c.y, c.x + dx, c.y) || !WorldGen.CanStep(c.x + dx, c.y, c.x + dx, c.y + dy)
-                        || !WorldGen.CanStep(c.x, c.y, c.x, c.y + dy) || !WorldGen.CanStep(c.x, c.y + dy, c.x + dx, c.y + dy)) continue;
+                    if (!WorldGen.CanStep(c.x, c.y, c.x + dx, c.y, how) || !WorldGen.CanStep(c.x + dx, c.y, c.x + dx, c.y + dy, how)
+                        || !WorldGen.CanStep(c.x, c.y, c.x, c.y + dy, how) || !WorldGen.CanStep(c.x, c.y + dy, c.x + dx, c.y + dy, how)) continue;
                 }
-                else if (!WorldGen.CanStep(c.x, c.y, c.x + dx, c.y + dy)) continue;
+                else if (!WorldGen.CanStep(c.x, c.y, c.x + dx, c.y + dy, how)) continue;
                 best = d;
                 step = new Vector2Int(c.x + dx, c.y + dy);
             }
@@ -69,14 +74,14 @@ namespace TWF
         static bool Open(int x, int y)
         {
             var c = WorldGen.CellAt(x, y);
-            return WorldGen.Walkable(c) || c == TWF.Cell.Plateau || c == TWF.Cell.Stairs;
+            return WorldGen.Standable(c) || c == TWF.Cell.Stairs;
         }
 
-        static Field FieldFor(Vector2Int target)
+        static Field FieldFor(Vector2Int target, Mobility how)
         {
             if (seed != WorldGen.Seed) { fields.Clear(); seed = WorldGen.Seed; }
             foreach (var f in fields)
-                if (f.target == target) { f.lastUsed = Time.time; return f; }
+                if (f.target == target && f.how == how) { f.lastUsed = Time.time; return f; }
             if (!Open(target.x, target.y)) return null;
             Field field;
             if (fields.Count < MaxFields) fields.Add(field = new Field());
@@ -85,6 +90,7 @@ namespace TWF
                 field = fields[0];
                 foreach (var f in fields) if (f.lastUsed < field.lastUsed) field = f;
             }
+            field.how = how;
             Build(field, target);
             return field;
         }
@@ -117,11 +123,44 @@ namespace TWF
             int i = ly * Window + lx;
             if (f.dist[i] != 0) return;
             if (!Open(x, y)) { f.dist[i] = -1; return; }
-            if (!WorldGen.CanStep(from.x, from.y, x, y)) return;      // reachable another way, perhaps
+            if (!WorldGen.CanStep(from.x, from.y, x, y, f.how)) return;      // reachable another way, perhaps
             f.dist[i] = d + 1;
             queue.Enqueue(new Vector2Int(x, y));
         }
 
         static void Set(Field f, int x, int y, int v) => f.dist[(y - f.origin.y) * Window + (x - f.origin.x)] = v;
+    }
+
+    // The thin walls between levels of land, and the creatures that pass through them: climbers and flyers always,
+    // a leaper for the moment of its jump. Unity is told to ignore each pair as chunks load.
+    public static class LevelPass
+    {
+        static readonly List<Collider2D> edges = new List<Collider2D>();
+        static readonly List<Collider2D> passers = new List<Collider2D>();
+
+        public static void AddEdges(Collider2D e)
+        {
+            edges.RemoveAll(x => x == null);
+            passers.RemoveAll(x => x == null);
+            edges.Add(e);
+            foreach (var p in passers) Physics2D.IgnoreCollision(p, e, true);
+        }
+
+        public static void Register(Collider2D c)
+        {
+            if (c == null || passers.Contains(c)) return;
+            edges.RemoveAll(x => x == null);
+            passers.Add(c);
+            foreach (var e in edges) Physics2D.IgnoreCollision(c, e, true);
+        }
+
+        public static void Unregister(Collider2D c)
+        {
+            if (c == null || !passers.Remove(c)) return;
+            edges.RemoveAll(x => x == null);
+            foreach (var e in edges) Physics2D.IgnoreCollision(c, e, false);
+        }
+
+        public static bool IsEdge(Collider2D c) => c != null && c.name == "LevelEdges";
     }
 }

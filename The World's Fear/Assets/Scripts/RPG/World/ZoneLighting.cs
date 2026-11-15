@@ -150,8 +150,8 @@ namespace TWF
             Shader.SetGlobalColor("_TWF_Ambient", m.ambient);
             RenderSettings.ambientLight = m.ambient;
             RenderSettings.fogColor = m.fog;
-            RenderSettings.fogStartDistance = m.fogStart;
-            RenderSettings.fogEndDistance = m.fogEnd;
+            RenderSettings.fogStartDistance = m.fogStart + CameraFollow.FogShift;
+            RenderSettings.fogEndDistance = m.fogEnd + CameraFollow.FogShift;
             var cam = Camera.main;
             if (cam != null) cam.backgroundColor = m.fog;
         }

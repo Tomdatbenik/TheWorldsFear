@@ -125,9 +125,19 @@ namespace TWF
 
         readonly List<Vector2> nodes = new List<Vector2>();
         readonly List<List<int>> links = new List<List<int>>();
+        // The walled town gives its own walking routes.
+        public static List<Vector2> OverrideNodes;
+        public static List<List<int>> OverrideLinks;
 
         void Awake()
         {
+            if (OverrideNodes != null)
+            {
+                nodes.AddRange(OverrideNodes);
+                links.AddRange(OverrideLinks);
+                OverrideNodes = null; OverrideLinks = null;
+                return;
+            }
             nodes.AddRange(Ring);
             for (int i = 0; i < Ring.Length; i++) links.Add(new List<int> { (i + 1) % Ring.Length, (i + Ring.Length - 1) % Ring.Length });
             foreach (var r in Roads)

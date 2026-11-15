@@ -1,0 +1,12 @@
+{
+ "name": "timber_house",
+ "kind": "house",
+ "mesh": true,
+ "footprint": [
+  6.4399999999999995,
+  5.04
+ ],
+ "height": 7.918399810791016,
+ "verts": 37734,
+ "tris": 18866
+}

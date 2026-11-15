@@ -115,6 +115,7 @@ namespace TWF
             var d = Profile.Data;
             // Coming back from a boss: appear next to the gate you entered.
             Vector2 p = d.hasReturn ? new Vector2(d.returnX, d.returnY) : WaypointPosition(d.lastWaypoint) + Vector2.down * 1.5f;
+            if (Town.Blocked(p)) p = Town.Spawn + Vector2.down * 1.5f;   // a spot from before the town had walls
             d.hasReturn = false;
             ChunkWorld.Instance?.LoadAround(p);
             return p;

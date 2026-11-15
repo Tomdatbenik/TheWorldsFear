@@ -1,0 +1,12 @@
+{
+ "name": "haystack",
+ "kind": "haystack",
+ "mesh": true,
+ "footprint": [
+  2.2,
+  2.2
+ ],
+ "height": 2.2747552394866943,
+ "verts": 4080,
+ "tris": 1920
+}

@@ -1,0 +1,12 @@
+{
+ "name": "tree_pine",
+ "kind": "pine3d",
+ "mesh": true,
+ "footprint": [
+  0.5,
+  0.5
+ ],
+ "height": 9.0132,
+ "verts": 356,
+ "tris": 142
+}

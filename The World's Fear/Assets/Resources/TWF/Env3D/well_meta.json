@@ -1,0 +1,12 @@
+{
+ "name": "well",
+ "kind": "well",
+ "mesh": true,
+ "footprint": [
+  3,
+  3
+ ],
+ "height": 4.710538864135742,
+ "verts": 7134,
+ "tris": 3566
+}

@@ -175,8 +175,86 @@ namespace TWF
             strafeSeed = UnityEngine.Random.Range(0f, 100f);
         }
 
+        // ---------- Levels of land ----------
+        // Spiders crawl up and down cliff faces, flyers go over them, chargers and beasts leap down, the rest take
+        // the stairs. Melee can't strike across a cliff; ranged attackers hit harder from high ground.
+        public Mobility Mobility { get; private set; } = Mobility.Walk;
+        GroundFollow ground;
+        float leapUntil;
+        const float ReachHeight = 1.6f;          // melee reaches this far up or down
+
+        static Mobility MobilityOf(MonsterSpecies sp)
+        {
+            string body = sp.mob != null ? sp.mob.body : null;
+            if (body == "spider" || sp.isSpider) return Mobility.Climb;
+            if (body == "flyer") return Mobility.Fly;
+            if (body == "quadruped" || sp.archetype == MonsterArchetype.Charger) return Mobility.Leap;
+            return Mobility.Walk;
+        }
+
+        void SetupMobility()
+        {
+            Mobility = MobilityOf(Species);
+            ground = GetComponent<GroundFollow>();
+            if (ground == null) return;
+            ground.mobility = Mobility;
+            ground.riseSpeed = Mobility == Mobility.Climb ? 2.6f : Mobility == Mobility.Fly ? 6f : ground.riseSpeed;
+            if (Mobility == Mobility.Climb || Mobility == Mobility.Fly) LevelPass.Register(GetComponent<Collider2D>());
+        }
+
+        // How far above the hero this monster stands (negative: below).
+        float HeightOverHero(Combatant hero)
+        {
+            var hg = hero != null ? hero.GetComponent<GroundFollow>() : null;
+            if (ground == null || hg == null) return 0f;
+            return ground.Height - hg.Height;
+        }
+
+        bool Ranged => Species.archetype == MonsterArchetype.Spitter || Species.archetype == MonsterArchetype.Caster;
+
+        // High ground: ranged attackers two levels or more above the hero deal a fifth more.
+        bool highGround;
+        void UpdateHighGround(Combatant hero)
+        {
+            bool now = Ranged && HeightOverHero(hero) >= WorldGen.LevelHeight * 2f - 0.1f;
+            if (now == highGround) return;
+            highGround = now;
+            if (now) Combatant.Stats.AddModifier(new StatModifier(StatType.Damage, ModKind.Percent, 0.2f, "highground"));
+            else Combatant.Stats.RemoveModifiersFrom("highground");
+        }
+
+        // A leaper about to step off a drop: for a moment it passes the level's edge, and drops.
+        void MaybeLeap(Vector2 pos, Vector2 move)
+        {
+            if (Mobility != Mobility.Leap || move.sqrMagnitude < 0.01f || Time.time < leapUntil) return;
+            Vector2 ahead = pos + move.normalized * 0.7f;
+            int ax = Mathf.FloorToInt(pos.x), ay = Mathf.FloorToInt(pos.y), bx = Mathf.FloorToInt(ahead.x), by = Mathf.FloorToInt(ahead.y);
+            if (ax == bx && ay == by) return;
+            int ea = WorldGen.ElevAt(ax, ay), eb = WorldGen.ElevAt(bx, by);
+            if (eb >= ea || ea - eb > WorldGen.LeapDrop || !WorldGen.Standable(WorldGen.CellAt(bx, by))) return;
+            leapUntil = Time.time + 0.7f;
+            StartCoroutine(Leap(ahead));
+        }
+
+        System.Collections.IEnumerator Leap(Vector2 to)
+        {
+            var col = GetComponent<Collider2D>();
+            LevelPass.Register(col);
+            float t = 0f;
+            Vector2 from = body.position;
+            while (t < 0.35f && !Combatant.IsDead)
+            {
+                t += Time.fixedDeltaTime;
+                body.MovePosition(Vector2.Lerp(from, to + (to - from).normalized * 0.4f, t / 0.35f));
+                yield return new WaitForFixedUpdate();
+            }
+            LevelPass.Unregister(col);
+            CameraFollow.Shake(0.04f);
+        }
+
         void Start()
         {
+            SetupMobility();
             Combatant.Damaged += OnDamaged;
             Combatant.Died += OnDied;
             attackTimer = UnityEngine.Random.Range(0.2f, 0.8f);
@@ -339,8 +417,11 @@ namespace TWF
                 // Open world: round walls, cliffs, water and lava toward the hero, or back home.
                 var hero = Hero;
                 Vector2 target = state == State.Chase && hero != null ? (Vector2)hero.transform.position : Home;
-                move = WorldRouter.Route(pos, target, desired);
+                move = WorldRouter.Route(pos, target, desired, Mobility);
+                MaybeLeap(pos, move);
             }
+            // Crawling up or down a cliff face is slow.
+            if (Mobility == Mobility.Climb && ground != null && ground.Climbing) speed *= 0.35f;
             move = Unstick(pos, move, speed);
             body.linearVelocity = move * speed;
         }
@@ -394,6 +475,8 @@ namespace TWF
         {
             Vector2 toHero = ((Vector2)hero.transform.position - pos).normalized;
             var sp = Species;
+            UpdateHighGround(hero);
+            if (!Ranged && Mathf.Abs(HeightOverHero(hero)) > ReachHeight && !(ground != null && ground.Climbing)) dist = Mathf.Max(dist, sp.attackRange + 2f);
             speedMult = 1f;
             facing = toHero;
 

@@ -1,0 +1,9 @@
+{
+ "name": "bush_flower",
+ "kind": "bush3d",
+ "mesh": true,
+ "footprint": null,
+ "height": 0.8200315237045288,
+ "verts": 420,
+ "tris": 180
+}

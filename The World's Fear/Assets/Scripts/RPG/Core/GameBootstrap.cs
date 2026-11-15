@@ -48,6 +48,7 @@ namespace TWF
             ZoneLighting.Create();
             var ui = new GameObject("UI").AddComponent<GameUI>();
             PanelsBuilder.Build(ui);
+            GiantSpawner.Create();   // giants roam level 100+ land
         }
 
         void OnEnable() => MonsterBrain.AnyDied += OnMonsterDied;

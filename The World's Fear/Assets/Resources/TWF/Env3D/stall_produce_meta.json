@@ -1,0 +1,12 @@
+{
+ "name": "stall_produce",
+ "kind": "stall",
+ "mesh": true,
+ "footprint": [
+  3.6,
+  2.2
+ ],
+ "height": 3.5487046241760254,
+ "verts": 5112,
+ "tris": 1996
+}

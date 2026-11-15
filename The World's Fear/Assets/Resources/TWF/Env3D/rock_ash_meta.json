@@ -1,0 +1,12 @@
+{
+ "name": "rock_ash",
+ "kind": "rock3d",
+ "mesh": true,
+ "footprint": [
+  1.1,
+  1.1
+ ],
+ "height": 0.9714838552474976,
+ "verts": 60,
+ "tris": 20
+}

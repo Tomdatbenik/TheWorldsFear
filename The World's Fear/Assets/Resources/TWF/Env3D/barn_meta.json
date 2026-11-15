@@ -1,0 +1,12 @@
+{
+ "name": "barn",
+ "kind": "house",
+ "mesh": true,
+ "footprint": [
+  7.6,
+  10.6
+ ],
+ "height": 8.833417892456055,
+ "verts": 54342,
+ "tris": 27170
+}

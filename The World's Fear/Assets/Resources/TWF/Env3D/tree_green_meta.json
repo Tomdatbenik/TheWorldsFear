@@ -1,0 +1,12 @@
+{
+ "name": "tree_green",
+ "kind": "tree3d",
+ "mesh": true,
+ "footprint": [
+  0.5,
+  0.5
+ ],
+ "height": 7.360694255638122,
+ "verts": 2108,
+ "tris": 734
+}

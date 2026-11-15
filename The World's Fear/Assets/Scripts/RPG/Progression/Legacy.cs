@@ -26,9 +26,9 @@ namespace TWF
         public static readonly WeaponType[][] WeaponTiers =
         {
             new[] { WeaponType.Sword, WeaponType.Bow, WeaponType.Staff },
-            new[] { WeaponType.Axe, WeaponType.Daggers },
+            new[] { WeaponType.Axe },
             new[] { WeaponType.Spear, WeaponType.Crossbow },
-            new[] { WeaponType.Hammer, WeaponType.Wand },
+            new[] { WeaponType.Hammer, WeaponType.Wand, WeaponType.Daggers },
         };
 
         public const int SeasonedLevel = 10, VeteranLevel = 25, LairGoal = 10, ExplorerDistance = 1500;

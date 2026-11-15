@@ -10,13 +10,21 @@ namespace TWF
     // Movement stays 2D; heights only move what you see, and edge colliders keep you on the level you are on.
     public static class TerrainHeight
     {
-        public struct Region { public Rect rect; public float h0, h1; public bool ramp; }
+        public struct Region { public Rect rect; public float h0, h1; public bool ramp; public Vector2Int dir; }
         static readonly List<Region> regions = new List<Region>();
 
         public static void Clear() => regions.Clear();
         public static void AddFlat(Rect r, float h) => regions.Add(new Region { rect = r, h0 = h, h1 = h });
         // Rises along +Y from h0 at the rect's bottom edge to h1 at its top edge.
-        public static void AddRamp(Rect r, float h0, float h1) => regions.Add(new Region { rect = r, h0 = h0, h1 = h1, ramp = true });
+        public static void AddRamp(Rect r, float h0, float h1) => AddRamp(r, h0, h1, Vector2Int.up);
+        // Rises along +X from h0 at the rect's left edge to h1 at its right edge.
+        public static void AddRampX(Rect r, float h0, float h1) => AddRamp(r, h0, h1, Vector2Int.right);
+        // Rises from h0 to h1 toward dir (one of the four axis directions).
+        public static void AddRamp(Rect r, float h0, float h1, Vector2Int dir) => regions.Add(new Region { rect = r, h0 = h0, h1 = h1, ramp = true, dir = dir });
+
+        static float Along(Region r, Vector2 p) =>
+            r.dir.x > 0 ? Mathf.InverseLerp(r.rect.xMin, r.rect.xMax, p.x) : r.dir.x < 0 ? Mathf.InverseLerp(r.rect.xMax, r.rect.xMin, p.x)
+            : r.dir.y < 0 ? Mathf.InverseLerp(r.rect.yMax, r.rect.yMin, p.y) : Mathf.InverseLerp(r.rect.yMin, r.rect.yMax, p.y);
 
         // The open world's own heights (plateaus and stairs), set by ChunkWorld while it is alive.
         public static Func<Vector2, float> World;
@@ -26,7 +34,7 @@ namespace TWF
             float best = World != null ? World(p) : 0f;
             foreach (var r in regions)
                 if (r.rect.Contains(p))
-                    best = Mathf.Max(best, r.ramp ? Mathf.Lerp(r.h0, r.h1, Mathf.InverseLerp(r.rect.yMin, r.rect.yMax, p.y)) : r.h0);
+                    best = Mathf.Max(best, !r.ramp ? r.h0 : Mathf.Lerp(r.h0, r.h1, Along(r, p)));
             return best;
         }
     }
@@ -35,6 +43,14 @@ namespace TWF
     public class GroundFollow : MonoBehaviour
     {
         const float RiseSpeed = 9f;
+        // How this body gets between levels: walkers keep to stairs; climbers (spiders) crawl up and down cliff
+        // faces, slowly; flyers drift over them; leapers may jump down. Set by the monster that owns it.
+        public Mobility mobility = Mobility.Walk;
+        public float riseSpeed = RiseSpeed;
+        float target;
+        // Still on its way up or down a cliff face (a climbing spider): it moves slowly meanwhile.
+        public bool Climbing => Mathf.Abs(height - target) > 0.6f;
+        public float Height => height;
         readonly Dictionary<Transform, float> parts = new Dictionary<Transform, float>();   // each part's own height
         readonly Dictionary<Transform, float> written = new Dictionary<Transform, float>(); // what was last set on it
         readonly List<Transform> keys = new List<Transform>();
@@ -54,21 +70,25 @@ namespace TWF
         // wall along a plateau's edge; when that happens it is put back where it last stood.
         public static bool KeepLevels = true;
         Vector2 lastGood;
-        int lastLevel = -1;        // 0 low ground, 1 plateau, -1 anything else (stairs, pillars: no rule)
+        int lastLevel = -1;        // the level of land it stands on, -1 on stairs or anywhere else with no rule
         Rigidbody2D rb;
 
         static int LevelOf(Vector2 p)
         {
-            var c = WorldGen.CellAt(Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y));
-            return c == Cell.Plateau ? 1 : WorldGen.Walkable(c) ? 0 : -1;
+            int x = Mathf.FloorToInt(p.x), y = Mathf.FloorToInt(p.y);
+            var c = WorldGen.CellAt(x, y);
+            return c != Cell.Stairs && WorldGen.Standable(c) ? WorldGen.ElevAt(x, y) : -1;
         }
 
         void Guard()
         {
-            if (!KeepLevels || TerrainHeight.World == null) return;
+            if (!KeepLevels || TerrainHeight.World == null || mobility == Mobility.Climb || mobility == Mobility.Fly) return;
             Vector2 p = transform.position;
             int level = LevelOf(p);
-            if (level >= 0 && lastLevel >= 0 && level != lastLevel)
+            bool leapDown = mobility == Mobility.Leap && level >= 0 && level < lastLevel && lastLevel - level <= WorldGen.LeapDrop;
+            // A jump of more than a few tiles in one step is a teleport (a waypoint, a portal), not a knock over an edge.
+            bool teleported = (p - lastGood).sqrMagnitude > 9f;
+            if (level >= 0 && lastLevel >= 0 && level != lastLevel && !leapDown && !teleported)
             {
                 if (rb == null) rb = GetComponent<Rigidbody2D>();
                 if (rb != null) { rb.position = lastGood; rb.linearVelocity = Vector2.zero; }
@@ -83,8 +103,10 @@ namespace TWF
         void LateUpdate()
         {
             Guard();
-            float target = TerrainHeight.At(transform.position);
-            height = Mathf.MoveTowards(height, target, RiseSpeed * Time.deltaTime);
+            target = TerrainHeight.At(transform.position);
+            // A leaper drops fast; everyone else rises and falls at their own pace.
+            float speed = mobility == Mobility.Leap && target < height ? 16f : riseSpeed;
+            height = Mathf.MoveTowards(height, target, speed * Time.deltaTime);
             // Children that turn up later (status flames, bars) join in at the height they were made for.
             foreach (Transform c in transform)
                 if (!parts.ContainsKey(c)) parts[c] = c.localPosition.z;
@@ -319,6 +341,9 @@ namespace TWF
         // A building or prop standing at p: 8-view sprite, footprint collider, and a hidden box that casts its shadow.
         public static GameObject Place(string name, Transform parent, Vector2 p, float height = 0f)
         {
+            // Made as a real 3D mesh by the environment kit: that wins over the baked views.
+            var solid = EnvMesh.Place(name, parent, p, height);
+            if (solid != null) return solid;
             var views = LoadViews(name);
             var m = LoadMeta(name);
             if (views == null) return null;
@@ -349,6 +374,17 @@ namespace TWF
         // A tree or bush: a single upright view, swaying like the old ones.
         public static GameObject PlaceTree(string name, Transform parent, Vector2 p, float height = 0f)
         {
+            // The 3D trees and bushes of the environment kit stand in for the old cards when installed.
+            string[] meshes = name == "bush" ? new[] { "bush_green", "bush_flower", "bush_red" } : new[] { "tree_green", "tree_green2", "tree_red", "tree_orange" };
+            uint hh = (uint)(Mathf.RoundToInt(p.x * 7.3f) * 73856093 ^ Mathf.RoundToInt(p.y * 5.1f) * 19349663);
+            var mesh = EnvMesh.Place(meshes[hh % (uint)meshes.Length], parent, p, height, hh % 360);
+            if (mesh != null)
+            {
+                float sc = 0.9f + (hh >> 8) % 30 / 100f;
+                mesh.transform.localScale = new Vector3(sc, sc, sc);
+                if (name != "bush" && mesh.GetComponent<Collider2D>() == null) mesh.AddComponent<CircleCollider2D>().radius = 0.4f;
+                return mesh;
+            }
             var views = LoadViews(name);
             if (views == null) return null;
             var go = new GameObject(name);

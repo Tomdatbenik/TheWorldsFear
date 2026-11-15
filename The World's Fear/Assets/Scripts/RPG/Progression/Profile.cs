@@ -78,7 +78,6 @@ namespace TWF
     // The player's persistent progress: level, XP, gold, skills, items.
     public static class Profile
     {
-        public const int MaxLevel = 100;
         public const int InventorySize = 24;
         public const int MaxPotions = 5;
 
@@ -328,7 +327,33 @@ namespace TWF
 
         public static int XPToNext(int level) => Mathf.RoundToInt(100f * Mathf.Pow(level, 1.5f));
 
-        public static float XPFraction => Data.level >= MaxLevel ? 1f : (float)Data.xp / XPToNext(Data.level);
+        public static float XPFraction => AtLevelCap ? 1f : (float)Data.xp / XPToNext(Data.level);
+
+        // Levels stop at a cap until the next boss in line falls, so a hero can't grind far past a boss.
+        // Each cap is about the level of that boss's land at its far edge.
+        public static readonly int[] LevelCaps = { 17, 24, 33, 44, 55 };   // Slime, Spider, Zombie, Skeleton, World's Fear
+
+        public static BossKind? NextBoss
+        {
+            get
+            {
+                foreach (var k in WorldManager.BossOrder)
+                    if (!WorldManager.Slain(k)) return k;
+                return null;
+            }
+        }
+
+        public static int LevelCap
+        {
+            get
+            {
+                var next = NextBoss;
+                if (next == null) return int.MaxValue;   // every boss slain: no cap at all
+                return LevelCaps[System.Array.IndexOf(WorldManager.BossOrder, next.Value)];
+            }
+        }
+
+        public static bool AtLevelCap => Data.level >= LevelCap;
 
         // Monsters well below your level give less XP.
         public static int MonsterXP(int monsterLevel, MonsterRank rank)
@@ -342,9 +367,9 @@ namespace TWF
 
         public static void AddXP(int amount)
         {
-            if (Data.level >= MaxLevel) return;
+            int cap = LevelCap;
             Data.xp += amount;
-            while (Data.level < MaxLevel && Data.xp >= XPToNext(Data.level))
+            while (Data.level < cap && Data.xp >= XPToNext(Data.level))
             {
                 Data.xp -= XPToNext(Data.level);
                 Data.level++;
@@ -353,7 +378,8 @@ namespace TWF
                 LeveledUp?.Invoke(Data.level);
                 Legacy.OnLevel(Data.level);
             }
-            if (Data.level >= MaxLevel) Data.xp = 0;
+            // At the cap the bar fills and waits: the next kill after the boss falls levels you up.
+            if (Data.level >= cap) Data.xp = Mathf.Min(Data.xp, XPToNext(Data.level) - 1);
             Changed?.Invoke();
         }
 

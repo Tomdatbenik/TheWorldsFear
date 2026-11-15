@@ -1,0 +1,12 @@
+{
+ "name": "moss_cottage",
+ "kind": "house",
+ "mesh": true,
+ "footprint": [
+  6.16,
+  4.76
+ ],
+ "height": 6.636000156402588,
+ "verts": 30534,
+ "tris": 15266
+}

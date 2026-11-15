@@ -514,7 +514,8 @@ namespace TWF
             levelText.text = data.level.ToString();
             potionCount.text = data.potions.ToString();
             xpFill.fillAmount = Profile.XPFraction;
-            xpText.text = data.level >= Profile.MaxLevel ? "MAX LEVEL" : $"{data.xp} / {Profile.XPToNext(data.level)} XP";
+            xpText.text = Profile.AtLevelCap ? $"LEVEL CAP · slay {BossTitan.BossName(Profile.NextBoss.Value)}"
+                : $"{data.xp} / {Profile.XPToNext(data.level)} XP";
             goldText.text = $"{data.gold} gold";
             skillPointBadge.transform.parent.gameObject.SetActive(true);
             int points = data.skillPoints + data.attributePoints;

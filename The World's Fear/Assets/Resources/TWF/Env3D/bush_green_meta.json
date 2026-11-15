@@ -1,0 +1,9 @@
+{
+ "name": "bush_green",
+ "kind": "bush3d",
+ "mesh": true,
+ "footprint": null,
+ "height": 1.0383805845975875,
+ "verts": 240,
+ "tris": 80
+}

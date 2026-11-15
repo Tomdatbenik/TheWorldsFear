@@ -83,6 +83,17 @@ namespace TWF
             return open[rng.Next(open.Count)];
         }
 
+        // Off-hands tied to a weapon (parrying dagger, sword, quiver, orb, tome) only drop once that weapon is unlocked.
+        public static OffHandKind RandomOffHand(System.Random rng)
+        {
+            var open = new List<OffHandKind> { OffHandKind.Shield };
+            if (Legacy.WeaponUnlocked(WeaponType.Daggers)) open.Add(OffHandKind.ParryDagger);
+            if (Legacy.WeaponUnlocked(WeaponType.Sword)) open.Add(OffHandKind.Sword);
+            if (Legacy.WeaponUnlocked(WeaponType.Bow) || Legacy.WeaponUnlocked(WeaponType.Crossbow)) open.Add(OffHandKind.Quiver);
+            if (Legacy.WeaponUnlocked(WeaponType.Staff) || Legacy.WeaponUnlocked(WeaponType.Wand)) { open.Add(OffHandKind.Orb); open.Add(OffHandKind.Tome); }
+            return open[rng.Next(open.Count)];
+        }
+
         public static Rarity RollRarity(System.Random rng, MonsterRank source, float magicFind = 0f)
         {
             float legendary = 0.01f, rare = 0.09f, magic = 0.32f;
@@ -125,7 +136,7 @@ namespace TWF
             }
             else if (slot == ItemSlot.OffHand)
             {
-                var kind = (OffHandKind)rng.Next(6);
+                var kind = RandomOffHand(rng);
                 item.offHandKind = (int)kind;
                 item.baseName = offHandNames[kind][tier];
             }

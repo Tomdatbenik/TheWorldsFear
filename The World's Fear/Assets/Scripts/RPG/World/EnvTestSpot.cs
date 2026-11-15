@@ -25,7 +25,7 @@ namespace TWF
 
         static void Spawn()
         {
-            if (FindAnyObjectByType<Village>() == null || FindAnyObjectByType<EnvTestSpot>() != null) return;
+            if (Town.On || FindAnyObjectByType<Village>() == null || FindAnyObjectByType<EnvTestSpot>() != null) return;
             new GameObject("Env Test Spot").AddComponent<EnvTestSpot>();
         }
 

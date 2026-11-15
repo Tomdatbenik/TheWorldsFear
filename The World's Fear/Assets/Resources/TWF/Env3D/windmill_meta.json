@@ -1,0 +1,12 @@
+{
+ "name": "windmill",
+ "kind": "windmill",
+ "mesh": true,
+ "footprint": [
+  4.4,
+  4.4
+ ],
+ "height": 12.459999999999999,
+ "verts": 952,
+ "tris": 472
+}

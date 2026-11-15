@@ -1,0 +1,12 @@
+{
+ "name": "tree_dead",
+ "kind": "tree3d",
+ "mesh": true,
+ "footprint": [
+  0.5,
+  0.5
+ ],
+ "height": 6.293448941087723,
+ "verts": 1388,
+ "tris": 494
+}

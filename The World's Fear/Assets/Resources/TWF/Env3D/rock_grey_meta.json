@@ -1,0 +1,12 @@
+{
+ "name": "rock_grey",
+ "kind": "rock3d",
+ "mesh": true,
+ "footprint": [
+  1.0,
+  1.0
+ ],
+ "height": 0.872461314201355,
+ "verts": 60,
+ "tris": 20
+}
