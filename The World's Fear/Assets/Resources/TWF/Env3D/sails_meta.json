@@ -4,6 +4,11 @@
  "mesh": true,
  "footprint": null,
  "height": 6.406450271606445,
- "verts": 1272,
- "tris": 636
+ "verts": 1296,
+ "tris": 648,
+ "materials": [
+  "wood",
+  "cloth",
+  "flat"
+ ]
 }

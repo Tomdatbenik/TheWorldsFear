@@ -6,7 +6,7 @@ using UnityEngine;
 namespace TWF
 {
     // The player's hero: movement, auto-targeted basic attacks, skills, stats from level/items/passives.
-    [RequireComponent(typeof(Combatant), typeof(Rigidbody2D))]
+    [RequireComponent(typeof(Combatant), typeof(GroundBody))]
     public class HeroController : MonoBehaviour
     {
         public static HeroController Instance { get; private set; }
@@ -47,7 +47,7 @@ namespace TWF
 
         public WeaponProfile Weapon => weaponProfile ?? Weapons.Get(Weapons.Equipped);
 
-        Rigidbody2D body;
+        GroundBody body;
         CharacterAnimator animator;
         SpriteRenderer spriteRenderer;
         float attackTimer;
@@ -82,13 +82,11 @@ namespace TWF
         {
             Instance = this;
             Combatant = GetComponent<Combatant>();
-            body = GetComponent<Rigidbody2D>();
+            body = GroundBody.Ensure(gameObject);
             animator = GetComponentInChildren<CharacterAnimator>();
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
-            body.gravityScale = 0f;
-            body.freezeRotation = true;
-            body.interpolation = RigidbodyInterpolation2D.Interpolate;
-            body.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            body.Rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+            body.Rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
             Combatant.team = Team.Player;
             Combatant.destroyOnDeath = false;
             Combatant.radius = 0.45f;
@@ -106,7 +104,9 @@ namespace TWF
                 ssr.sprite = GameAssets.SoftCircle;
                 ssr.color = new Color(0, 0, 0, 0.22f);
                 RenderAssets.MakeUnlit(ssr);
-                shadow.position = Ground.Decal(shadow.position);
+                // Lies on the ground under the feet (the prefab still has it in the old flat-XY layout).
+                shadow.localPosition = new Vector3(0f, Ground.DecalH, 0.05f);
+                shadow.localRotation = Ground.Flat;
             }
             RenderAssets.MakeLit(spriteRenderer);
             if (weapon) RenderAssets.MakeLit(weapon.GetComponent<SpriteRenderer>());
@@ -273,7 +273,7 @@ namespace TWF
         public void Revive(Vector2 at)
         {
             body.position = at;
-            transform.position = at;
+            transform.position = at.W();
             Combatant.ResetLife();
             for (int i = 0; i < SlotCount; i++) cooldowns[i] = 0f;
             potionTimer = 0f;
@@ -324,18 +324,18 @@ namespace TWF
             HandleKeyboardSkills();
             if (!MobaInput.Blocked && KeyBinds.Pressed(GameAction.Potion)) UsePotion();
 
-            CurrentTarget = Combat.NearestHostile(Team.Player, transform.position, AttackRange + 0.2f);
-            var mouseAim = MobaInput.MouseAttackDirection(transform.position);
+            CurrentTarget = Combat.NearestHostile(Team.Player, transform.G(), AttackRange + 0.2f);
+            var mouseAim = MobaInput.MouseAttackDirection(transform.G());
             if (mouseAim.HasValue)
             {
                 TryBasicAttack(CurrentTarget, mouseAim.Value);   // toward the cursor, whether or not anything is there
             }
             else if (MobaInput.AttackHeld)
             {
-                var chase = CurrentTarget ?? Combat.NearestHostile(Team.Player, transform.position, acquireRange);
+                var chase = CurrentTarget ?? Combat.NearestHostile(Team.Player, transform.G(), acquireRange);
                 if (CurrentTarget != null) TryBasicAttack(CurrentTarget);
                 else if (chase != null && moveInput == Vector2.zero)
-                    moveInput = ((Vector2)(chase.transform.position - transform.position)).normalized;
+                    moveInput = (chase.transform.G() - transform.G()).normalized;
                 if (CurrentTarget == null) CurrentTarget = chase;
             }
 
@@ -379,12 +379,12 @@ namespace TWF
             if (mastery && w.type == WeaponType.Bow) interval /= WeaponMasteries.RunAndGunSpeed;
             if (mastery && w.type == WeaponType.Crossbow) interval *= WeaponMasteries.RepeaterReload;
             attackTimer = interval;
-            Vector2 dir = aim ?? ((Vector2)(target.transform.position - transform.position)).normalized;
+            Vector2 dir = aim ?? (target.transform.G() - transform.G()).normalized;
             if (aim.HasValue)
             {
                 // A homing shot only locks on to something near the line of the aim.
                 target = null;
-                foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, dir, w.range + 2f, 50f)) { target = c; break; }
+                foreach (var c in Combat.HostilesInArc(Team.Player, transform.G(), dir, w.range + 2f, 50f)) { target = c; break; }
             }
             Facing = dir;
             attackAnimTimer = 0.2f;
@@ -428,7 +428,7 @@ namespace TWF
         // The main shot plus one for each extra projectile.
         void FireVolley(WeaponProfile w, ProjectileSpec spec, Vector2 dir, Combatant target)
         {
-            Projectile.Fire(Combatant, (Vector2)transform.position + dir * 0.4f, dir, spec, w.homing ? target : null);
+            Projectile.Fire(Combatant, transform.G() + dir * 0.4f, dir, spec, w.homing ? target : null);
             int extra = Mathf.RoundToInt(Combatant.Stats.Get(StatType.ExtraProjectiles));
             for (int k = 1; k <= extra; k++)
             {
@@ -436,7 +436,7 @@ namespace TWF
                 var d2 = (Vector2)(Quaternion.Euler(0, 0, a) * dir);
                 var s2 = spec;
                 s2.homing = false;
-                Projectile.Fire(Combatant, (Vector2)transform.position + d2 * 0.4f, d2, s2);
+                Projectile.Fire(Combatant, transform.G() + d2 * 0.4f, d2, s2);
             }
             // Endless Volley: every fifth shot also fans out five arrows.
             if (MythicPowers.VolleyShot())
@@ -448,7 +448,7 @@ namespace TWF
                 for (int k = -2; k <= 2; k++)
                 {
                     var d3 = (Vector2)(Quaternion.Euler(0, 0, k * 11f) * dir);
-                    Projectile.Fire(Combatant, (Vector2)transform.position + d3 * 0.4f, d3, fan);
+                    Projectile.Fire(Combatant, transform.G() + d3 * 0.4f, d3, fan);
                 }
             }
             Shoot(dir, w.type == WeaponType.Bow || w.type == WeaponType.Crossbow);
@@ -492,7 +492,7 @@ namespace TWF
             for (int k = 0; k < knives; k++)
             {
                 var d = (Vector2)(Quaternion.Euler(0, 0, (k - (knives - 1) / 2f) * spread) * dir);
-                Projectile.Fire(Combatant, (Vector2)transform.position + d * 0.4f, d, spec);
+                Projectile.Fire(Combatant, transform.G() + d * 0.4f, d, spec);
             }
             Shoot(dir, false);
             Sound.Play(Sfx.Swing, transform.position, 0.4f);
@@ -515,13 +515,13 @@ namespace TWF
         void GravityOnHit(Combatant victim)
         {
             if (victim == null) return;
-            Vector2 at = victim.transform.position;
+            Vector2 at = victim.transform.G();
             VFX.Ring(at, new Color(0.75f, 0.5f, 1f), WeaponMasteries.GravityRadius, 0.35f);
             foreach (var c in Combat.HostilesInRadius(Team.Player, at, WeaponMasteries.GravityRadius).ToArray())
             {
                 if (c == victim || c.IsDead) continue;
                 var info = Combat.Roll(Combatant, 0.15f, true);
-                info.knockback = (at - (Vector2)c.transform.position).normalized * WeaponMasteries.GravityPull;
+                info.knockback = (at - c.transform.G()).normalized * WeaponMasteries.GravityPull;
                 c.TakeDamage(info);
             }
         }
@@ -534,10 +534,10 @@ namespace TWF
             if (jumpsLeft <= 0) return;
             Combatant next = null;
             float best = WeaponMasteries.ChainRange;
-            foreach (var c in Combat.HostilesInRadius(Team.Player, victim.transform.position, WeaponMasteries.ChainRange))
+            foreach (var c in Combat.HostilesInRadius(Team.Player, victim.transform.G(), WeaponMasteries.ChainRange))
             {
                 if (c == victim || c.IsDead || struck.Contains(c)) continue;
-                float d = Vector2.Distance(victim.transform.position, c.transform.position);
+                float d = Vector2.Distance(victim.transform.G(), c.transform.G());
                 if (d < best) { best = d; next = c; }
             }
             if (next == null) return;
@@ -546,8 +546,8 @@ namespace TWF
             hop.homing = true;
             hop.range = WeaponMasteries.ChainRange + 1f;
             hop.onHit = ChainOnHit(spec, jumpsLeft - 1, struck);
-            Vector2 from = victim.transform.position;
-            var dir = ((Vector2)next.transform.position - from).normalized;
+            Vector2 from = victim.transform.G();
+            var dir = (next.transform.G() - from).normalized;
             Projectile.Fire(Combatant, from + dir * 0.9f, dir, hop, next);
         };
 
@@ -592,7 +592,7 @@ namespace TWF
                 if (w.arc >= 360f)
                 {
                     // Hammer: slam a circle at the target: a shockwave with cracks and a puff of dust (or the weapon's element).
-                    Vector2 at = (Vector2)transform.position + dir * (target != null ? Mathf.Min(reach * 0.7f, Vector2.Distance(transform.position, target.transform.position)) : reach * 0.7f);
+                    Vector2 at = transform.G() + dir * (target != null ? Mathf.Min(reach * 0.7f, Vector2.Distance(transform.G(), target.transform.G())) : reach * 0.7f);
                     Fx.Shock(at, reach * 0.9f, fx);
                     Fx.Play("blast_" + fx, at, reach * 0.42f);
                     CameraFollow.Shake(0.08f);
@@ -614,7 +614,7 @@ namespace TWF
                 {
                     // Axe mastery: a full spin around the hero.
                     Fx.Slash(transform.position, dir, reach, 360f, fx);
-                    foreach (var c in Combat.HostilesInRadius(Team.Player, transform.position, reach))
+                    foreach (var c in Combat.HostilesInRadius(Team.Player, transform.G(), reach))
                     {
                         Combat.Hit(Combatant, c, MeleeMult(w, c) * slashMult, WeaponStatus(w), true, push, -1f, MythicPowers.AttackMask);
                         Fx.HitOn(c, fx);
@@ -624,7 +624,7 @@ namespace TWF
                 else
                 {
                     Fx.Slash(transform.position, swingDir, reach * 0.95f, w.arc, fx);
-                    foreach (var c in Combat.HostilesInArc(Team.Player, transform.position, swingDir, reach, w.arc))
+                    foreach (var c in Combat.HostilesInArc(Team.Player, transform.G(), swingDir, reach, w.arc))
                     {
                         Combat.Hit(Combatant, c, MeleeMult(w, c) * slashMult, WeaponStatus(w), true, push, -1f, MythicPowers.AttackMask);
                         Fx.HitOn(c, fx);
@@ -667,7 +667,7 @@ namespace TWF
                 float reach = bow
                     ? (k < 0.45f ? Mathf.Lerp(0.6f, 0.45f, k / 0.45f) : Mathf.Lerp(0.45f, 0.62f, (k - 0.45f) / 0.55f))   // draw, then release
                     : 0.45f + Mathf.Sin(k * Mathf.PI) * 0.35f;                                                            // thrust
-                weapon.position = (Vector3)((Vector2)transform.position + dir * reach) + View.Up * 0.7f;
+                weapon.position = (transform.G() + dir * reach).W(transform.position.y) + View.Up * 0.7f;
                 yield return null;
             }
             weapon.gameObject.SetActive(false);
@@ -686,7 +686,7 @@ namespace TWF
                 float a = baseAngle + Mathf.Lerp(arc / 2f, -arc / 2f, t / duration);
                 Vector2 off = new Vector2(Mathf.Cos(a * Mathf.Deg2Rad), Mathf.Sin(a * Mathf.Deg2Rad));
                 // Swing around the hero at chest height, drawn facing the camera.
-                weapon.position = (Vector3)((Vector2)transform.position + off * 0.8f) + View.Up * 0.7f;
+                weapon.position = (transform.G() + off * 0.8f).W(transform.position.y) + View.Up * 0.7f;
                 Vector2 onScreen = View.ToScreen(off);
                 weapon.rotation = View.Rotation * Quaternion.Euler(0, 0, Mathf.Atan2(onScreen.y, onScreen.x) * Mathf.Rad2Deg - 90f);
                 yield return null;
@@ -702,7 +702,7 @@ namespace TWF
             for (int i = 0; i < SlotCount; i++)
             {
                 if (!MobaInput.KeyboardSkillPressed(i)) continue;
-                Vector2? aim = MobaInput.MouseAim(transform.position, slotSkills[i] != null ? SkillRange(slotSkills[i]) : 5f);
+                Vector2? aim = MobaInput.MouseAim(transform.G(), slotSkills[i] != null ? SkillRange(slotSkills[i]) : 5f);
                 if (aim.HasValue) TryCast(i, aim.Value, true);
                 else TryCast(i, Vector2.zero, false);
             }
@@ -748,10 +748,10 @@ namespace TWF
                 if (autoCooldowns[i] > 0f) { autoCooldowns[i] -= dt; continue; }
                 var skill = autoSkills[i];
                 float range = skill.targeting == Targeting.Self ? 7f : SkillRange(skill) + 1f;
-                var target = Combat.NearestHostile(Team.Player, transform.position, range);
+                var target = Combat.NearestHostile(Team.Player, transform.G(), range);
                 if (target == null) continue;
-                Vector2 to = (Vector2)target.transform.position - (Vector2)transform.position;
-                Cast(skill, 1, to.normalized, (Vector2)transform.position + Vector2.ClampMagnitude(to, SkillRange(skill)));
+                Vector2 to = target.transform.G() - transform.G();
+                Cast(skill, 1, to.normalized, transform.G() + Vector2.ClampMagnitude(to, SkillRange(skill)));
                 autoCooldowns[i] = skill.Cooldown(1, Combatant.Stats.Get(StatType.CooldownReduction)) * 1.5f;
             }
         }
@@ -776,7 +776,7 @@ namespace TWF
                 var skill = slotSkills[slot];
                 if (skill.targeting == Targeting.Dash) continue;
                 float range = skill.targeting == Targeting.Self ? 6f : SkillRange(skill) + 0.5f;
-                if (Combat.NearestHostile(Team.Player, transform.position, range) == null) continue;
+                if (Combat.NearestHostile(Team.Player, transform.G(), range) == null) continue;
                 if (TryCast(slot, Vector2.zero, false))
                 {
                     casualGap = 0.35f;
@@ -803,7 +803,7 @@ namespace TWF
         {
             var ctx = new SkillContext
             {
-                caster = Combatant, runner = this, body = body, origin = transform.position, direction = dir.normalized,
+                caster = Combatant, runner = this, body = body, origin = transform.G(), direction = dir.normalized,
                 point = point, rank = rank, power = skill.Power(rank) * (1f + Combatant.Stats.Get(StatType.SkillPower)),
             };
             skill.Cast(ctx);
@@ -814,7 +814,7 @@ namespace TWF
         {
             if (!CanCast(slot)) return false;
             var skill = slotSkills[slot];
-            Vector2 pos = transform.position;
+            Vector2 pos = transform.G();
             float range = SkillRange(skill);
             Vector2 dir;
             Vector2 point;
@@ -834,7 +834,7 @@ namespace TWF
                 var target = Combat.NearestHostile(Team.Player, pos, range + 1.5f);
                 if (target != null)
                 {
-                    Vector2 to = (Vector2)target.transform.position - pos;
+                    Vector2 to = target.transform.G() - pos;
                     dir = to.normalized;
                     point = pos + Vector2.ClampMagnitude(to, range);
                 }

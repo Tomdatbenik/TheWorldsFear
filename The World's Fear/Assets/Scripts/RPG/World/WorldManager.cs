@@ -129,7 +129,7 @@ namespace TWF
             if (checkTimer > 0f) return;
             checkTimer = 0.4f;
 
-            Vector2 pos = hero.transform.position;
+            Vector2 pos = hero.transform.G();
             float dist = pos.magnitude;
             if (dist > Profile.Data.farthest) { Profile.Data.farthest = dist; Legacy.OnTravel(dist); }
 
@@ -158,8 +158,8 @@ namespace TWF
             Vector2 to = WaypointPosition(waypointId) + Vector2.down * 1.5f;
             ChunkWorld.Instance?.LoadAround(to);
             VFX.Burst(hero.transform.position, new Color(0.5f, 0.8f, 1f), 20, 1f);
-            hero.GetComponent<Rigidbody2D>().position = to;
-            hero.transform.position = to;
+            hero.GetComponent<GroundBody>().position = to;
+            hero.transform.position = to.W();
             var follow = Camera.main != null ? Camera.main.GetComponent<CameraFollow>() : null;
             if (follow) follow.SnapToTarget();
             VFX.Burst(to, new Color(0.5f, 0.8f, 1f), 20, 1f);

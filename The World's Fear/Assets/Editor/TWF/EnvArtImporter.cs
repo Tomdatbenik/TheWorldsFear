@@ -8,15 +8,17 @@ namespace TWF.EditorTools
     {
         void OnPreprocessTexture()
         {
-            if (!assetPath.Contains("/Resources/TWF/Env/")) return;
+            // The 3D kit's textures (env_textures.py): pixel art that repeats over a mesh.
+            bool kit = assetPath.Contains("/Resources/TWF/Env3D/");
+            if (!kit && !assetPath.Contains("/Resources/TWF/Env/")) return;
             var t = (TextureImporter)assetImporter;
             t.textureType = TextureImporterType.Default;
             t.alphaIsTransparency = false;
             t.mipmapEnabled = false;
             t.filterMode = UnityEngine.FilterMode.Point;
-            bool tiled = assetPath.EndsWith("_tile.png");
+            bool tiled = kit || assetPath.EndsWith("_tile.png");
             t.wrapMode = tiled ? UnityEngine.TextureWrapMode.Repeat : UnityEngine.TextureWrapMode.Clamp;
-            t.isReadable = tiled;   // the road is painted from the dirt tile at runtime
+            t.isReadable = tiled && !kit;   // the road is painted from the dirt tile at runtime
             t.npotScale = TextureImporterNPOTScale.None;
             t.textureCompression = TextureImporterCompression.Uncompressed;
             t.maxTextureSize = 8192;

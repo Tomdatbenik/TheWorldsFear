@@ -302,8 +302,8 @@ namespace TWF
             if (skill == null) return;
             var ind = Get();
             ind.gameObject.SetActive(true);
-            Vector2 pos = hero.transform.position;
-            ind.transform.position = pos;
+            Vector2 pos = hero.transform.G();
+            ind.transform.position = Ground.Decal(pos) + Vector3.up * (hero.transform.position.y - TerrainHeight.At(pos));
             Color c = cancelling ? new Color(1f, 0.3f, 0.3f) : skill.color;
 
             float skillRange = hero.SkillRange(skill);
@@ -318,9 +318,9 @@ namespace TWF
             if (showLine)
             {
                 float unit = GameAssets.Pixel.bounds.size.x;
-                ind.line.transform.localRotation = Quaternion.Euler(0, 0, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+                ind.line.transform.localRotation = Ground.Facing(dir) * Ground.Flat;
                 ind.line.transform.localScale = new Vector3(skillRange / unit, 0.7f / unit, 1f);
-                ind.line.transform.localPosition = dir * skillRange / 2f;
+                ind.line.transform.localPosition = (dir * skillRange / 2f).W();
                 ind.line.color = new Color(c.r, c.g, c.b, 0.35f);
             }
 
@@ -329,7 +329,7 @@ namespace TWF
             if (showCircle)
             {
                 Vector2 at = skill.targeting == Targeting.Self ? Vector2.zero : dir * skillRange * Mathf.Clamp01(aim.magnitude);
-                ind.circle.transform.localPosition = at;
+                ind.circle.transform.localPosition = at.W();
                 float area = 1f + hero.Combatant.Stats.Get(StatType.AreaSize);
                 ind.circle.transform.localScale = Vector3.one * skill.indicatorRadius * area * 2f / GameAssets.SoftCircle.bounds.size.x * 1.25f;
                 ind.circle.color = new Color(c.r, c.g, c.b, 0.45f);

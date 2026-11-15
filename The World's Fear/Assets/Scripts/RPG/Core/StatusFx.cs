@@ -41,7 +41,7 @@ namespace TWF
             {
                 // Spread across the body from the hips up, in front of it, then carried along.
                 float side = (i - (count - 1) / 2f) * 0.26f * Mathf.Max(1f, h / 1.6f);
-                var p = Fx.Play(kinds[k].sheet, (Vector2)transform.position, (0.5f + 0.18f * h) * (i == 1 ? 1.15f : 1f), null, 0f, 9999f);
+                var p = Fx.Play(kinds[k].sheet, transform.G(), (0.5f + 0.18f * h) * (i == 1 ? 1.15f : 1f), null, 0f, 9999f);
                 if (p == null) return;
                 p.transform.position += View.Right * side + View.Up * (h * (i % 2 == 0 ? 0.18f : 0.32f));
                 Fx.Lift(p, 1f);

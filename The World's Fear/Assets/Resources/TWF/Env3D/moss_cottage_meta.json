@@ -6,7 +6,16 @@
   6.16,
   4.76
  ],
- "height": 6.636000156402588,
- "verts": 30534,
- "tris": 15266
+ "height": 6.803999900817871,
+ "verts": 11722,
+ "tris": 5860,
+ "materials": [
+  "stone",
+  "plaster",
+  "wood",
+  "door_house",
+  "glass",
+  "flat",
+  "thatch"
+ ]
 }

@@ -28,7 +28,7 @@ namespace TWF
             m.name = "Giant";
             m.aggroRange = 18f;
             m.leashRange = 80f;
-            m.GetComponent<Rigidbody2D>().mass = 60f;   // the hero can't push it around
+            m.GetComponent<GroundBody>().mass = 60f;   // the hero can't push it around
             m.gameObject.AddComponent<Giant>();
             return m;
         }
@@ -59,7 +59,7 @@ namespace TWF
         void Start()
         {
             self.Died += OnDied;
-            lastPos = transform.position;
+            lastPos = transform.G();
         }
 
         void Update()
@@ -67,8 +67,8 @@ namespace TWF
             if (self.IsDead) return;
             var hero = HeroController.Instance;
             if (hero == null || hero.Combatant.IsDead) return;
-            Vector2 pos = transform.position;
-            float dist = Vector2.Distance(hero.transform.position, pos);
+            Vector2 pos = transform.G();
+            float dist = Vector2.Distance(hero.transform.G(), pos);
 
             // Heavy footfalls: the screen shakes a little with every step when it walks near you.
             float moved = (pos - lastPos).magnitude;
@@ -97,7 +97,7 @@ namespace TWF
             stomping = true;
             var hold = new StatModifier(StatType.MoveSpeed, ModKind.Percent, -1f, this);
             self.Stats.AddModifier(hold);
-            Vector2 feet = transform.position;
+            Vector2 feet = transform.G();
             AreaEffect.Spawn(self, feet, new AreaSpec
             {
                 radius = StompRadius,
@@ -120,7 +120,7 @@ namespace TWF
         // A giant is worth the fight: it drops a second load of loot.
         void OnDied(Combatant killer)
         {
-            Loot.Drop(self, transform.position + Vector3.right * 1.5f);
+            Loot.Drop(self, transform.G() + Vector2.right * 1.5f);
         }
     }
 
@@ -146,11 +146,11 @@ namespace TWF
             if (WorldManager.Instance == null || DungeonSetup.Instance != null || BossArenaSetup.Instance != null) return;
             var hero = HeroController.Instance;
             if (hero == null || hero.Combatant.IsDead) return;
-            Vector2 p = hero.transform.position;
+            Vector2 p = hero.transform.G();
 
             giants.RemoveAll(g => g == null || g.Combatant.IsDead);
             foreach (var g in giants.ToArray())
-                if (Vector2.Distance(g.transform.position, p) > Despawn) { giants.Remove(g); Destroy(g.gameObject); }
+                if (Vector2.Distance(g.transform.G(), p) > Despawn) { giants.Remove(g); Destroy(g.gameObject); }
 
             if (WorldGen.LevelAt(p) < Giant.LandLevel || giants.Count >= MaxGiants) return;
             for (int tries = 0; tries < 12; tries++)

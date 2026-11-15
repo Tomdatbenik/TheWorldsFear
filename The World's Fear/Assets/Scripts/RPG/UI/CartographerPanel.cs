@@ -42,7 +42,7 @@ namespace TWF
             foreach (Transform c in list) Destroy(c.gameObject);
             goldText.text = $"{Profile.Data.gold} gold";
             var hero = HeroController.Instance;
-            Vector2 from = hero != null ? (Vector2)hero.transform.position : Vector2.zero;
+            Vector2 from = hero != null ? hero.transform.G() : Vector2.zero;
 
             foreach (var kind in WorldManager.BossOrder)
             {

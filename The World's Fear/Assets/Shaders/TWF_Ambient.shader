@@ -99,7 +99,7 @@ Shader "TWF/Ambient"
                     off = float3(cos(a) * 1.6 + sin(a * 2.3) * 0.5,
                                  sin(a * 1.2) * 1.2 + sin(t * 1.7 + ph * 3.0) * 0.35,
                                  -(0.6 + 0.22 * sin(t * 2.7 + ph)));
-                    float3 vel = float3(-sin(a) * 1.6 + cos(a * 2.3) * 1.15, cos(a * 1.2) * 1.44, 0) * k;
+                    float3 vel = float3(-sin(a) * 1.6 + cos(a * 2.3) * 1.15, 0, cos(a * 1.2) * 1.44) * k;
                     float facing = dot(vel, right) >= 0 ? 1.0 : -1.0;
                     c.x *= facing;
                     float f = floor(frac(t * 7.0 + s * 5.0) * 4.0); // 0 1 2 1: open, half, closed, half
@@ -138,9 +138,12 @@ Shader "TWF/Ambient"
                     level = smoothstep(0.0, 0.08, life) * smoothstep(1.0, 0.93, life);
                 }
 
+                // The drifts above are written with the ground on XY and up -Z; the world is Y-up.
+                off = float3(off.x, -off.z, off.y);
+
                 // Sunbeams and their dust follow the sun's direction, so each biome's light leans its own way.
                 float3 toSun = normalize(_MainLightPosition.xyz);
-                float3 beamAxis = toSun * (6.0 / max(0.25, -toSun.z));
+                float3 beamAxis = toSun * (6.0 / max(0.25, toSun.y));
                 // Sunbeams are fully lit in bright biomes and fade in dim ones.
                 float day = saturate(dot(_MainLightColor.rgb, 0.3333) * 1.4);
                 if (kind == KIND_MOTE)
@@ -155,7 +158,7 @@ Shader "TWF/Ambient"
                 if (kind == KIND_BUTTERFLY) size *= saturate(_TWF_Day * 3.0 - 0.5);
                 if (kind == KIND_MOTE) level *= _TWF_Day;
 
-                float3 quad = flat ? float3(c.x, c.y, 0) * size : (right * c.x + up * c.y) * size;
+                float3 quad = flat ? float3(c.x, 0, c.y) * size : (right * c.x + up * c.y) * size;
                 float3 positionWS = anchor + off + quad;
                 if (kind == KIND_BEAM)
                 {

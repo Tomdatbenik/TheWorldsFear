@@ -24,6 +24,10 @@ namespace TWF
         int target = (int)Biome.Village;
         Mood current;
         bool boss, dungeon;
+        // How much the time of day shows (1 most biomes, less in the Ember, 0 in boss arenas), blended like the rest
+        // of the mood: switched outright, crossing into a biome snapped the light from one look to the other.
+        float dayAmount = 1f;
+        float DayAmountGoal => boss ? 0f : target == (int)Biome.Ember ? 0.55f : 1f;
 
         public static ZoneLighting Create()
         {
@@ -64,6 +68,7 @@ namespace TWF
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             current = MoodFor(target, false);
+            dayAmount = DayAmountGoal;
             ApplyMood(current);
         }
 
@@ -83,6 +88,7 @@ namespace TWF
             target = (int)Biome.Ruins;
             dungeonMood.ambient = ambient;
             current = dungeonMood;
+            dayAmount = DayAmountGoal;
             for (int i = 0; i < volumes.Length; i++) volumes[i].weight = i == target ? 1f : 0f;
             ApplyMood(current);
         }
@@ -91,12 +97,15 @@ namespace TWF
         {
             boss = true;
             target = volumes.Length - 1;
+            dayAmount = 0f;   // an arena's light is fixed from the start
         }
 
         void Update()
         {
             DayNight.Tick(Time.deltaTime);
-            float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 1.5f);
+            // A few seconds to cross from one biome's light to the next.
+            float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 0.6f);
+            dayAmount = Mathf.Lerp(dayAmount, DayAmountGoal, k);
             var goal = dungeon ? dungeonMood : MoodFor(target, boss);
             current.sun = Color.Lerp(current.sun, goal.sun, k);
             current.sunIntensity = Mathf.Lerp(current.sunIntensity, goal.sunIntensity, k);
@@ -108,16 +117,16 @@ namespace TWF
             ApplyMood(current);
 
             for (int i = 0; i < volumes.Length; i++)
-                volumes[i].weight = Mathf.MoveTowards(volumes[i].weight, i == target ? 1f : 0f, Time.unscaledDeltaTime * 0.6f);
+                volumes[i].weight = Mathf.MoveTowards(volumes[i].weight, i == target ? 1f : 0f, Time.unscaledDeltaTime * 0.25f);
         }
 
         // The biome's mood at this time of day. The boss arenas keep their own fixed light, and the Ember's lava lights its nights.
         Mood AtTimeOfDay(Mood m)
         {
-            float amount = boss ? 0f : target == (int)Biome.Ember ? 0.55f : 1f;
+            float amount = dayAmount;
             float height = DayNight.SunHeight;
             float day = Mathf.Lerp(1f, DayNight.Daylight, amount);
-            float warm = amount * Mathf.Clamp01(DayNight.Daylight * 1.5f) * (1f - Mathf.SmoothStep(0f, 0.35f, Mathf.Abs(height)));
+            float warm = amount * Mathf.Clamp01(DayNight.Daylight * 1.5f) * (1f - Smooth(0f, 0.35f, Mathf.Abs(height)));
 
             var moon = new Color(0.55f, 0.66f, 1f);
             m.sun = Color.Lerp(moon, Color.Lerp(m.sun, new Color(1f, 0.55f, 0.3f), warm * 0.7f), day);
@@ -128,15 +137,19 @@ namespace TWF
             m.fog = Color.Lerp(new Color(m.fog.r * 0.35f, m.fog.g * 0.4f, m.fog.b * 0.6f, m.fog.a), duskFog, day);
 
             // The sun climbs and crosses the sky; the moon takes over while the light is dimmest, with no shadow to give it away.
-            float elevation = height > 0f ? Mathf.Lerp(30f, m.sunAngles.x, Mathf.SmoothStep(0f, 0.7f, height)) : m.sunAngles.x * 0.9f;
+            float elevation = height > 0f ? Mathf.Lerp(30f, m.sunAngles.x, Smooth(0f, 0.7f, height)) : m.sunAngles.x * 0.9f;
             // Flat ground gets less light from a low sun; make up for it so dawn and dusk stay warm rather than dark.
             float elevated = Mathf.Lerp(m.sunAngles.x, elevation, amount);
             m.sunIntensity *= Mathf.Clamp(Mathf.Sin(m.sunAngles.x * Mathf.Deg2Rad) / Mathf.Sin(elevated * Mathf.Deg2Rad), 1f, 1.6f);
             float azimuth = m.sunAngles.y + DayNight.ArcPosition * 140f;
             m.sunAngles = Vector2.Lerp(m.sunAngles, new Vector2(elevation, azimuth), amount);
-            sun.shadowStrength = 0.75f * Mathf.Lerp(1f, Mathf.SmoothStep(0f, 0.18f, Mathf.Abs(height)), amount);
+            sun.shadowStrength = 0.75f * Mathf.Lerp(1f, Smooth(0f, 0.18f, Mathf.Abs(height)), amount);
             return m;
         }
+
+        // 0 below a, 1 above b, eased between (the shader smoothstep; Mathf.SmoothStep instead eases between its
+        // first two arguments, so SmoothStep(0, 0.18, x) never got above 0.18 and the shadows all but vanished).
+        static float Smooth(float a, float b, float x) => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(a, b, x));
 
         void ApplyMood(Mood m)
         {
@@ -146,7 +159,7 @@ namespace TWF
             // The ground is XY with up = -Z: tilt the light down from that "sky".
             float elev = m.sunAngles.x * Mathf.Deg2Rad, az = m.sunAngles.y * Mathf.Deg2Rad;
             Vector3 dir = new Vector3(Mathf.Cos(elev) * Mathf.Cos(az), Mathf.Cos(elev) * Mathf.Sin(az), Mathf.Sin(elev));
-            sun.transform.rotation = Quaternion.LookRotation(dir, Vector3.back);
+            sun.transform.rotation = Quaternion.LookRotation(Ground.FromOld(dir), Vector3.up);
             Shader.SetGlobalColor("_TWF_Ambient", m.ambient);
             RenderSettings.ambientLight = m.ambient;
             RenderSettings.fogColor = m.fog;

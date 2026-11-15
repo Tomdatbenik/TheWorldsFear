@@ -48,8 +48,9 @@ Shader "TWF/EnvSprite"
         {
             // Orthographic cameras look along one direction; perspective ones along the ray through the pixel.
             float3 ray = unity_OrthoParams.w > 0.5 ? -UNITY_MATRIX_V[2].xyz : positionWS - _WorldSpaceCameraPos;
-            if (abs(ray.z) < 1e-4) return depth;
-            float t = (_BaseZ - positionWS.z) / ray.z;
+            // _BaseZ: the height (Y) of the ground the sprite stands on.
+            if (abs(ray.y) < 1e-4) return depth;
+            float t = (_BaseZ - positionWS.y) / ray.y;
             float3 g = positionWS + ray * t - normalize(ray) * 0.05;
             float4 cs = TransformWorldToHClip(g);
             float gd = cs.z / cs.w;
@@ -116,7 +117,7 @@ Shader "TWF/EnvSprite"
                 depth = EnvDepth(i.positionWS, tex.a, i.positionCS);
 
                 // Light as the ground is lit, so the two stay one picture; walls use their own normals.
-                float3 up = float3(0, 0, -1);
+                float3 up = float3(0, 1, 0);
                 float3 n = _WallMode > 0.5 ? normalize(i.normalWS) : up;
                 Light mainLight = GetMainLight(TransformWorldToShadowCoord(i.positionWS));
                 half shadow = _WallMode > 0.5 ? mainLight.shadowAttenuation : 1;

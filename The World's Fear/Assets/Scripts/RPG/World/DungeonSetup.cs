@@ -65,14 +65,14 @@ namespace TWF
             PlaceChests();
 
             var boot = FindAnyObjectByType<GameBootstrap>();
-            if (boot != null && boot.defaultSpawn != null) boot.defaultSpawn.position = HeroSpawn;
+            if (boot != null && boot.defaultSpawn != null) boot.defaultSpawn.position = HeroSpawn.W();
         }
 
         void Start()
         {
             ZoneLighting.Instance?.SetDungeon(variant.ambient);
             var hero = HeroController.Instance;
-            if (hero != null) PointLights.Attach(hero.transform, new Color(1f, 0.85f, 0.68f), 12f, 2.6f, new Vector3(0f, 0f, -2.5f), true);
+            if (hero != null) PointLights.Attach(hero.transform, new Color(1f, 0.85f, 0.68f), 12f, 2.6f, new Vector3(0f, 2.5f, 0f), true);
             GameUI.Instance?.ShowZoneBanner(WorldManager.PendingDungeonName, $"{variant.kind}  ·  Monster level {level}  ·  {chests.Count} chests to find", new Color(0.75f, 0.85f, 1f));
         }
 
@@ -116,13 +116,13 @@ namespace TWF
         void BuildBlockers()
         {
             var grid = new GameObject("Grid").AddComponent<Grid>();
+            grid.transform.localRotation = Ground.Flat;   // the ground lies flat; inside it, cells are (x, y) and local z is minus height
             grid.transform.SetParent(transform, false);
             var go = new GameObject("Blockers");
             go.transform.SetParent(grid.transform, false);
             go.layer = LayerMask.NameToLayer("Walls");
             var map = go.AddComponent<Tilemap>();
-            go.AddComponent<TilemapCollider2D>();
-            go.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
+            go.AddComponent<TilemapBoxes>();
 
             for (int x = 0; x < Size; x++)
             for (int y = 0; y < Size; y++)
@@ -151,7 +151,7 @@ namespace TWF
         {
             var go = new GameObject("Dungeon Exit");
             go.transform.SetParent(transform, false);
-            go.transform.position = at;
+            go.transform.position = at.W();
             go.AddComponent<DungeonExit>().wallTexture = variant.wall;
         }
 
@@ -167,9 +167,9 @@ namespace TWF
                     continue;
                 }
                 for (int x = r.xMin + 3; x < r.xMax - 2; x += spacing)
-                    if (!Open(x, r.yMax)) Torch(new Vector3(x + 0.5f, r.yMax - 0.35f, -2.2f));
-                if (!Open(r.xMin - 1, (int)r.center.y)) Torch(new Vector3(r.xMin + 0.35f, r.center.y, -2.2f));
-                if (!Open(r.xMax, (int)r.center.y)) Torch(new Vector3(r.xMax - 0.35f, r.center.y, -2.2f));
+                    if (!Open(x, r.yMax)) Torch(new Vector3(x + 0.5f, 2.2f, r.yMax - 0.35f));
+                if (!Open(r.xMin - 1, (int)r.center.y)) Torch(new Vector3(r.xMin + 0.35f, 2.2f, r.center.y));
+                if (!Open(r.xMax, (int)r.center.y)) Torch(new Vector3(r.xMax - 0.35f, 2.2f, r.center.y));
             }
         }
 
@@ -179,7 +179,7 @@ namespace TWF
             for (int y = r.yMax - 1; y >= r.yMin; y--)
                 if (Open(x, y) && !Open(x, y + 1))
                 {
-                    Torch(new Vector3(x + 0.5f, y + 0.65f, -1.6f));
+                    Torch(new Vector3(x + 0.5f, 1.6f, y + 0.65f));
                     return;
                 }
         }
@@ -214,14 +214,14 @@ namespace TWF
         {
             var go = new GameObject("Pillar");
             go.transform.SetParent(transform, false);
-            go.transform.position = at;
+            go.transform.position = at.W();
             go.layer = LayerMask.NameToLayer("Walls");
             var bb = Billboard.Create(go.transform, "Visual");
             bb.localScale = Vector3.one * 1.4f;
             var sr = bb.gameObject.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
             RenderAssets.MakeLit(sr);
-            go.AddComponent<CircleCollider2D>().radius = 0.6f;
+            Phys.Circle(go, 0.6f);
         }
 
         void PlaceChests()
@@ -257,7 +257,7 @@ namespace TWF
         {
             var go = new GameObject(vault ? "Dungeon Vault" : "Dungeon Chest");
             go.transform.SetParent(transform, false);
-            go.transform.position = at;
+            go.transform.position = at.W();
             var chest = go.AddComponent<DungeonChest>();
             chest.key = $"dgn_{gateKey}_{index}";
             chest.level = level;
@@ -286,7 +286,7 @@ namespace TWF
             spawnCheck -= Time.deltaTime;
             if (spawnCheck > 0f) return;
             spawnCheck = 0.3f;
-            Vector2 p = hero.transform.position;
+            Vector2 p = hero.transform.G();
             foreach (var room in rooms)
             {
                 if (room.spawned || room.isStart) continue;
@@ -313,10 +313,10 @@ namespace TWF
                 if (m == null) continue;
                 m.leashRange = 200f;
                 // Small or ragged rooms can leave part of a pack inside the rock.
-                Vector2 p = m.transform.position;
+                Vector2 p = m.transform.G();
                 if (Open(Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y))) continue;
-                m.transform.position = NearestOpen(p);
-                m.Home = m.transform.position;
+                m.transform.position = NearestOpen(p).W();
+                m.Home = m.transform.G();
             }
         }
 
@@ -369,7 +369,7 @@ namespace TWF
         {
             var hero = HeroController.Instance;
             if (hero == null || desired == Vector2.zero) return desired;
-            Vector2 target = hero.transform.position;
+            Vector2 target = hero.transform.G();
             if (!Walls.Blocked(from, target)) return desired;
             RefreshFlow(target);
 

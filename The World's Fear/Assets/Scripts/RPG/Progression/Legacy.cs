@@ -53,6 +53,7 @@ namespace TWF
 
         static void Save()
         {
+            if (Profile.Sandbox) return;
             try { File.WriteAllText(FilePath, JsonUtility.ToJson(Data)); }
             catch (Exception e) { Debug.LogWarning("Could not save legacy: " + e.Message); }
         }

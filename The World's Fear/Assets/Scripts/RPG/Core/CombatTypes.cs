@@ -98,7 +98,7 @@ namespace TWF
             foreach (var c in Combatant.All)
             {
                 if (c.IsDead || !IsHostile(team, c.team)) continue;
-                if (((Vector2)c.transform.position - center).sqrMagnitude <= (radius + c.radius) * (radius + c.radius))
+                if ((c.transform.G() - center).sqrMagnitude <= (radius + c.radius) * (radius + c.radius))
                     buffer.Add(c);
             }
             return buffer;
@@ -110,7 +110,7 @@ namespace TWF
             if (angleDeg >= 360f) return list;
             list.RemoveAll(c =>
             {
-                Vector2 to = (Vector2)c.transform.position - center;
+                Vector2 to = c.transform.G() - center;
                 return to.sqrMagnitude > 0.04f && Vector2.Angle(dir, to) > angleDeg * 0.5f;
             });
             return list;
@@ -123,7 +123,7 @@ namespace TWF
             foreach (var c in Combatant.All)
             {
                 if (c.IsDead || !c.Targetable || !IsHostile(team, c.team)) continue;
-                float d = Vector2.Distance(from, c.transform.position) - c.radius;
+                float d = Vector2.Distance(from, c.transform.G()) - c.radius;
                 if (d > range) continue;
                 // Prefer closer targets, and low-health targets among those nearly as close.
                 float score = d + c.HPFraction * 0.75f;
@@ -143,7 +143,7 @@ namespace TWF
             info.status = status;
             info.elements = elements;
             if (knockback > 0f && attacker != null && target != null)
-                info.knockback = ((Vector2)(target.transform.position - attacker.transform.position)).normalized * knockback;
+                info.knockback = (target.transform.G() - attacker.transform.G()).normalized * knockback;
             target.TakeDamage(info);
         }
     }

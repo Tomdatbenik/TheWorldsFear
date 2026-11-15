@@ -96,7 +96,7 @@ namespace TWF
             EnvMesh.Place(index % 3 == 0 ? "red_cottage" : "thatch_cottage", transform, f.P(U * 0.72f, V - 4.5f), 0f, f.Yaw);
             EnvMesh.Place("haystack", transform, f.P(U * 0.47f, V - 3f), 0f, (float)rng.NextDouble() * 360f);
             EnvMesh.Place("haystack", transform, f.P(U * 0.42f, V - 6.5f), 0f, (float)rng.NextDouble() * 360f);
-            if (index % 2 == 0 && U >= 26f) Windmill(f.P(U - 3.2f, V - 10.5f));
+            if (index % 2 == 0 && U >= 26f) Windmill(transform, f.P(U - 3.2f, V - 10.5f));
 
             // Fields either side of the lane, a crop each, a scarecrow in one.
             var crops = new[] { Crop.Wheat, Crop.Cabbage, Crop.Corn };
@@ -109,20 +109,20 @@ namespace TWF
                                     f.R(mid + 2.5f, v0, U - 2f, vm - 0.6f), f.R(mid + 2.5f, vm + 0.6f, U - 2f, v1) };
                 int first = rng.Next(3);
                 for (int p = 0; p < plots.Length; p++) Field(plots[p], crops[(first + p) % 3], f.RowsAlongX);
-                EnvMesh.Place("scarecrow", transform, plots[rng.Next(plots.Length)].center, 0f, f.Yaw + 180f);
+                EnvMesh.Place("scarecrow", transform, plots[rng.Next(plots.Length)].center, 0f, 0f);   // facing south, toward the camera
             }
         }
 
         static Rect Grow(Rect r, float by) => new Rect(r.xMin - by, r.yMin - by, r.width + by * 2f, r.height + by * 2f);
 
-        void Windmill(Vector2 p)
+        public static void Windmill(Transform parent, Vector2 p)
         {
-            var mill = EnvMesh.Place("windmill", transform, p, 0f, 0f);
+            var mill = EnvMesh.Place("windmill", parent, p, 0f, 0f);
             if (mill == null) return;
             // The sails turn on the front of the cap, facing south.
             var sails = EnvMesh.Place("sails", mill.transform, p + new Vector2(0f, -2.15f), 7.0f * 1.4f + 0.35f, 0f);
             if (sails == null) return;
-            Destroy(sails.GetComponent<BoxCollider2D>());
+            Destroy(sails.GetComponent<Collider>());
             sails.AddComponent<Spin>();
         }
 
@@ -145,9 +145,7 @@ namespace TWF
             var go = new GameObject("Fence");
             go.transform.SetParent(transform, false);
             go.layer = LayerMask.NameToLayer("Walls");
-            var bc = go.AddComponent<BoxCollider2D>();
-            bc.offset = (a + b) / 2f;
-            bc.size = dir.x != 0f ? new Vector2(len, 0.2f) : new Vector2(0.2f, len);
+            Phys.Box(go, dir.x != 0f ? new Vector2(len, 0.2f) : new Vector2(0.2f, len), (a + b) / 2f);
         }
 
         void Post(Vector2 p, float h) => Town.Box(wood, wood, new Rect(p.x - 0.09f, p.y - 0.09f, 0.18f, 0.18f), 0f, h);
@@ -169,7 +167,7 @@ namespace TWF
                 for (float b = (rowsAlongX ? r.xMin : r.yMin) + 0.4f; b < (rowsAlongX ? r.xMax : r.yMax) - 0.3f; b += step)
                 {
                     float jit = ((float)rng.NextDouble() - 0.5f) * 0.12f, sc = 0.85f + (float)rng.NextDouble() * 0.3f;
-                    var pos = rowsAlongX ? new Vector3(b + jit, a + jit, 0f) : new Vector3(a + jit, b + jit, 0f);
+                    var pos = rowsAlongX ? new Vector3(b + jit, 0f, a + jit) : new Vector3(a + jit, 0f, b + jit);
                     list.Add(Matrix4x4.TRS(pos, Quaternion.identity, new Vector3(size.x * sc * (rng.NextDouble() < 0.5 ? -1f : 1f), size.y * sc, 1f)));
                 }
         }
@@ -180,7 +178,7 @@ namespace TWF
         {
             if (card == null) card = Card();
             var hero = HeroController.Instance;
-            Vector2 near = CameraFollow.CinematicActive ? (Vector2)CameraFollow.CinematicFocus : hero != null ? (Vector2)hero.transform.position : Vector2.zero;
+            Vector2 near = CameraFollow.CinematicActive ? CameraFollow.CinematicFocus.G() : hero != null ? hero.transform.G() : Vector2.zero;
             if (near.magnitude > WorldGen.FarmRingOuter + 60f) return;
             var rot = View.Rotation;
             foreach (var kv in plants)
@@ -320,6 +318,6 @@ namespace TWF
     public class Spin : MonoBehaviour
     {
         public float speed = 40f;
-        void Update() => transform.Rotate(Vector3.up, speed * Time.deltaTime, Space.World);
+        void Update() => transform.Rotate(Vector3.forward, speed * Time.deltaTime, Space.World);
     }
 }

@@ -754,7 +754,7 @@ namespace TWF
             if (wm == null || hero == null) return;
 
             // Paint explored chunks around the hero.
-            centerChunk = WorldGen.ChunkOf(hero.transform.position);
+            centerChunk = WorldGen.ChunkOf(hero.transform.G());
             int half = MapChunks / 2;
             var px = new Color[MapChunks * MapChunks];
             int S = WorldGen.ChunkSize;
@@ -795,7 +795,7 @@ namespace TWF
                 tag.outlineWidth = 0.25f;
                 tag.outlineColor = Color.black;
                 tag.rectTransform.Place(new Vector2(0.5f, 0), new Vector2(0, -24), new Vector2(260, 26));
-                var entry = UIFactory.Text("LairEntry", list, $"<color=#fc8>{BossTitan.LairName(kind)}</color>\n<size=80%>{BossAtlas.Directions(hero.transform.position, lair)}</size>", 24, Palette.Text, TextAlignmentOptions.Left);
+                var entry = UIFactory.Text("LairEntry", list, $"<color=#fc8>{BossTitan.LairName(kind)}</color>\n<size=80%>{BossAtlas.Directions(hero.transform.G(), lair)}</size>", 24, Palette.Text, TextAlignmentOptions.Left);
                 entry.rectTransform.sizeDelta = new Vector2(0, 70);
             }
 
@@ -811,7 +811,7 @@ namespace TWF
         void UpdateHero()
         {
             var hero = HeroController.Instance;
-            if (hero != null) PlaceWorldPoint(heroDot, hero.transform.position);
+            if (hero != null) PlaceWorldPoint(heroDot, hero.transform.G());
         }
 
         void PlaceWorldPoint(RectTransform rt, Vector2 world, bool pinToEdge = false)

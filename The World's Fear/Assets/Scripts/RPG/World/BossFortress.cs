@@ -48,7 +48,7 @@ namespace TWF
 
             label = new GameObject("Label").AddComponent<TextMeshPro>();
             label.transform.SetParent(Billboard.Create(transform), false);
-            label.transform.position = new Vector3(foot.x, foot.y - 1.2f, -2.6f);
+            label.transform.position = new Vector3(foot.x, 2.6f, foot.y - 1.2f);
             label.font = GameAssets.Font;
             label.fontSize = 3f;
             label.alignment = TextAlignmentOptions.Center;
@@ -132,12 +132,12 @@ namespace TWF
             if (sprite == null) return;
             var go = new GameObject(sprite.name);
             go.transform.SetParent(transform, false);
-            go.transform.position = new Vector3(pos.x, pos.y, 0f);
+            go.transform.position = pos.W();
             go.layer = LayerMask.NameToLayer("Walls");
             float s = 0.95f + (float)rng.NextDouble() * 0.3f;
             var visual = new GameObject("Visual");
             visual.transform.SetParent(go.transform, false);
-            visual.transform.localPosition = new Vector3(0f, 0f, -WorldGen.PlateauHeight);   // it stands on the high ground
+            visual.transform.localPosition = new Vector3(0f, WorldGen.PlateauHeight, 0f);   // it stands on the high ground
             visual.transform.localScale = new Vector3(rng.NextDouble() < 0.5 ? -s : s, s, 1f);
             visual.AddComponent<Billboard>();
             var sr = visual.AddComponent<SpriteRenderer>();
@@ -145,7 +145,7 @@ namespace TWF
             string n = sprite.name;
             bool sways = n.StartsWith("tree") || n.StartsWith("bush") || n.StartsWith("fern") || n.StartsWith("oak") || n.StartsWith("pine") || n.StartsWith("birch") || n.StartsWith("willow");
             RenderAssets.MakeLit(sr, true, sways ? RenderAssets.Instance.litWind : null);
-            if (solid) go.AddComponent<CircleCollider2D>().radius = Mathf.Clamp(sprite.bounds.size.x * s * 0.18f, 0.35f, 1.2f);
+            if (solid) Phys.Circle(go, Mathf.Clamp(sprite.bounds.size.x * s * 0.18f, 0.35f, 1.2f));
         }
 
         // A glowing wall across a passage: blocks while it is active.
@@ -153,19 +153,19 @@ namespace TWF
         {
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
-            go.transform.position = new Vector3(at.x, at.y, 0f);
+            go.transform.position = at.W();
             go.layer = LayerMask.NameToLayer("Walls");
-            go.AddComponent<BoxCollider2D>().size = new Vector2(width, 0.5f);
+            Phys.Box(go, new Vector2(width, 0.5f));
             int n = Mathf.CeilToInt(width / 0.8f);
             for (int i = 0; i < n; i++)
             {
                 var bb = Billboard.Create(go.transform, "Flame" + i);
-                bb.localPosition = new Vector3(-width / 2f + (i + 0.5f) * width / n, 0f, -height);
+                bb.localPosition = new Vector3(-width / 2f + (i + 0.5f) * width / n, height, 0f);
                 var sr = GameAssets.CreateWorldSprite("Glow", GameAssets.PixelGlow, bb, color, SortOrder.Effects, 1.5f);
                 sr.transform.localPosition = new Vector3(0f, 0.9f, 0f);
                 sr.transform.localScale = new Vector3(sr.transform.localScale.x * 0.7f, sr.transform.localScale.y * 1.6f, 1f);
             }
-            PointLights.Attach(go.transform, color, 5f, 1.6f, new Vector3(0, 0, -height - 1f), true);
+            PointLights.Attach(go.transform, color, 5f, 1.6f, new Vector3(0, height + 1f, 0), true);
             return go;
         }
 
@@ -180,7 +180,7 @@ namespace TWF
         {
             var hero = HeroController.Instance;
             if (hero == null) return;
-            Vector2 hp = hero.transform.position;
+            Vector2 hp = hero.transform.G();
             string lair = BossTitan.LairName(kind), bossName = BossTitan.BossName(kind);
 
             if (Defeated)

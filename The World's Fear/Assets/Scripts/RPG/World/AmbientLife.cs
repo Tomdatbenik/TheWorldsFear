@@ -122,7 +122,8 @@ namespace TWF
             mesh.SetTriangles(tris, 0, false);
             // Motion is done on the GPU, so the bounds cover everywhere a critter can wander.
             // Sunbeams lean several units toward the sun, hence the wide margin.
-            mesh.bounds = new Bounds(new Vector3(x0 + S / 2f, y0 + S / 2f, -2.5f), new Vector3(S + 20f, S + 20f, 8f));
+            Ground.ToY(mesh);
+            mesh.bounds = new Bounds(new Vector3(x0 + S / 2f, 2.5f, y0 + S / 2f), new Vector3(S + 20f, 8f, S + 20f));
 
             var go = new GameObject("Ambient");
             go.transform.SetParent(parent, false);

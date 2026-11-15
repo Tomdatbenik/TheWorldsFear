@@ -56,7 +56,7 @@ namespace TWF
             BuildDecor();
             CollectEdges();
             var boot = FindAnyObjectByType<GameBootstrap>();
-            if (boot != null && boot.defaultSpawn != null) boot.defaultSpawn.position = HeroSpawn;
+            if (boot != null && boot.defaultSpawn != null) boot.defaultSpawn.position = HeroSpawn.W();
         }
 
         void Start()
@@ -153,6 +153,7 @@ namespace TWF
         void BuildTiles()
         {
             var grid = new GameObject("Grid").AddComponent<Grid>();
+            grid.transform.localRotation = Ground.Flat;   // the ground lies flat; inside it, cells are (x, y) and local z is minus height
             grid.transform.SetParent(transform, false);
             var floor = MakeTilemap(grid.transform, "Floor", 0f, RenderAssets.Instance.litGround);
             var below = MakeTilemap(grid.transform, "Lowlands", Drop, RenderAssets.Instance.litGround);
@@ -161,8 +162,7 @@ namespace TWF
             blockGo.transform.SetParent(grid.transform, false);
             blockGo.layer = LayerMask.NameToLayer("Walls");
             var blockers = blockGo.AddComponent<Tilemap>();
-            blockGo.AddComponent<TilemapCollider2D>();
-            blockGo.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
+            blockGo.AddComponent<TilemapBoxes>();
 
             var floorTiles = FloorTiles();
             var rimTiles = RimTiles();
@@ -199,7 +199,7 @@ namespace TWF
                 {
                     var holder = new GameObject("LavaGlow");
                     holder.transform.SetParent(transform, false);
-                    holder.transform.position = moat[i] + new Vector3(0.5f, 0.5f, Drop - 2f);
+                    holder.transform.position = Ground.FromOld(moat[i] + new Vector3(0.5f, 0.5f, Drop - 2f));
                     PointLights.Attach(holder.transform, new Color(1f, 0.45f, 0.15f), 9f, 2.2f, Vector3.zero, true);
                 }
             }
@@ -209,7 +209,7 @@ namespace TWF
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
-            go.transform.localPosition = new Vector3(0, 0, z);
+            go.transform.localPosition = new Vector3(0, 0, z);   // inside the flat grid: local z is minus height
             var tm = go.AddComponent<Tilemap>();
             var r = go.AddComponent<TilemapRenderer>();
             RenderAssets.MakeLit(r, false, mat);
@@ -320,7 +320,7 @@ namespace TWF
         {
             var go = new GameObject(sprite.name);
             go.transform.SetParent(transform, false);
-            go.transform.position = new Vector3(pos.x, pos.y, z);
+            go.transform.position = pos.W(-z);
             go.layer = LayerMask.NameToLayer("Walls");
             var bb = Billboard.Create(go.transform, "Visual");
             bb.localScale = Vector3.one * scale * (0.9f + (float)rng.NextDouble() * 0.25f);
@@ -328,7 +328,7 @@ namespace TWF
             sr.sprite = sprite;
             bool sways = sprite.name.StartsWith("tree") || sprite.name.StartsWith("bush");
             RenderAssets.MakeLit(sr, true, sways ? RenderAssets.Instance.litWind : null);
-            if (solid) go.AddComponent<CircleCollider2D>().radius = Mathf.Max(0.6f, sprite.bounds.size.x * scale * 0.3f);
+            if (solid) Phys.Circle(go, Mathf.Max(0.6f, sprite.bounds.size.x * scale * 0.3f));
         }
 
         void Pillar(Vector2 c, float size, float height, Material mat)
@@ -343,9 +343,9 @@ namespace TWF
             MeshObject("Pillar", mb, mat, true);
             var col = new GameObject("Pillar Collider");
             col.transform.SetParent(transform, false);
-            col.transform.position = c;
+            col.transform.position = c.W();
             col.layer = LayerMask.NameToLayer("Walls");
-            col.AddComponent<BoxCollider2D>().size = Vector2.one * size;
+            Phys.Box(col, Vector2.one * size);
         }
 
         // ---------- Mesh helpers ----------
@@ -378,7 +378,7 @@ namespace TWF
             for (int i = 0; i < colors.Length; i++) colors[i] = Color.white;
             m.colors = colors;
             m.SetTriangles(q.t, 0);
-            m.RecalculateBounds();
+            Ground.ToY(m);
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
             go.AddComponent<MeshFilter>().sharedMesh = m;

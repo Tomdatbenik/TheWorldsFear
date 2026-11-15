@@ -1,4 +1,4 @@
-// Animated water (marsh) and lava (ember) for HD-2D. Ground plane is XY, up is -Z.
+// Animated water (marsh) and lava (ember) for HD-2D. The world is Y-up: the water lies on XZ.
 Shader "TWF/Water"
 {
     Properties
@@ -9,6 +9,7 @@ Shader "TWF/Water"
         _Hot ("Lava Hot", Color) = (1.0, 0.75, 0.2, 1)
         _Cool ("Lava Crust", Color) = (0.45, 0.07, 0.03, 1)
         _PixelSize ("Pixel Size", Float) = 16
+        _Round ("Round puddle corners (vertex colour marks which)", Float) = 0
     }
 
     SubShader
@@ -35,10 +36,11 @@ Shader "TWF/Water"
                 half _Lava;
                 half4 _Deep, _Shallow, _Hot, _Cool;
                 float _PixelSize;
+                half _Round;
             CBUFFER_END
 
-            struct Attributes { float4 positionOS : POSITION; };
-            struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; float fog : TEXCOORD1; };
+            struct Attributes { float4 positionOS : POSITION; float2 uv : TEXCOORD0; float4 sides : TEXCOORD1; float4 color : COLOR; };
+            struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; float fog : TEXCOORD1; float2 uv : TEXCOORD2; float4 corners : TEXCOORD3; float4 sides : TEXCOORD4; };
 
             float hash(float2 p) { return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
 
@@ -78,13 +80,37 @@ Shader "TWF/Water"
                 o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 o.fog = ComputeFogFactor(o.positionCS.z);
+                o.uv = v.uv;
+                o.corners = v.color;
+                o.sides = v.sides;
                 return o;
             }
 
             half4 frag(Varyings i) : SV_Target
             {
+                // Puddles: the marked corners of each cell cut to a quarter circle, on the pixel grid, with a
+                // little wobble so the edge reads as a puddle's, not a drawn circle.
+                // How far in from the shore this pixel is (in cells), for the shore band below.
+                float edge = 1;
+                if (_Round > 0.5)
+                {
+                    float2 c = (floor(saturate(i.uv) * _PixelSize) + 0.5) / _PixelSize;
+                    float2 q = c - 0.5;
+                    float mask = q.x < 0 ? (q.y < 0 ? i.corners.r : i.corners.b) : (q.y < 0 ? i.corners.g : i.corners.a);
+                    float wob = (hash(floor(i.positionWS.xz * _PixelSize)) - 0.5) * 0.06;
+                    if (mask > 0.5)
+                    {
+                        if (length(q) > 0.5 + wob) discard;
+                        edge = 0.5 + wob - length(q);
+                    }
+                    if (i.sides.x > 0.5) edge = min(edge, c.x);
+                    if (i.sides.y > 0.5) edge = min(edge, 1 - c.x);
+                    if (i.sides.z > 0.5) edge = min(edge, c.y);
+                    if (i.sides.w > 0.5) edge = min(edge, 1 - c.y);
+                }
+                float px = 1.0 / _PixelSize;
                 // Snap to the pixel grid so it matches the pixel art.
-                float2 p = floor(i.positionWS.xy * _PixelSize) / _PixelSize;
+                float2 p = floor(i.positionWS.xz * _PixelSize) / _PixelSize;
                 float t = _Time.y;
                 half3 color;
                 if (_Lava > 0.5)
@@ -105,11 +131,17 @@ Shader "TWF/Water"
                     half3 crustCol = _Cool.rgb * (0.45 + crust * 0.5) + _Hot.rgb * 0.08 * heat;
                     half3 hotCol = lerp(_Hot.rgb * float3(1.0, 0.5, 0.25) * 1.4, _Hot.rgb * float3(1.0, 0.85, 0.6) * 2.2, glow * glow);
                     color = lerp(crustCol, hotCol, glow);
+                    // A cooled, dark crust where the lava meets its shore.
+                    if (edge < 2.5 * px) color = _Cool.rgb * 0.35;
+                    else if (edge < 4.5 * px) color = lerp(color, _Cool.rgb * 0.6, 0.6);
                     color = MixFog(color, i.fog);
                     return half4(color, 1);
                 }
                 float w = noise(p * 1.5 + float2(t * 0.3, t * 0.2)) * 0.5 + noise(p * 3.7 - float2(t * 0.25, 0)) * 0.5;
                 color = lerp(_Deep.rgb, _Shallow.rgb, w);
+                // Shallows and a line of foam along the shore.
+                if (edge < 4.5 * px) color = lerp(color, _Shallow.rgb * 1.25, 0.55);
+                if (edge < 1.5 * px) color = lerp(_Shallow.rgb, half3(1, 1, 1), 0.6);
                 // Sparkles where ripples peak.
                 float glint = step(0.93, noise(p * 6 + t * 0.8));
                 Light light = GetMainLight(TransformWorldToShadowCoord(i.positionWS));

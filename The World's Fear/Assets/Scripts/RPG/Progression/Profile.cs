@@ -295,10 +295,12 @@ namespace TWF
         }
 
         public static bool RunOver { get; private set; }
+        // The debug scene's throwaway hero: nothing is written to or deleted from disk.
+        public static bool Sandbox;
 
         public static void Save()
         {
-            if (data == null || RunOver) return;
+            if (data == null || RunOver || Sandbox) return;
             var current = Ranks; // build the lookup before clearing the list it may be built from
             data.nodeRanks = new List<NodeRank>();
             foreach (var kv in current) data.nodeRanks.Add(new NodeRank { id = kv.Key, rank = kv.Value });
@@ -314,6 +316,7 @@ namespace TWF
 
         public static void DeleteSave()
         {
+            if (Sandbox) return;
             RunOver = HeroController.Instance != null && HeroController.Instance.Combatant.IsDead;
             if (File.Exists(SavePath)) File.Delete(SavePath);
             // After a death the data stays in memory (for the summary) but can never be saved again.

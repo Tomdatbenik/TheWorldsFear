@@ -19,15 +19,15 @@ void TWF_RevealClip(float3 positionWS, float3 groundWS, float4 positionCS)
     for (int i = 0; i < TWF_REVEAL_MAX && i < _TWF_RevealCount; i++)
     {
         float3 hero = _TWF_Reveal[i].xyz;
-        // What the hero stands on never fades: steps under the feet, the cliff below a plateau's edge (up is -Z).
-        if (positionWS.z > hero.z - 0.2) continue;
+        // What the hero stands on never fades: steps under the feet, the cliff below a plateau's edge.
+        if (positionWS.y < hero.y + 0.2) continue;
         // In front of the hero, along the view? Starts just before the hero is fully behind, so nothing pops.
         float front = saturate((dot(hero - groundWS, forward) + 0.1) / 0.2);
         // A 3D surface (no separate ground spot) only fades when it is clearly nearer the camera than the hero's
         // body, not merely higher than the hero's feet: a wall right behind the hero stays solid.
         if (all(groundWS == positionWS))
         {
-            float3 body = hero + float3(0, 0, -0.9);
+            float3 body = hero + float3(0, 0.9, 0);
             front = saturate((dot(body - positionWS, forward) - 0.7) / 0.35);
         }
         if (front <= 0) continue;

@@ -27,10 +27,10 @@ namespace TWF
 
             var db = GameDatabase.Instance;
             Vector2 spawn = SpawnPosition();
-            var heroGo = Instantiate(db.heroPrefab, spawn, Quaternion.identity);
+            var heroGo = Instantiate(db.heroPrefab, spawn.W(), Quaternion.identity);
             heroGo.name = "Hero";
             Hero = heroGo.GetComponent<HeroController>();
-            heroGo.GetComponent<Rigidbody2D>().mass = 3f;
+            heroGo.GetComponent<GroundBody>().mass = 3f;
             Hero.Died += OnHeroDied;
 
             var cam = Camera.main;
@@ -54,7 +54,7 @@ namespace TWF
         void OnEnable() => MonsterBrain.AnyDied += OnMonsterDied;
         void OnDisable() => MonsterBrain.AnyDied -= OnMonsterDied;
 
-        void OnMonsterDied(MonsterBrain monster, Combatant killer) => Loot.Drop(monster.Combatant, monster.transform.position);
+        void OnMonsterDied(MonsterBrain monster, Combatant killer) => Loot.Drop(monster.Combatant, monster.transform.G());
 
         // The run's own clock: lairs grow by it, so a lair keeps its age across a restart.
         void Update()
@@ -70,7 +70,7 @@ namespace TWF
         protected virtual Vector2 SpawnPosition()
         {
             if (WorldManager.Instance != null) return WorldManager.Instance.SpawnPoint();
-            return defaultSpawn != null ? (Vector2)defaultSpawn.position : Vector2.zero;
+            return defaultSpawn != null ? defaultSpawn.G() : Vector2.zero;
         }
 
         void OnHeroDied() => StartCoroutine(DeathRoutine());
@@ -78,6 +78,13 @@ namespace TWF
         // One life: the run ends, the save is wiped, and you start a new hero from the title screen.
         IEnumerator DeathRoutine()
         {
+            if (Profile.Sandbox)
+            {
+                // The debug scene: no run to end, just start it over.
+                yield return new WaitForSeconds(1.5f);
+                UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+                yield break;
+            }
             var d = Profile.Data;
             string summary =
                 $"<size=110%>YOU HAVE FALLEN</size>\n\n" +
@@ -124,7 +131,7 @@ namespace TWF
                 if (alive < arenaMonsterCount && Hero != null && !Hero.Combatant.IsDead)
                 {
                     var sp = species[i++ % species.Count];
-                    Vector2 at = (Vector2)Hero.transform.position + Random.insideUnitCircle.normalized * Random.Range(7f, 10f);
+                    Vector2 at = Hero.transform.G() + Random.insideUnitCircle.normalized * Random.Range(7f, 10f);
                     var rank = Random.value < 0.1f ? MonsterRank.Rare : Random.value < 0.2f ? MonsterRank.Elite : MonsterRank.Normal;
                     var affixes = rank == MonsterRank.Rare ? MonsterSpawner.RollAffixes(new System.Random(), 2) : null;
                     var m = MonsterBrain.Spawn(sp, Mathf.Clamp(Profile.Data.level, zone.minLevel, zone.maxLevel), rank, at, affixes, zone);

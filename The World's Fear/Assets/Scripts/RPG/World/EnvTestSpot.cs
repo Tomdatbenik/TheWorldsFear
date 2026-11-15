@@ -210,9 +210,7 @@ namespace TWF
             var go = new GameObject("Terrace Edge");
             go.transform.SetParent(transform, false);
             go.layer = LayerMask.NameToLayer("Walls");
-            var e = go.AddComponent<EdgeCollider2D>();
-            e.points = new[] { a, b };
-            e.edgeRadius = 0.05f;
+            Phys.Edge(go, new[] { a, b });
         }
 
         // ---------- Water ----------
@@ -237,9 +235,9 @@ namespace TWF
             PoolShore(p);
             var go = new GameObject("Pool Block");
             go.transform.SetParent(transform, false);
-            go.transform.position = p.center;
+            go.transform.position = p.center.W();
             go.layer = LayerMask.NameToLayer("Walls");
-            go.AddComponent<BoxCollider2D>().size = p.size;
+            Phys.Box(go, p.size);
         }
 
         // Grass and a stone rim laid over the pool's edge, so the water has a natural outline.
@@ -309,7 +307,7 @@ namespace TWF
             for (int i = 0; i < colors.Length; i++) colors[i] = Color.white;
             m.colors = colors;
             m.SetTriangles(q.t, 0);
-            m.RecalculateBounds();
+            Ground.ToY(m);
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
             go.AddComponent<MeshFilter>().sharedMesh = m;

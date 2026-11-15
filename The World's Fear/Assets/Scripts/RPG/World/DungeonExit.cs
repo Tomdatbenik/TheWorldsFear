@@ -36,19 +36,18 @@ namespace TWF
 
             var solid = new GameObject("Steps Collider");
             solid.transform.SetParent(transform, false);
-            solid.transform.localPosition = new Vector3(0f, Length * 0.5f, 0f);
+            solid.transform.localPosition = new Vector3(0f, 0f, Length * 0.5f);
             solid.layer = LayerMask.NameToLayer("Walls");
-            solid.AddComponent<BoxCollider2D>().size = new Vector2(2f * W, Length);
-            solid.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Static;
+            Phys.Box(solid, new Vector2(2f * W, Length));
 
-            PointLights.Attach(transform, new Color(0.7f, 0.82f, 1f), 7f, 1.6f, new Vector3(0f, Length - 1f, -3f), true);
+            PointLights.Attach(transform, new Color(0.7f, 0.82f, 1f), 7f, 1.6f, new Vector3(0f, 3f, Length - 1f), true);
         }
 
         void Update()
         {
             var hero = HeroController.Instance;
             if (hero == null || GameUI.Instance == null || leaving) return;
-            bool near = Vector2.Distance(hero.transform.position, transform.position) < Reach;
+            bool near = Vector2.Distance(hero.transform.G(), transform.G()) < Reach;
             if (near && !inRange) GameUI.Instance.ShowInteract("Climb out", () => Leave(hero));
             else if (!near && inRange) GameUI.Instance.HideInteract();
             inRange = near;
@@ -60,7 +59,7 @@ namespace TWF
             leaving = true;
             GameUI.Instance.HideInteract();
             Profile.Save();
-            Vector2 foot = transform.position;
+            Vector2 foot = transform.G();
             hero.StartCoroutine(DungeonTravel.WalkStairs(hero, foot + Vector2.down * 0.4f, foot + Vector2.up * (Length - 0.5f), 0f, -Height,
                 () => SceneManager.LoadScene("World")));
         }

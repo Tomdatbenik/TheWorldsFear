@@ -135,32 +135,32 @@ namespace TWF
     // a leaper for the moment of its jump. Unity is told to ignore each pair as chunks load.
     public static class LevelPass
     {
-        static readonly List<Collider2D> edges = new List<Collider2D>();
-        static readonly List<Collider2D> passers = new List<Collider2D>();
+        static readonly List<Collider> edges = new List<Collider>();
+        static readonly List<Collider> passers = new List<Collider>();
 
-        public static void AddEdges(Collider2D e)
+        public static void AddEdges(Collider e)
         {
             edges.RemoveAll(x => x == null);
             passers.RemoveAll(x => x == null);
             edges.Add(e);
-            foreach (var p in passers) Physics2D.IgnoreCollision(p, e, true);
+            foreach (var p in passers) Physics.IgnoreCollision(p, e, true);
         }
 
-        public static void Register(Collider2D c)
+        public static void Register(Collider c)
         {
             if (c == null || passers.Contains(c)) return;
             edges.RemoveAll(x => x == null);
             passers.Add(c);
-            foreach (var e in edges) Physics2D.IgnoreCollision(c, e, true);
+            foreach (var e in edges) Physics.IgnoreCollision(c, e, true);
         }
 
-        public static void Unregister(Collider2D c)
+        public static void Unregister(Collider c)
         {
             if (c == null || !passers.Remove(c)) return;
             edges.RemoveAll(x => x == null);
-            foreach (var e in edges) Physics2D.IgnoreCollision(c, e, false);
+            foreach (var e in edges) if (e != null) Physics.IgnoreCollision(c, e, false);
         }
 
-        public static bool IsEdge(Collider2D c) => c != null && c.name == "LevelEdges";
+        public static bool IsEdge(Collider c) => c != null && c.name == "LevelEdges";
     }
 }

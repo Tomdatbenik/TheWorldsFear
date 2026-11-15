@@ -6,7 +6,16 @@
   4.4,
   4.4
  ],
- "height": 12.459999999999999,
- "verts": 952,
- "tris": 472
+ "height": 13.0,
+ "verts": 1592,
+ "tris": 790,
+ "materials": [
+  "stone",
+  "wood",
+  "plaster",
+  "door",
+  "glass",
+  "shingle",
+  "flat"
+ ]
 }

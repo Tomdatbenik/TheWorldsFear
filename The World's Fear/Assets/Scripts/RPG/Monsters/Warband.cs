@@ -52,7 +52,7 @@ namespace TWF
             foreach (var m in band.Members)
             {
                 m.Pack = band.Members;
-                m.Home = m.transform.position;
+                m.Home = m.transform.G();
             }
             return true;
         }
@@ -110,11 +110,11 @@ namespace TWF
             foreach (var o in Members)
             {
                 if (o == null || o == m || o.Combatant.IsDead || o.Species.archetype != MonsterArchetype.Guardian) continue;
-                float d = ((Vector2)o.transform.position - pos).sqrMagnitude;
+                float d = (o.transform.G() - pos).sqrMagnitude;
                 if (d < bestD) { bestD = d; best = o; }
             }
             Vector2 away = (pos - hero).normalized;
-            return best != null ? (Vector2)best.transform.position + away * 1.6f : pos + away * 3f;
+            return best != null ? best.transform.G() + away * 1.6f : pos + away * 3f;
         }
     }
 }

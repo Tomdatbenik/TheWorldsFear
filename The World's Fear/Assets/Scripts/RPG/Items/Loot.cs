@@ -63,7 +63,7 @@ namespace TWF
         public static void SpawnGold(Vector2 at, int amount)
         {
             var go = new GameObject("Gold");
-            go.transform.position = at;
+            go.transform.position = at.W();
             var p = go.AddComponent<Pickup>();
             p.gold = amount;
             var sr = GameAssets.CreateWorldSprite("coin", GameAssets.Circle, Billboard.Create(go.transform), Palette.Gold, SortOrder.Pickup, 0.35f);
@@ -74,7 +74,7 @@ namespace TWF
         public static void SpawnGlyph(Vector2 at, PartRef part)
         {
             var go = new GameObject("Glyph " + part.FullName);
-            go.transform.position = at;
+            go.transform.position = at.W();
             var p = go.AddComponent<Pickup>();
             p.glyph = part;
             Color c = part.kind == PartKind.Element ? SkillParts.ElementColor((ElementPart)part.id) : SkillParts.KindColor(part.kind);
@@ -82,13 +82,13 @@ namespace TWF
             var sr = GameAssets.CreateWorldSprite("glyph", IconFactory.Get(SkillParts.Icon(part.kind, part.id), c), bb, Color.white, SortOrder.Pickup + 1, 0.7f);
             RenderAssets.MakeLit(sr, true, RenderAssets.Instance != null ? RenderAssets.Instance.litEmissive : null);
             p.visual = sr.transform;
-            PointLights.Attach(go.transform, c, 2.5f, 1.2f, new Vector3(0, 0, -0.8f), true);
+            PointLights.Attach(go.transform, c, 2.5f, 1.2f, new Vector3(0, 0.8f, 0), true);
         }
 
         public static void SpawnPotion(Vector2 at)
         {
             var go = new GameObject("Potion");
-            go.transform.position = at;
+            go.transform.position = at.W();
             var p = go.AddComponent<Pickup>();
             p.potion = true;
             var sr = GameAssets.CreateWorldSprite("flask", PotionIcon, Billboard.Create(go.transform), Color.white, SortOrder.Pickup, 0.7f);
@@ -112,7 +112,7 @@ namespace TWF
         public static void SpawnItem(Vector2 at, ItemInstance item)
         {
             var go = new GameObject("Item " + item.name);
-            go.transform.position = at;
+            go.transform.position = at.W();
             var p = go.AddComponent<Pickup>();
             p.item = item;
             Color c = RarityInfo.Color(item.rarity);
@@ -120,7 +120,7 @@ namespace TWF
             var bb = Billboard.Create(go.transform);
             var icon = GameAssets.CreateWorldSprite("icon", ItemIcons.Get(item), bb, Color.white, SortOrder.Pickup + 1, 0.8f);
             RenderAssets.MakeLit(icon, true, RenderAssets.Instance != null ? RenderAssets.Instance.litEmissive : null);
-            if (item.rarity >= Rarity.Rare) PointLights.Attach(go.transform, c, 3f, 1.5f, new Vector3(0, 0, -1f), true);
+            if (item.rarity >= Rarity.Rare) PointLights.Attach(go.transform, c, 3f, 1.5f, new Vector3(0, 1f, 0), true);
             p.visual = icon.transform;
             if (item.rarity >= Rarity.Magic)
             {
@@ -159,14 +159,14 @@ namespace TWF
 
             var hero = HeroController.Instance;
             if (hero == null || hero.Combatant.IsDead || age < 0.4f) return;
-            float d = Vector2.Distance(hero.transform.position, transform.position);
+            float d = Vector2.Distance(hero.transform.G(), transform.G());
 
             if (gold > 0)
             {
                 if (d < 2.6f) collecting = true;
                 if (collecting)
                 {
-                    transform.position = Vector2.MoveTowards(transform.position, hero.transform.position, Time.deltaTime * 12f);
+                    transform.position = Vector2.MoveTowards(transform.G(), hero.transform.G(), Time.deltaTime * 12f).W(transform.position.y);
                     if (d < 0.4f)
                     {
                         Profile.AddGold(gold);

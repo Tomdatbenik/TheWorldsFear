@@ -195,6 +195,7 @@ namespace TWF
             m.mainTexture = tex;
             m.SetFloat("_Cutoff", 0f);
             m.SetFloat("_MeshNormals", 1f);
+            m.SetFloat("_Relief", 1f);   // stone, steps and rock lit by their own texture's height
             materials[key] = m;
             return m;
         }

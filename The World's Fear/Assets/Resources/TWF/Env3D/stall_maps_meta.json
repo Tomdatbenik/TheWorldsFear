@@ -8,5 +8,10 @@
  ],
  "height": 3.5487046241760254,
  "verts": 2088,
- "tris": 1044
+ "tris": 1044,
+ "materials": [
+  "wood",
+  "cloth",
+  "flat"
+ ]
 }

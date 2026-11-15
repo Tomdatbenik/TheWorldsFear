@@ -24,7 +24,7 @@ namespace TWF
             // A faint crisp disc marks the area; the drawn pool on top carries the look.
             gf.poolColor = new Color(color.r, color.g, color.b, 0.22f);
             gf.pool = GameAssets.CreateWorldSprite("Pool", Fx.Disc(radius), gf.transform, gf.poolColor, SortOrder.Ground + 5, radius * 2f);
-            gf.pool.transform.localPosition = new Vector3(0, 0, Ground.DecalZ);
+            gf.pool.transform.localPosition = new Vector3(0, Ground.DecalH, 0);
             Fx.Linger(at, radius, Fx.Element(0, color), gf.life);
             if (gf.glow != null) { gf.glow.color = color; gf.glow.range = radius * 2.5f; }
             return gf;
@@ -33,7 +33,7 @@ namespace TWF
         public static GroundFire Spawn(Combatant owner, Vector2 at, Sprite sprite, float radius = 1.1f, float duration = -1f)
         {
             var go = new GameObject("GroundFire");
-            go.transform.position = at;
+            go.transform.position = at.W();
             var gf = go.AddComponent<GroundFire>();
             gf.owner = owner;
             gf.radius = radius;
@@ -56,7 +56,7 @@ namespace TWF
                 gf.baseScale = f.transform.localScale;
                 Fx.Play("linger_fire", at, radius * 0.9f, null, Random.Range(0f, 360f), gf.life);
             }
-            gf.glow = PointLights.Attach(go.transform, new Color(1f, 0.5f, 0.2f), 3.5f, 1.6f, new Vector3(0, 0, -0.6f));
+            gf.glow = PointLights.Attach(go.transform, new Color(1f, 0.5f, 0.2f), 3.5f, 1.6f, new Vector3(0, 0.6f, 0));
             return gf;
         }
 
@@ -80,7 +80,7 @@ namespace TWF
                 float bubble = 1f + Mathf.Sin((age + seed) * 4f) * 0.04f;
                 pool.transform.localScale = baseScaleOf(pool) * Mathf.Clamp01(age / 0.3f) * bubble;
                 pool.color = new Color(poolColor.r, poolColor.g, poolColor.b, poolColor.a * Mathf.Clamp01(life - age));
-                if (Random.value < Time.deltaTime * 3f) VFX.Burst((Vector2)transform.position + Random.insideUnitCircle * radius * 0.7f, poolColor, 2, 0.3f);
+                if (Random.value < Time.deltaTime * 3f) VFX.Burst(transform.G() + Random.insideUnitCircle * radius * 0.7f, poolColor, 2, 0.3f);
             }
 
             if (owner == null || owner.IsDead) { life = Mathf.Min(life, age + 1f); }
@@ -88,7 +88,7 @@ namespace TWF
             {
                 nextTick = age + 0.5f;
                 var hero = HeroController.Instance != null ? HeroController.Instance.Combatant : null;
-                if (hero != null && !hero.IsDead && Vector2.Distance(hero.transform.position, transform.position) < radius)
+                if (hero != null && !hero.IsDead && Vector2.Distance(hero.transform.G(), transform.G()) < radius)
                     Combat.Hit(owner, hero, 0.18f, status);
             }
             if (age >= life) Destroy(gameObject);

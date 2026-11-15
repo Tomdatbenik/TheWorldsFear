@@ -6,7 +6,7 @@ using UnityEngine;
 namespace TWF
 {
     // Monster AI: idle near home, aggro on the hero, attack by archetype, leash back home.
-    [RequireComponent(typeof(Combatant), typeof(Rigidbody2D))]
+    [RequireComponent(typeof(Combatant), typeof(GroundBody))]
     public class MonsterBrain : MonoBehaviour
     {
         public static event Action<MonsterBrain, Combatant> AnyDied;
@@ -25,7 +25,7 @@ namespace TWF
         enum State { Idle, Chase, Busy, Return }
         State state = State.Idle;
 
-        Rigidbody2D body;
+        GroundBody body;
         SpriteRenderer sr;
         Transform visual;
         Vector2 wanderTarget;
@@ -76,7 +76,7 @@ namespace TWF
                 foreach (var c in Players())
                 {
                     if (c == null || c.IsDead) continue;
-                    float d = ((Vector2)c.transform.position - (Vector2)transform.position).sqrMagnitude;
+                    float d = (c.transform.G() - transform.G()).sqrMagnitude;
                     if (d < bestD) { bestD = d; best = c; }
                 }
                 return best;
@@ -88,7 +88,7 @@ namespace TWF
         public static MonsterBrain Spawn(MonsterSpecies species, int level, MonsterRank rank, Vector2 position, IList<MonsterAffix> affixes = null, ZoneDefinition zone = null)
         {
             var go = new GameObject(species.name);
-            go.transform.position = position;
+            go.transform.position = position.W();
             go.layer = LayerMask.NameToLayer("Monsters");
             go.tag = "Enemie";
 
@@ -108,15 +108,10 @@ namespace TWF
             visualGo.transform.localScale = Vector3.one * scale;
             visualGo.AddComponent<Billboard>();
 
-            var body = go.AddComponent<Rigidbody2D>();
-            body.gravityScale = 0f;
-            body.freezeRotation = true;
-            body.mass = species.archetype == MonsterArchetype.Brute || species.archetype == MonsterArchetype.Guardian ? 6f : 1f;
-            body.interpolation = RigidbodyInterpolation2D.Interpolate;
-            var col = go.AddComponent<CircleCollider2D>();
             float radius = species.look.pixelSize / 16f * 0.3f * scale;
-            col.radius = radius;
-            col.offset = new Vector2(0, radius * 0.6f);
+            var body = GroundBody.Ensure(go, radius, new Vector2(0, radius * 0.6f));
+            body.mass = species.archetype == MonsterArchetype.Brute || species.archetype == MonsterArchetype.Guardian ? 6f : 1f;
+            body.Rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
 
             var c = go.AddComponent<Combatant>();
             c.team = Team.Enemy;
@@ -171,7 +166,7 @@ namespace TWF
         void Awake()
         {
             Combatant = GetComponent<Combatant>();
-            body = GetComponent<Rigidbody2D>();
+            body = GetComponent<GroundBody>();
             strafeSeed = UnityEngine.Random.Range(0f, 100f);
         }
 
@@ -199,7 +194,7 @@ namespace TWF
             if (ground == null) return;
             ground.mobility = Mobility;
             ground.riseSpeed = Mobility == Mobility.Climb ? 2.6f : Mobility == Mobility.Fly ? 6f : ground.riseSpeed;
-            if (Mobility == Mobility.Climb || Mobility == Mobility.Fly) LevelPass.Register(GetComponent<Collider2D>());
+            if (Mobility == Mobility.Climb || Mobility == Mobility.Fly) LevelPass.Register(GetComponent<Collider>());
         }
 
         // How far above the hero this monster stands (negative: below).
@@ -238,7 +233,7 @@ namespace TWF
 
         System.Collections.IEnumerator Leap(Vector2 to)
         {
-            var col = GetComponent<Collider2D>();
+            var col = GetComponent<Collider>();
             LevelPass.Register(col);
             float t = 0f;
             Vector2 from = body.position;
@@ -313,7 +308,7 @@ namespace TWF
             VFX.Burst(transform.position + View.Up * 0.5f, Species.look.primary, 14, 0.8f);
             if (Has(MonsterAffix.Molten))
             {
-                AreaEffect.Spawn(null, transform.position, new AreaSpec
+                AreaEffect.Spawn(null, transform.G(), new AreaSpec
                 {
                     radius = 2.2f, delay = 0.9f, damageMult = Combatant.Stats.Get(StatType.Damage) * 1.5f,
                     color = new Color(1f, 0.45f, 0.1f), status = StatusSpec.Burn(0.3f, 2f),
@@ -326,7 +321,7 @@ namespace TWF
         // Plays the death frames, then fades out and removes the body.
         IEnumerator MobDeath()
         {
-            foreach (var col in GetComponentsInChildren<Collider2D>()) col.enabled = false;
+            foreach (var col in GetComponentsInChildren<Collider>()) col.enabled = false;
             var frames = Species.mob.sprites.Get("death", currentDir);
             for (int i = 0; i < frames.Length; i++)
             {
@@ -363,9 +358,9 @@ namespace TWF
             Animate(dt);
 
             var hero = Hero;
-            Vector2 pos = transform.position;
+            Vector2 pos = transform.G();
             bool heroAlive = hero != null && !hero.IsDead;
-            float distHero = heroAlive ? Vector2.Distance(pos, hero.transform.position) : float.MaxValue;
+            float distHero = heroAlive ? Vector2.Distance(pos, hero.transform.G()) : float.MaxValue;
             float distHome = Vector2.Distance(pos, Home);
 
             if (heroAlive && state != State.Return) UpdateAffixes(dt, hero, distHero);
@@ -409,14 +404,14 @@ namespace TWF
             }
             if (busy) return;
             float speed = Combatant.MoveSpeed * (state == State.Return ? 1.5f : state == State.Idle ? 0.4f : speedMult);
-            Vector2 pos = transform.position;
+            Vector2 pos = transform.G();
             var move = desired;
             if (state == State.Chase && DungeonSetup.Instance != null) move = DungeonSetup.Instance.Route(pos, desired);
             else if (ChunkWorld.Instance != null && state != State.Idle)
             {
                 // Open world: round walls, cliffs, water and lava toward the hero, or back home.
                 var hero = Hero;
-                Vector2 target = state == State.Chase && hero != null ? (Vector2)hero.transform.position : Home;
+                Vector2 target = state == State.Chase && hero != null ? hero.transform.G() : Home;
                 move = WorldRouter.Route(pos, target, desired, Mobility);
                 MaybeLeap(pos, move);
             }
@@ -450,7 +445,7 @@ namespace TWF
                 {
                     stuckReturning = 0;
                     body.position = Home;
-                    transform.position = Home;
+                    transform.position = Home.W();
                 }
             }
             if (state != State.Return) stuckReturning = 0;
@@ -473,7 +468,7 @@ namespace TWF
 
         void Fight(Combatant hero, Vector2 pos, float dist)
         {
-            Vector2 toHero = ((Vector2)hero.transform.position - pos).normalized;
+            Vector2 toHero = (hero.transform.G() - pos).normalized;
             var sp = Species;
             UpdateHighGround(hero);
             if (!Ranged && Mathf.Abs(HeightOverHero(hero)) > ReachHeight && !(ground != null && ground.Climbing)) dist = Mathf.Max(dist, sp.attackRange + 2f);
@@ -485,7 +480,7 @@ namespace TWF
                 Band.Tick();
                 if (Band.Leader != this && sp.archetype != MonsterArchetype.Guardian && Combatant.HP < Combatant.MaxHP * 0.3f)
                 {
-                    Vector2 spot = Band.SafeSpot(this, (Vector2)hero.transform.position, pos);
+                    Vector2 spot = Band.SafeSpot(this, hero.transform.G(), pos);
                     Vector2 go = spot - pos;
                     desired = go.magnitude > 0.5f ? go.normalized : Vector2.zero;
                     if (attackTimer <= 0f && dist <= sp.attackRange) StartCoroutine(MeleeAttack(hero));
@@ -516,7 +511,7 @@ namespace TWF
             // A warband's melee take a place on a ring round the hero, so it can't all be kited in a line.
             if (Band != null && sp.preferredDistance <= 0f && dist > sp.attackRange * 0.85f)
             {
-                Vector2 to = Band.FlankPoint(this, (Vector2)hero.transform.position, Mathf.Max(sp.attackRange * 0.85f, 1f)) - pos;
+                Vector2 to = Band.FlankPoint(this, hero.transform.G(), Mathf.Max(sp.attackRange * 0.85f, 1f)) - pos;
                 if (to.magnitude > 0.3f) desired = to.normalized;
             }
 
@@ -574,7 +569,7 @@ namespace TWF
             foreach (var c in Combatant.All)
             {
                 if (c == Combatant || c.IsDead || c.team != Team.Enemy) continue;
-                if (((Vector2)c.transform.position - pos).sqrMagnitude < 14f * 14f) wards.Add(c);
+                if ((c.transform.G() - pos).sqrMagnitude < 14f * 14f) wards.Add(c);
             }
         }
 
@@ -599,14 +594,14 @@ namespace TWF
             float best = float.MaxValue;
             foreach (var w in wards)
             {
-                float d = ((Vector2)w.transform.position - (Vector2)hero.transform.position).sqrMagnitude;
+                float d = (w.transform.G() - hero.transform.G()).sqrMagnitude;
                 if (d < best) { best = d; ward = w; }
             }
             if (ward != null)
             {
-                Vector2 w = ward.transform.position;
-                Vector2 side = ((Vector2)hero.transform.position - w).normalized;
-                Vector2 post = w + side * Mathf.Min(2.4f, Vector2.Distance(w, hero.transform.position) * 0.5f);
+                Vector2 w = ward.transform.G();
+                Vector2 side = (hero.transform.G() - w).normalized;
+                Vector2 post = w + side * Mathf.Min(2.4f, Vector2.Distance(w, hero.transform.G()) * 0.5f);
                 Vector2 to = post - pos;
                 desired = to.magnitude > 0.35f ? to.normalized : Vector2.zero;
                 if (dist < 7f) RaiseGuard(toHero);
@@ -626,10 +621,10 @@ namespace TWF
             foreach (var p in Projectile.Live)
             {
                 if (p == null || p.OwnerTeam != Team.Player) continue;
-                Vector2 s = p.transform.position, d = p.Direction;
+                Vector2 s = p.transform.G(), d = p.Direction;
                 foreach (var w in wards)
                 {
-                    Vector2 toW = (Vector2)w.transform.position - s;
+                    Vector2 toW = w.transform.G() - s;
                     float along = Vector2.Dot(toW, d);
                     if (along <= 0.3f || along > p.RangeLeft + 0.6f) continue;
                     if (Mathf.Abs(toW.x * d.y - toW.y * d.x) > w.radius + 0.8f) continue;
@@ -702,9 +697,9 @@ namespace TWF
             attackTimer = Species.attackCooldown * CooldownScale;
             yield return Windup(0.12f, new Color(1f, 0.6f, 0.5f));
             if (!Combatant.IsDead && !Combatant.IsStunned && hero != null &&
-                Vector2.Distance(transform.position, hero.transform.position) <= Species.attackRange + 0.6f)
+                Vector2.Distance(transform.G(), hero.transform.G()) <= Species.attackRange + 0.6f)
             {
-                Vector2 dir = (hero.transform.position - transform.position).normalized;
+                Vector2 dir = (hero.transform.G() - transform.G()).normalized;
                 StartCoroutine(Lunge(dir));
                 Combat.Hit(Combatant, hero, 1f, Species.onHitStatus, false, 0f, -1f, Elements.Mask(Species.element));
             }
@@ -745,9 +740,9 @@ namespace TWF
             attackTimer = Species.attackCooldown * CooldownScale;
             yield return Windup(0.25f, new Color(1f, 0.6f, 0.5f));
             if (!Combatant.IsDead && !Combatant.IsStunned && hero != null &&
-                Vector2.Distance(transform.position, hero.transform.position) <= Species.attackRange + 0.45f)
+                Vector2.Distance(transform.G(), hero.transform.G()) <= Species.attackRange + 0.45f)
             {
-                Vector2 dir = (hero.transform.position - transform.position).normalized;
+                Vector2 dir = (hero.transform.G() - transform.G()).normalized;
                 StartCoroutine(Lunge(dir));
                 Combat.Hit(Combatant, hero, 1f, Species.onHitStatus, false, 0f, -1f, Elements.Mask(Species.element));
             }
@@ -760,7 +755,7 @@ namespace TWF
             while (t < 0.12f)
             {
                 t += Time.deltaTime;
-                visual.localPosition = dir * Mathf.Sin(t / 0.12f * Mathf.PI) * 0.25f;
+                visual.localPosition = (dir * Mathf.Sin(t / 0.12f * Mathf.PI) * 0.25f).W();
                 yield return null;
             }
             visual.localPosition = Vector3.zero;
@@ -770,8 +765,8 @@ namespace TWF
         {
             busy = true;
             body.linearVelocity = Vector2.zero;
-            Vector2 start = transform.position;
-            Vector2 dir = ((Vector2)hero.transform.position - start).normalized;
+            Vector2 start = transform.G();
+            Vector2 dir = (hero.transform.G() - start).normalized;
             const float length = 7.5f;
             LineTelegraph.Show(start, dir, length, 1.1f, Palette.EnemyTelegraph, 0.7f);
             yield return Windup(0.7f, new Color(1f, 0.4f, 0.3f));
@@ -788,7 +783,7 @@ namespace TWF
             {
                 t += Time.fixedDeltaTime;
                 body.linearVelocity = dir * length / duration;
-                if (!hit && hero != null && Vector2.Distance(transform.position, hero.transform.position) < Combatant.radius + hero.radius + 0.3f)
+                if (!hit && hero != null && Vector2.Distance(transform.G(), hero.transform.G()) < Combatant.radius + hero.radius + 0.3f)
                 {
                     hit = true;
                     Combat.Hit(Combatant, hero, 1.6f, StatusSpec.Stun(0.6f), false, 2f, -1f, Elements.Mask(Species.element));
@@ -803,8 +798,8 @@ namespace TWF
         IEnumerator SlamAttack(Combatant hero)
         {
             attackTimer = Species.attackCooldown * CooldownScale;
-            Vector2 dir = ((Vector2)hero.transform.position - (Vector2)transform.position).normalized;
-            Vector2 center = (Vector2)transform.position + dir * 1.2f;
+            Vector2 dir = (hero.transform.G() - transform.G()).normalized;
+            Vector2 center = transform.G() + dir * 1.2f;
             AreaEffect.Spawn(Combatant, center, new AreaSpec
             {
                 radius = 2.1f, delay = 0.85f, damageMult = 1f, color = new Color(1f, 0.3f, 0.2f), knockback = 2f,
@@ -820,7 +815,7 @@ namespace TWF
             yield return Windup(0.3f, Species.projectileColor);
             if (!Combatant.IsDead && hero != null)
             {
-                Vector2 dir = ((Vector2)hero.transform.position - (Vector2)transform.position).normalized;
+                Vector2 dir = (hero.transform.G() - transform.G()).normalized;
                 FireVolley(dir, Has(MonsterAffix.Multishot) ? 3 : 1, 25f, 1f);
             }
             busy = false;
@@ -833,7 +828,7 @@ namespace TWF
             {
                 float a = count == 1 ? baseAngle : baseAngle - spread / 2f + spread * i / (count - 1);
                 var d = new Vector2(Mathf.Cos(a * Mathf.Deg2Rad), Mathf.Sin(a * Mathf.Deg2Rad));
-                Projectile.Fire(Combatant, (Vector2)transform.position + d * 0.4f, d, new ProjectileSpec
+                Projectile.Fire(Combatant, transform.G() + d * 0.4f, d, new ProjectileSpec
                 {
                     speed = Species.projectileSpeed, range = Species.attackRange + 2f, hitRadius = 0.3f, damageMult = mult,
                     color = Species.projectileColor, size = 0.45f, status = Species.onHitStatus,
@@ -844,7 +839,7 @@ namespace TWF
         IEnumerator CastAttack(Combatant hero)
         {
             attackTimer = Species.attackCooldown * CooldownScale;
-            Vector2 target = (Vector2)hero.transform.position + hero.GetComponent<Rigidbody2D>().linearVelocity * 0.4f;
+            Vector2 target = hero.transform.G() + hero.GetComponent<GroundBody>().linearVelocity * 0.4f;
             AreaEffect.Spawn(Combatant, target, new AreaSpec
             {
                 radius = 1.8f, delay = 1.1f, damageMult = 1f, color = Species.projectileColor, status = Species.onHitStatus,
@@ -857,7 +852,7 @@ namespace TWF
         {
             busy = true;
             body.linearVelocity = Vector2.zero;
-            AreaEffect.Spawn(Combatant, transform.position, new AreaSpec
+            AreaEffect.Spawn(Combatant, transform.G(), new AreaSpec
             {
                 radius = 2.3f, delay = 0.7f, damageMult = 1f, color = new Color(1f, 0.55f, 0.15f), knockback = 2.5f, followOwner = true,
             });
@@ -899,9 +894,9 @@ namespace TWF
             if (Has(MonsterAffix.Teleporter) && !busy && distHero > 3f && UnityEngine.Random.value < dt / 6f)
             {
                 VFX.Burst(transform.position, new Color(0.7f, 0.4f, 1f), 12, 0.8f);
-                Vector2 to = (Vector2)hero.transform.position + UnityEngine.Random.insideUnitCircle.normalized * 1.8f;
+                Vector2 to = hero.transform.G() + UnityEngine.Random.insideUnitCircle.normalized * 1.8f;
                 body.position = to;
-                transform.position = to;
+                transform.position = to.W();
                 VFX.Burst(to, new Color(0.7f, 0.4f, 1f), 12, 0.8f);
             }
         }

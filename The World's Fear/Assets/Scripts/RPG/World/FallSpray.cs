@@ -24,7 +24,7 @@ namespace TWF
                 {
                     int nl = elev[x + dx[k] + 1, y + dy[k] + 1];
                     if (nl >= lv) continue;
-                    feet.Add(new Vector3(x0 + x + 0.5f + dx[k] * 0.9f, y0 + y + 0.5f + dy[k] * 0.9f, -nl * WorldGen.LevelHeight));
+                    feet.Add(new Vector3(x0 + x + 0.5f + dx[k] * 0.9f, -(-nl * WorldGen.LevelHeight), y0 + y + 0.5f + dy[k] * 0.9f));
                 }
             }
         }
@@ -38,7 +38,7 @@ namespace TWF
             var hero = HeroController.Instance;
             if (hero == null) return;
             var p = feet[Random.Range(0, feet.Count)];
-            if (((Vector2)p - (Vector2)hero.transform.position).sqrMagnitude > 30f * 30f) return;
+            if ((p.G() - hero.transform.G()).sqrMagnitude > 30f * 30f) return;
             VFX.Burst(p, new Color(0.88f, 0.96f, 1f, 0.8f), 3, 0.5f);
         }
     }

@@ -1,6 +1,6 @@
 // HD-2D sprite shader for URP: pixel-art sprites that receive light, cast and receive
 // shadows, glow (emission) and optionally sway in the wind.
-// The world ground is the XY plane and "up" is -Z.
+// The world is Y-up: the ground is the XZ plane.
 Shader "TWF/LitSprite"
 {
     Properties
@@ -18,6 +18,7 @@ Shader "TWF/LitSprite"
         _UseNormalMap ("Use Normal Map", Float) = 0
         _Bands ("Light Bands", Range(2,8)) = 4
         _ShadowTint ("Shadow Tint", Color) = (0.42,0.36,0.62,1)
+        _Relief ("Relief (height from the texture's own light and dark)", Range(0,4)) = 0
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
     }
 
@@ -37,6 +38,8 @@ Shader "TWF/LitSprite"
 
         // Set by ZoneLighting for the whole scene.
         half4 _TWF_Ambient;
+        // Scales every material's relief: 0 as authored, -1 off (the debug scene's slider).
+        half _TWF_ReliefBoost;
 
         CBUFFER_START(UnityPerMaterial)
             float4 _MainTex_ST;
@@ -51,7 +54,35 @@ Shader "TWF/LitSprite"
             half _UseNormalMap;
             half _Bands;
             half4 _ShadowTint;
+            half _Relief;
+            float4 _MainTex_TexelSize;
         CBUFFER_END
+
+        // The texture as a heightmap: bright stones stand up, dark mortar and gaps sink.
+        float TexHeight(float2 uv)
+        {
+            half4 c = SAMPLE_TEXTURE2D_LOD(_MainTex, sampler_MainTex, uv, 0);
+            return dot(c.rgb, half3(0.3, 0.59, 0.11)) * c.a;
+        }
+
+        // The surface normal of one texel of the heightmap, in the world: one flat facet per texel, so the relief
+        // stays crisp pixel art. The tangent frame comes from screen derivatives, so any mesh or tile works.
+        float3 ReliefNormal(float3 n, float3 positionWS, float2 uv)
+        {
+            float2 ts = _MainTex_TexelSize.xy;
+            float2 c = (floor(uv / ts) + 0.5) * ts;
+            float hl = TexHeight(c - float2(ts.x, 0)), hr = TexHeight(c + float2(ts.x, 0));
+            float hd = TexHeight(c - float2(0, ts.y)), hu = TexHeight(c + float2(0, ts.y));
+            float3 dp1 = ddx(positionWS), dp2 = ddy(positionWS);
+            float2 duv1 = ddx(uv), duv2 = ddy(uv);
+            float3 p2 = cross(dp2, n), p1 = cross(n, dp1);
+            float3 t = p2 * duv1.x + p1 * duv2.x;
+            float3 b = p2 * duv1.y + p1 * duv2.y;
+            float inv = rsqrt(max(max(dot(t, t), dot(b, b)), 1e-12));
+            t *= inv; b *= inv;
+            return normalize(n - _Relief * (1 + _TWF_ReliefBoost) * (t * (hr - hl) + b * (hu - hd)));
+        }
+        
 
         // Trees, bushes and 3D walls dither away in front of a hero; the ground and units never do.
         bool RevealsHero() { return _NoReveal < 0.5 && _FlatGround < 0.5 && (_Wind > 0.001 || _MeshNormals > 0.5); }
@@ -59,10 +90,10 @@ Shader "TWF/LitSprite"
         // Sway the top of the sprite; the base (uv.y = 0) stays put.
         float3 ApplyWind(float3 positionWS, float2 uv)
         {
-            float phase = _Time.y * 1.7 + positionWS.x * 0.35 + positionWS.y * 0.27;
+            float phase = _Time.y * 1.7 + positionWS.x * 0.35 + positionWS.z * 0.27;
             float sway = (sin(phase) * 0.6 + sin(phase * 2.3) * 0.25) * _Wind * uv.y * uv.y;
             positionWS.x += sway * 0.25;
-            positionWS.y += sway * 0.12;
+            positionWS.z += sway * 0.12;
             return positionWS;
         }
         ENDHLSL
@@ -134,7 +165,7 @@ Shader "TWF/LitSprite"
 
                 // Sprites are lit as if they face the sky, so the whole sprite gets even light
                 // no matter which way the billboard turns. Shadows still fall per pixel.
-                float3 up = float3(0, 0, -1);
+                float3 up = float3(0, 1, 0);
                 float3 n = _MeshNormals > 0.5 ? normalize(i.normalWS) : up;
                 float4 shadowCoord = TransformWorldToShadowCoord(i.positionWS);
                 Light mainLight = GetMainLight(shadowCoord);
@@ -174,6 +205,14 @@ Shader "TWF/LitSprite"
                 }
 
                 half ndl = saturate(dot(n, mainLight.direction) * 0.5 + 0.5);
+                // Relief: each texel lit by the slope of its own heightmap, against the flat surface's light,
+                // in a few steps like hand-shaded pixel art.
+                if (_Relief * (1 + _TWF_ReliefBoost) > 0.001)
+                {
+                    float3 pn = ReliefNormal(n, i.positionWS, i.uv);
+                    half rel = clamp(1 + (dot(pn, mainLight.direction) - dot(n, mainLight.direction)) * 1.6, 0.55, 1.45);
+                    ndl *= floor(rel * 6 + 0.5) / 6;
+                }
                 half3 light = mainLight.color * ndl * mainLight.shadowAttenuation;
 
                 half3 ambient = _TWF_Ambient.rgb * _Ambient;
@@ -242,7 +281,7 @@ Shader "TWF/LitSprite"
                 UNITY_SETUP_INSTANCE_ID(v);
                 Varyings o;
                 float3 ws = ApplyWind(TransformObjectToWorld(v.positionOS.xyz), v.uv);
-                float3 normalWS = float3(0, 0, -1);
+                float3 normalWS = float3(0, 1, 0);
                 #if _CASTING_PUNCTUAL_LIGHT_SHADOW
                 float3 lightDir = normalize(_LightPosition - ws);
                 #else

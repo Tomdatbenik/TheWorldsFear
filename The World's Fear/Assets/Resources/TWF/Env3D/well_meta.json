@@ -6,7 +6,13 @@
   3,
   3
  ],
- "height": 4.710538864135742,
- "verts": 7134,
- "tris": 3566
+ "height": 4.690000057220459,
+ "verts": 462,
+ "tris": 230,
+ "materials": [
+  "stone",
+  "flat",
+  "wood",
+  "shingle"
+ ]
 }

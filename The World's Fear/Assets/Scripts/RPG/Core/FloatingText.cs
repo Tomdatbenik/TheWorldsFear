@@ -25,6 +25,9 @@ namespace TWF
             Spawn(pos, crit ? n + "!" : n.ToString(), c, crit ? 1.35f : 0.9f);
         }
 
+        public static FloatingText Spawn(Vector2 at, string text, Color color, float scale = 1f, float duration = 0.8f) =>
+            Spawn(Ground.On(at), text, color, scale, duration);
+
         public static FloatingText Spawn(Vector3 pos, string text, Color color, float scale = 1f, float duration = 0.8f)
         {
             if (root == null) root = new GameObject("FloatingText").transform;

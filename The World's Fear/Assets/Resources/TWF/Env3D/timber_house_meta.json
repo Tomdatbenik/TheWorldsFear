@@ -7,6 +7,15 @@
   5.04
  ],
  "height": 7.918399810791016,
- "verts": 37734,
- "tris": 18866
+ "verts": 14386,
+ "tris": 7192,
+ "materials": [
+  "stone",
+  "plaster",
+  "wood",
+  "door_house",
+  "glass",
+  "flat",
+  "shingle"
+ ]
 }

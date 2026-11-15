@@ -13,16 +13,16 @@ namespace TWF
 
         public static IEnumerator WalkStairs(HeroController hero, Vector2 from, Vector2 to, float startZ, float endZ, Action arrive)
         {
-            var collider = hero.GetComponent<Collider2D>();
+            var collider = hero.GetComponent<Collider>();
             collider.enabled = false;
             hero.Combatant.Invulnerable = true;
             float time = 0f;
 
             // First to the foot of the steps.
-            while (time < MaxSeconds && Vector2.Distance(hero.transform.position, from) > 0.2f)
+            while (time < MaxSeconds && Vector2.Distance(hero.transform.G(), from) > 0.2f)
             {
                 MobaInput.Blocked = true;
-                hero.AutoWalk = (from - (Vector2)hero.transform.position).normalized;
+                hero.AutoWalk = (from - hero.transform.G()).normalized;
                 time += Time.deltaTime;
                 yield return null;
             }
@@ -32,11 +32,12 @@ namespace TWF
             while (time < MaxSeconds)
             {
                 MobaInput.Blocked = true;
-                Vector2 pos = hero.transform.position;
+                Vector2 pos = hero.transform.G();
                 float along = Mathf.Clamp01(Vector2.Dot(pos - from, (to - from).normalized) / length);
                 hero.AutoWalk = (to - pos).normalized;
-                var p = hero.transform.position;
-                hero.transform.position = new Vector3(p.x, p.y, Mathf.Lerp(startZ, endZ, along));
+                // startZ / endZ: depth below the ground (negative is up).
+                var gf = hero.GetComponent<GroundFollow>();
+                if (gf != null) gf.lift = -Mathf.Lerp(startZ, endZ, along);
                 if (!fading && along >= FadeFrom)
                 {
                     fading = true;
@@ -50,6 +51,8 @@ namespace TWF
             hero.AutoWalk = Vector2.zero;
             if (!fading) SceneFade.ToBlack(FadeSeconds);
             yield return new WaitForSeconds(0.25f);
+            var follow = hero.GetComponent<GroundFollow>();
+            if (follow != null) follow.lift = 0f;
             arrive();
         }
     }

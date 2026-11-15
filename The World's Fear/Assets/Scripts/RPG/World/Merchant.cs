@@ -28,10 +28,7 @@ namespace TWF
             var shadow = GameAssets.CreateWorldSprite("Shadow", GameAssets.SoftCircle, transform, new Color(0, 0, 0, 0.35f), SortOrder.Units - 1, 1f);
             shadow.transform.localScale = new Vector3(shadow.transform.localScale.x, shadow.transform.localScale.y * 0.4f, 1f);
 
-            var col = gameObject.AddComponent<CapsuleCollider2D>();
-            col.direction = CapsuleDirection2D.Horizontal;
-            col.size = new Vector2(0.7f, 0.45f);
-            col.offset = new Vector2(0, 0.15f);
+            Phys.Circle(gameObject, 0.3f, new Vector2(0, 0.15f));
 
             var label = new GameObject("Label").AddComponent<TextMeshPro>();
             label.transform.SetParent(Billboard.Create(transform), false);
@@ -51,7 +48,7 @@ namespace TWF
         {
             var hero = HeroController.Instance;
             if (hero == null || GameUI.Instance == null) return;
-            bool near = Vector2.Distance(hero.transform.position, transform.position) < talkRange;
+            bool near = Vector2.Distance(hero.transform.G(), transform.G()) < talkRange;
             if (near && !inRange) GameUI.Instance.ShowInteract(buttonLabel, () =>
             {
                 CraftPanel.AtForge = panel == PanelKind.Craft;

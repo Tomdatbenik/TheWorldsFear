@@ -74,11 +74,12 @@ namespace TWF
         SpriteRenderer[] renderers;
         Color[] baseColors;
         Coroutine flashRoutine;
-        Rigidbody2D body;
+        GroundBody body;
 
         void Awake()
         {
-            body = GetComponent<Rigidbody2D>();
+            if (GetComponent<Rigidbody2D>() != null) GroundBody.Ensure(gameObject);   // an old prefab's 2D body
+            body = GetComponent<GroundBody>();
             CacheRenderers();
             if (GetComponent<GroundFollow>() == null) gameObject.AddComponent<GroundFollow>();
         }
@@ -313,7 +314,7 @@ namespace TWF
 
         IEnumerator DeathFade()
         {
-            foreach (var col in GetComponentsInChildren<Collider2D>()) col.enabled = false;
+            foreach (var col in GetComponentsInChildren<Collider>()) col.enabled = false;
             float t = 0f;
             Vector3 startScale = transform.localScale;
             while (t < 0.35f)
@@ -359,10 +360,10 @@ namespace TWF
 
         // Old attacks (the boss's fists, fire lines, risk spots) are trigger colliders
         // tagged "Damage"/"Enemie" carrying a legacy Damage component.
-        void OnTriggerStay2D(Collider2D other) => LegacyHit(other);
-        void OnTriggerEnter2D(Collider2D other) => LegacyHit(other);
+        void OnTriggerStay(Collider other) => LegacyHit(other);
+        void OnTriggerEnter(Collider other) => LegacyHit(other);
 
-        void LegacyHit(Collider2D other)
+        void LegacyHit(Collider other)
         {
             if (team != Team.Player || legacyTimer > 0f || IsDead) return;
             if (!other.CompareTag("Damage") && !other.CompareTag("Enemie")) return;

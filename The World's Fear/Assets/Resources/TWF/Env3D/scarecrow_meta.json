@@ -6,7 +6,14 @@
   0.3,
   0.3
  ],
- "height": 3.69599986076355,
- "verts": 696,
- "tris": 308
+ "height": 3.3506052494049072,
+ "verts": 884,
+ "tris": 442,
+ "materials": [
+  "wood",
+  "cloth",
+  "straw",
+  "burlap",
+  "face"
+ ]
 }

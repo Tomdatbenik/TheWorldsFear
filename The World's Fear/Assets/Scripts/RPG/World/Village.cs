@@ -64,6 +64,7 @@ namespace TWF
         void BuildGround()
         {
             var grid = new GameObject("Village Ground").AddComponent<Grid>();
+            grid.transform.localRotation = Ground.Flat;   // the ground lies flat; inside it, cells are (x, y) and local z is minus height
             grid.transform.SetParent(transform, false);
             var go = new GameObject("Ground");
             go.transform.SetParent(grid.transform, false);
@@ -253,7 +254,7 @@ namespace TWF
             Box(stone, c.x - 1.75f, y1 - 1.3f, 0.8f, 0.7f, 1.6f, h + 1.9f);
             var fire = new GameObject("Furnace Light");
             fire.transform.SetParent(transform, false);
-            fire.transform.position = new Vector3(c.x - 1.3f, y1 - 2.3f, -0.8f);
+            fire.transform.position = new Vector3(c.x - 1.3f, 0.8f, y1 - 2.3f);
             var light = PointLights.Attach(fire.transform, new Color(1f, 0.5f, 0.2f), 6f, 2.2f, Vector3.zero, true);
             if (light != null) fire.AddComponent<Flicker>().target = light;
             // Anvil out front.
@@ -335,7 +336,7 @@ namespace TWF
             Box(iron, p.x - 0.24f, p.y - 0.24f, 0.48f, 0.48f, 3.08f, 0.1f);
             var holder = new GameObject("Lamp");
             holder.transform.SetParent(transform, false);
-            holder.transform.position = new Vector3(p.x, p.y, -2.9f);
+            holder.transform.position = p.W(2.9f);
             var lampLight = PointLights.Attach(holder.transform, new Color(1f, 0.78f, 0.45f), 7f, 1.3f, Vector3.zero, true);
             if (lampLight != null) holder.AddComponent<NightLight>().target = lampLight;
             Solid(p, Vector2.one * 0.3f);
@@ -369,10 +370,10 @@ namespace TWF
                 col.transform.SetParent(transform, false);
                 col.layer = LayerMask.NameToLayer("Walls");
                 var center = (a + b) / 2f;
-                col.transform.position = center;
-                var bc = col.AddComponent<BoxCollider2D>();
-                bc.size = Mathf.Abs(dir.x) > 0.5f ? new Vector2(len, 0.2f) : new Vector2(0.2f, len);
-                if (gap) { bc.size = Mathf.Abs(dir.x) > 0.5f ? new Vector2(mid - 0.7f, 0.2f) : new Vector2(0.2f, mid - 0.7f); col.transform.position = a + dir * (mid - 0.7f) / 2f; }
+                col.transform.position = center.W();
+                var size = Mathf.Abs(dir.x) > 0.5f ? new Vector2(len, 0.2f) : new Vector2(0.2f, len);
+                if (gap) { size = Mathf.Abs(dir.x) > 0.5f ? new Vector2(mid - 0.7f, 0.2f) : new Vector2(0.2f, mid - 0.7f); col.transform.position = (a + dir * (mid - 0.7f) / 2f).W(); }
+                Phys.Box(col, size);
             }
             var c00 = new Vector2(r.xMin, r.yMin); var c10 = new Vector2(r.xMax, r.yMin);
             var c01 = new Vector2(r.xMin, r.yMax); var c11 = new Vector2(r.xMax, r.yMax);
@@ -449,7 +450,7 @@ namespace TWF
         {
             var go = new GameObject(sprite.name);
             go.transform.SetParent(transform, false);
-            go.transform.position = pos;
+            go.transform.position = pos.W();
             go.layer = LayerMask.NameToLayer("Walls");
             var bb = Billboard.Create(go.transform, "Visual");
             bb.localScale = Vector3.one * scale * (0.9f + (float)rng.NextDouble() * 0.25f);
@@ -457,20 +458,18 @@ namespace TWF
             sr.sprite = sprite;
             bool sways = sprite.name.StartsWith("tree") || sprite.name.StartsWith("bush") || sprite.name.StartsWith("fern") || sprite.name.StartsWith("oak") || sprite.name.StartsWith("pine") || sprite.name.StartsWith("birch");
             RenderAssets.MakeLit(sr, true, sways ? RenderAssets.Instance.litWind : null);
-            if (solid) go.AddComponent<CircleCollider2D>().radius = 0.45f;
+            if (solid) Phys.Circle(go, 0.45f);
         }
 
         // ---------- Geometry helpers ----------
 
-        BoxCollider2D Solid(Vector2 center, Vector2 size)
+        BoxCollider Solid(Vector2 center, Vector2 size)
         {
             var go = new GameObject("Solid");
             go.transform.SetParent(transform, false);
-            go.transform.position = center;
+            go.transform.position = center.W();
             go.layer = LayerMask.NameToLayer("Walls");
-            var bc = go.AddComponent<BoxCollider2D>();
-            bc.size = size;
-            return bc;
+            return Phys.Box(go, size);
         }
 
         // An axis-aligned box standing on the ground from height z0 (up) with the given height.
@@ -548,7 +547,7 @@ namespace TWF
             for (int i = 0; i < colors.Length; i++) colors[i] = Color.white;
             m.colors = colors;
             m.SetTriangles(q.t, 0);
-            m.RecalculateBounds();
+            Ground.ToY(m);
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
             go.AddComponent<MeshFilter>().sharedMesh = m;

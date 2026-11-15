@@ -39,7 +39,7 @@ namespace TWF
         }
     }
 
-    // Lifts the visible parts of a unit to the terrain height under it (the physics body stays on the 2D plane).
+    // Keeps a unit standing on the terrain: its height (Y) follows the ground under it, rising and falling smoothly.
     public class GroundFollow : MonoBehaviour
     {
         const float RiseSpeed = 9f;
@@ -47,23 +47,24 @@ namespace TWF
         // faces, slowly; flyers drift over them; leapers may jump down. Set by the monster that owns it.
         public Mobility mobility = Mobility.Walk;
         public float riseSpeed = RiseSpeed;
+        // Extra height on top of the ground for scripted moves (walking down a well, up a stair out of a dungeon).
+        [System.NonSerialized] public float lift;
         float target;
         // Still on its way up or down a cliff face (a climbing spider): it moves slowly meanwhile.
         public bool Climbing => Mathf.Abs(height - target) > 0.6f;
         public float Height => height;
-        readonly Dictionary<Transform, float> parts = new Dictionary<Transform, float>();   // each part's own height
-        readonly Dictionary<Transform, float> written = new Dictionary<Transform, float>(); // what was last set on it
-        readonly List<Transform> keys = new List<Transform>();
-        readonly List<Transform> gone = new List<Transform>();
         float height;
         CameraFollow cam;
         bool hero;
+        GroundBody body;
 
         void Start()
         {
             hero = GetComponent<HeroController>() != null;
             if (hero && Camera.main != null) cam = Camera.main.GetComponent<CameraFollow>();
-            height = TerrainHeight.At(transform.position);
+            body = GetComponent<GroundBody>();
+            height = TerrainHeight.At(transform.G());
+            Apply();
         }
 
         // Low and high ground only meet on stairs. A knockback, a dash or a leap can carry a body through the thin
@@ -71,7 +72,6 @@ namespace TWF
         public static bool KeepLevels = true;
         Vector2 lastGood;
         int lastLevel = -1;        // the level of land it stands on, -1 on stairs or anywhere else with no rule
-        Rigidbody2D rb;
 
         static int LevelOf(Vector2 p)
         {
@@ -83,16 +83,15 @@ namespace TWF
         void Guard()
         {
             if (!KeepLevels || TerrainHeight.World == null || mobility == Mobility.Climb || mobility == Mobility.Fly) return;
-            Vector2 p = transform.position;
+            Vector2 p = transform.G();
             int level = LevelOf(p);
             bool leapDown = mobility == Mobility.Leap && level >= 0 && level < lastLevel && lastLevel - level <= WorldGen.LeapDrop;
             // A jump of more than a few tiles in one step is a teleport (a waypoint, a portal), not a knock over an edge.
             bool teleported = (p - lastGood).sqrMagnitude > 9f;
             if (level >= 0 && lastLevel >= 0 && level != lastLevel && !leapDown && !teleported)
             {
-                if (rb == null) rb = GetComponent<Rigidbody2D>();
-                if (rb != null) { rb.position = lastGood; rb.linearVelocity = Vector2.zero; }
-                transform.position = new Vector3(lastGood.x, lastGood.y, transform.position.z);
+                if (body != null) { body.position = lastGood; body.linearVelocity = Vector2.zero; }
+                else transform.SetG(lastGood);
                 return;
             }
             // Stairs clear the memory: whoever comes off them may be on either level.
@@ -103,34 +102,38 @@ namespace TWF
         void LateUpdate()
         {
             Guard();
-            target = TerrainHeight.At(transform.position);
+            target = TerrainHeight.At(transform.G());
             // A leaper drops fast; everyone else rises and falls at their own pace.
             float speed = mobility == Mobility.Leap && target < height ? 16f : riseSpeed;
             height = Mathf.MoveTowards(height, target, speed * Time.deltaTime);
-            // Children that turn up later (status flames, bars) join in at the height they were made for.
-            foreach (Transform c in transform)
-                if (!parts.ContainsKey(c)) parts[c] = c.localPosition.z;
-            keys.Clear(); keys.AddRange(parts.Keys);
-            foreach (var t in keys)
-            {
-                if (t == null) { gone.Add(t); continue; }
-                var p = t.localPosition;
-                // Moved by its own animation since last frame (a leap, a hop): that is its new height.
-                if (written.TryGetValue(t, out float w) && !Mathf.Approximately(p.z, w)) parts[t] = p.z;
-                p.z = parts[t] - height;
-                t.localPosition = p;
-                written[t] = p.z;
-            }
-            if (gone.Count > 0) { foreach (var g in gone) { parts.Remove(g); written.Remove(g); } gone.Clear(); }
+            Apply();
             if (cam != null) cam.groundHeight = height;
             if (hero) View.GroundHeight = height;
+        }
+
+        void Apply()
+        {
+            // An interpolated body keeps its own pose: only its height is set, on the body.
+            var rb = body != null ? body.Rigidbody : null;
+            float y = height + lift;
+            if (rb != null && rb.interpolation != RigidbodyInterpolation.None)
+            {
+                var q = rb.position;
+                if (!Mathf.Approximately(q.y, y)) rb.position = new Vector3(q.x, y, q.z);
+                return;
+            }
+            var p = transform.position;
+            if (Mathf.Approximately(p.y, y)) return;
+            p.y = y;
+            transform.position = p;
+            if (rb != null) rb.position = p;
         }
     }
 
     // Lifts a whole loose object (a projectile, a pickup, an effect, floating text) to the terrain height under it.
     public class HeightLift : MonoBehaviour
     {
-        float baseZ;
+        float baseY;
         bool skip, ready;
 
         public static void On(GameObject go)
@@ -145,12 +148,12 @@ namespace TWF
                 ready = true;
                 // Anything riding on a unit is lifted with it already.
                 skip = transform.parent != null && (transform.parent.GetComponentInParent<GroundFollow>() != null || transform.parent.GetComponentInParent<HeightLift>() != null);
-                float h0 = TerrainHeight.At(transform.position), z = transform.position.z;
-                baseZ = h0 > 0.5f && z < -h0 * 0.6f ? z + h0 : z;      // made at the lifted height already
+                float h0 = TerrainHeight.At(transform.G()), y = transform.position.y;
+                baseY = h0 > 0.5f && y > h0 * 0.6f ? y - h0 : y;      // made at the lifted height already
             }
             if (skip) return;
             var p = transform.position;
-            p.z = baseZ - TerrainHeight.At(p);
+            p.y = baseY + TerrainHeight.At(p.G());
             transform.position = p;
         }
     }
@@ -233,7 +236,7 @@ namespace TWF
             string key = art + "@" + height;
             if (spriteMats.TryGetValue(key, out var m) && m != null) return m;
             m = new Material(EnvShader) { name = "EnvSprite " + key };
-            m.SetFloat("_BaseZ", -height);
+            m.SetFloat("_BaseZ", height);
             var glow = Tex(art + "_glow");
             if (glow != null) m.SetTexture("_GlowTex", glow);
             spriteMats[key] = m;
@@ -244,7 +247,7 @@ namespace TWF
         {
             var m = new Material(EnvShader) { name = "EnvWall", mainTexture = tex };
             m.SetFloat("_WallMode", 1f);
-            m.SetFloat("_BaseZ", baseZ);
+            m.SetFloat("_BaseZ", -baseZ);   // baseZ: old convention (negative is up)
             return m;
         }
 
@@ -278,7 +281,7 @@ namespace TWF
             mesh.colors = new[] { Color.white, Color.white, Color.white, Color.white };
             mesh.normals = new[] { Vector3.back, Vector3.back, Vector3.back, Vector3.back };
             mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
-            mesh.RecalculateBounds();
+            Ground.ToY(mesh);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = go.AddComponent<MeshRenderer>();
             r.sharedMaterial = new Material(RenderAssets.Instance.litDetail) { mainTexture = tex };
@@ -349,7 +352,7 @@ namespace TWF
             if (views == null) return null;
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
-            go.transform.position = new Vector3(p.x, p.y, -height);
+            go.transform.position = p.W(height);
             go.layer = LayerMask.NameToLayer("Walls");
 
             var visual = new GameObject("Visual");
@@ -364,7 +367,7 @@ namespace TWF
             if (m.footprint != null && m.footprint.Length == 2 && m.footprint[0] > 0)
             {
                 var size = new Vector2(m.footprint[0], m.footprint[1]);
-                go.AddComponent<BoxCollider2D>().size = size;
+                Phys.Box(go, size);
                 ContactShadow(go.transform, size);
             }
             ShadowShape(go.transform, m.proxy);
@@ -372,24 +375,27 @@ namespace TWF
         }
 
         // A tree or bush: a single upright view, swaying like the old ones.
+        // Whether trees, bushes and rocks use the environment kit's 3D meshes; off, they are the pixel-art sprites.
+        public static bool MeshNature = false;
+
         public static GameObject PlaceTree(string name, Transform parent, Vector2 p, float height = 0f)
         {
             // The 3D trees and bushes of the environment kit stand in for the old cards when installed.
             string[] meshes = name == "bush" ? new[] { "bush_green", "bush_flower", "bush_red" } : new[] { "tree_green", "tree_green2", "tree_red", "tree_orange" };
             uint hh = (uint)(Mathf.RoundToInt(p.x * 7.3f) * 73856093 ^ Mathf.RoundToInt(p.y * 5.1f) * 19349663);
-            var mesh = EnvMesh.Place(meshes[hh % (uint)meshes.Length], parent, p, height, hh % 360);
+            var mesh = MeshNature ? EnvMesh.Place(meshes[hh % (uint)meshes.Length], parent, p, height, hh % 360) : null;
             if (mesh != null)
             {
                 float sc = 0.9f + (hh >> 8) % 30 / 100f;
                 mesh.transform.localScale = new Vector3(sc, sc, sc);
-                if (name != "bush" && mesh.GetComponent<Collider2D>() == null) mesh.AddComponent<CircleCollider2D>().radius = 0.4f;
+                if (name != "bush" && mesh.GetComponent<Collider>() == null) Phys.Circle(mesh, 0.4f);
                 return mesh;
             }
             var views = LoadViews(name);
             if (views == null) return null;
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
-            go.transform.position = new Vector3(p.x, p.y, -height);
+            go.transform.position = p.W(height);
             go.layer = LayerMask.NameToLayer("Walls");
             var visual = new GameObject("Visual");
             visual.transform.SetParent(go.transform, false);
@@ -398,7 +404,7 @@ namespace TWF
             sr.sprite = views[0];
             // The card itself casts nothing: its flat shadow would swing round with the camera.
             RenderAssets.MakeLit(sr, false, RenderAssets.Instance.litWind);
-            go.AddComponent<CircleCollider2D>().radius = 0.5f;
+            Phys.Circle(go, 0.5f);
             ShadowShape(go.transform, LoadMeta(name).proxy);
             return go;
         }
@@ -426,7 +432,8 @@ namespace TWF
             }
             var go = new GameObject("ContactShadow");
             go.transform.SetParent(parent, false);
-            go.transform.localPosition = new Vector3(0f, 0f, Ground.DecalZ);
+            go.transform.localPosition = new Vector3(0f, Ground.DecalH, 0f);
+            go.transform.localRotation = Ground.Flat;
             float pad = Mathf.Min(1.1f, Mathf.Min(size.x, size.y) * 0.5f);
             go.transform.localScale = new Vector3(size.x + pad, size.y + pad, 1f);
             var sr = go.AddComponent<SpriteRenderer>();
@@ -460,9 +467,10 @@ namespace TWF
             mesh.vertices = new[] { new Vector3(-x, -y, z0), new Vector3(x, -y, z0), new Vector3(x, 0f, z1), new Vector3(-x, 0f, z1), new Vector3(-x, y, z0), new Vector3(x, y, z0) };
             mesh.triangles = new[] { 0, 1, 2, 0, 2, 3, 1, 5, 2, 5, 4, 3, 5, 3, 2, 4, 0, 3, 0, 4, 5, 0, 5, 1 };
             mesh.RecalculateNormals();
+            Ground.ToY(mesh);
             var go = new GameObject("RoofShadow");
             go.transform.SetParent(parent, false);
-            if (!ridgeX) go.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            if (!ridgeX) go.transform.localRotation = Ground.Spin(90f);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;
             var r = go.AddComponent<MeshRenderer>();
             r.sharedMaterial = RenderAssets.Instance.litSprite;
@@ -476,8 +484,9 @@ namespace TWF
             UnityEngine.Object.Destroy(go.GetComponent<Collider>());
             go.name = "ShadowShape";
             go.transform.SetParent(parent, false);
-            go.transform.localPosition = pos;
-            go.transform.localRotation = rot ?? Quaternion.identity;
+            // Shapes are given with the ground on XY and up -Z; turned into the Y-up world here.
+            go.transform.localPosition = Ground.FromOld(pos);
+            go.transform.localRotation = Ground.Flat * (rot ?? Quaternion.identity);
             go.transform.localScale = scale;
             var r = go.GetComponent<MeshRenderer>();
             r.sharedMaterial = RenderAssets.Instance.litSprite;

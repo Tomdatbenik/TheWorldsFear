@@ -223,11 +223,11 @@ namespace TWF
             if (!Has("m_convergence")) return;
             attackCount++;
             if (attackCount % 8 != 0) return;
-            Vector2 at = target != null ? (Vector2)target.transform.position : (Vector2)h.transform.position + dir * 2.5f;
+            Vector2 at = target != null ? target.transform.G() : h.transform.G() + dir * 2.5f;
             float r = 2.4f * SlashScale(h.Combatant);
             Fx.Blast(at, r, AllElements | (((int)ElementPart.Fire + 1) << 8), Elements.Color(ElementPart.Fire));
             CameraFollow.Shake(0.12f);
-            FloatingText.Spawn(at + (Vector2)View.Up * 1.5f, "Convergence", new Color(1f, 0.3f, 0.5f), 1f);
+            FloatingText.Spawn(at + View.Up.G() * 1.5f, "Convergence", new Color(1f, 0.3f, 0.5f), 1f);
             foreach (var c in Combat.HostilesInRadius(Team.Player, at, r).ToArray())
                 Combat.Hit(h.Combatant, c, 2f, default, false, 0.4f, -1f, AllElements);
         }
@@ -268,7 +268,7 @@ namespace TWF
             VFX.Ring(at, new Color(0.7f, 0.45f, 1f), pull, 0.45f);
             foreach (var c in Combat.HostilesInRadius(Team.Player, at, pull).ToArray())
             {
-                Vector2 to = at - (Vector2)c.transform.position;
+                Vector2 to = at - c.transform.G();
                 float d = to.magnitude;
                 if (d < 0.4f) continue;
                 c.TakeDamage(new DamageInfo { source = caster, amount = 0f, silent = true, trueDamage = true, knockback = to / d * Mathf.Min(d * 0.85f, 4f) });
@@ -278,7 +278,7 @@ namespace TWF
         static void OnDealt(Combatant owner, Combatant target, DamageInfo info)
         {
             if (info.silent || target == null) return;
-            Vector2 at = target.transform.position;
+            Vector2 at = target.transform.G();
 
             if (info.isBasicAttack && twin.HasValue && !target.IsDead)
                 Fx.HitOn(target, Fx.Name(twin.Value));
@@ -357,11 +357,11 @@ namespace TWF
             if (Time.time < phoenixReady) return false;
             phoenixReady = Time.time + 90f;
             owner.SetHP(owner.MaxHP * 0.4f);
-            Vector2 at = owner.transform.position;
+            Vector2 at = owner.transform.G();
             Fx.Blast(at, 3.5f, "fire");
             VFX.Burst(at, new Color(1f, 0.6f, 0.2f), 40, 2.5f);
             CameraFollow.Shake(0.3f);
-            FloatingText.Spawn(at + (Vector2)View.Up * 2.4f, "Phoenix Heart!", new Color(1f, 0.55f, 0.2f), 1.4f, 1.3f);
+            FloatingText.Spawn(at + View.Up.G() * 2.4f, "Phoenix Heart!", new Color(1f, 0.55f, 0.2f), 1.4f, 1.3f);
             foreach (var c in Combat.HostilesInRadius(owner.team, at, 3.5f).ToArray())
                 Combat.Hit(owner, c, 2.5f, StatusSpec.Burn(0.5f, 4f), false, 1.2f, -1f, Elements.Mask(ElementPart.Fire));
             runner.Shield(1.5f);
@@ -383,7 +383,7 @@ namespace TWF
         public void Setup(HeroController h)
         {
             hero = h;
-            lastPos = h.transform.position;
+            lastPos = h.transform.G();
             var anim = h.GetComponentInChildren<CharacterAnimator>();
             body = anim ? anim.GetComponent<SpriteRenderer>() : null;
         }
@@ -423,7 +423,7 @@ namespace TWF
             for (float t = 0f; t < time; t += Time.deltaTime)
             {
                 float k = t / time;
-                go.transform.position = (Vector3)at + View.Up * Mathf.Lerp(7f, 0.3f, k * k) + (Vector3)(Vector2.left * Mathf.Lerp(2.5f, 0f, k));
+                go.transform.position = Ground.On(at) + View.Up * Mathf.Lerp(7f, 0.3f, k * k) + (Vector2.left * Mathf.Lerp(2.5f, 0f, k)).W();
                 if (UnityEngine.Random.value < 0.5f) VFX.Burst(go.transform.position, new Color(1f, 0.45f, 0.15f), 2, 0.2f);
                 yield return null;
             }
@@ -436,7 +436,7 @@ namespace TWF
         {
             if (hero == null || hero.Combatant.IsDead) { ShowShadow(false); return; }
             float dt = Time.deltaTime;
-            Vector2 pos = hero.transform.position;
+            Vector2 pos = hero.transform.G();
 
             if (MythicPowers.Has("m_stormcrown"))
             {
@@ -469,7 +469,7 @@ namespace TWF
             if (aegisStored > 0f && Time.time >= aegisAt)
             {
                 var target = Combat.NearestHostile(Team.Player, pos, 9f);
-                if (target != null) { Pillar(target.transform.position, aegisStored); aegisStored = 0f; }
+                if (target != null) { Pillar(target.transform.G(), aegisStored); aegisStored = 0f; }
                 else if (Time.time > aegisAt + 10f) aegisStored = 0f;
             }
 
@@ -480,12 +480,12 @@ namespace TWF
         {
             var struck = new HashSet<Combatant>();
             var cur = first;
-            Vector2 from = (Vector2)hero.transform.position + (Vector2)View.Up * 3f;
+            Vector2 from = hero.transform.G() + View.Up.G() * 3f;
             for (int k = 0; k < 3 && cur != null; k++)
             {
                 struck.Add(cur);
-                Vector2 at = cur.transform.position;
-                VFX.Slash(Vector3.Lerp(from, at, 0.5f), (at - from).normalized, Vector2.Distance(from, at) * 0.5f, 6f, new Color(0.7f, 0.85f, 1f));
+                Vector2 at = cur.transform.G();
+                VFX.Slash(Ground.On(Vector2.Lerp(from, at, 0.5f)), (at - from).normalized, Vector2.Distance(from, at) * 0.5f, 6f, new Color(0.7f, 0.85f, 1f));
                 Fx.Play("blast_lightning", at, 0.8f);
                 Combat.Hit(hero.Combatant, cur, 0.9f, default, false, 0f, -1f, Elements.Mask(ElementPart.Lightning));
                 from = at;
@@ -494,7 +494,7 @@ namespace TWF
                 foreach (var c in Combat.HostilesInRadius(Team.Player, at, 4.5f))
                 {
                     if (struck.Contains(c) || c.IsDead) continue;
-                    float d = Vector2.Distance(at, c.transform.position);
+                    float d = Vector2.Distance(at, c.transform.G());
                     if (d < best) { best = d; next = c; }
                 }
                 cur = next;
@@ -508,7 +508,7 @@ namespace TWF
             float dmg = stored * 2f + c.Stats.Get(StatType.Damage);
             Fx.Blast(at, 1.5f, "holy");
             VFX.Burst(at, new Color(1f, 0.95f, 0.6f), 24, 1.2f);
-            FloatingText.Spawn(at + (Vector2)View.Up * 2f, "Divine Aegis", new Color(1f, 0.92f, 0.55f), 0.9f);
+            FloatingText.Spawn(at + View.Up.G() * 2f, "Divine Aegis", new Color(1f, 0.92f, 0.55f), 0.9f);
             foreach (var t in Combat.HostilesInRadius(Team.Player, at, 1.5f).ToArray())
                 t.TakeDamage(new DamageInfo { source = c, amount = dmg, trueDamage = true, elements = Elements.Mask(ElementPart.Holy) });
         }
@@ -537,7 +537,7 @@ namespace TWF
             shadow.transform.rotation = bt.rotation;
             shadow.transform.localScale = bt.lossyScale;
             Vector2 back = -hero.Facing * (twinFlash > 0f ? 0.35f : 0.75f) + Vector2.left * 0.25f;
-            shadow.transform.position = bt.position + (Vector3)back;
+            shadow.transform.position = bt.position + back.W();
             shadow.color = new Color(0.16f, 0.05f, 0.24f, twinFlash > 0f ? 0.85f : 0.6f);
         }
     }

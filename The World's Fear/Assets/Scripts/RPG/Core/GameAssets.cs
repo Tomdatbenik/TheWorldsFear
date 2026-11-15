@@ -140,17 +140,10 @@ namespace TWF
             RenderAssets.MakeUnlit(sr);
             float native = sprite.bounds.size.x;
             go.transform.localScale = Vector3.one * (worldSize / native);
+            // A loose sprite lies on the ground (shadows, rings, telegraphs); billboards stand theirs up.
+            if (parent == null || parent.GetComponentInParent<Billboard>(true) == null) go.transform.localRotation = Ground.Flat;
             return sr;
         }
-    }
-
-    public static class Ground
-    {
-        // Flat decals (telegraphs, rings) sit a hair above the ground to avoid z-fighting. Up is -Z.
-        // Above the village plaza (-0.04) and roads, which would otherwise hide decals there.
-        public const float DecalZ = -0.07f;
-
-        public static Vector3 Decal(Vector2 p) => new Vector3(p.x, p.y, DecalZ - TerrainHeight.At(p));
     }
 
     public static class SortOrder

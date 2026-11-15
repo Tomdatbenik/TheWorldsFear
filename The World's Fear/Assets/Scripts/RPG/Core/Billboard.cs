@@ -65,16 +65,16 @@ namespace TWF
         // Inverse of ToWorld: world direction as seen on screen.
         public static Vector2 ToScreen(Vector2 worldDir) => (Vector2)(Quaternion.Euler(0f, 0f, -Yaw) * worldDir);
 
-        // Projects a screen point onto the ground plane (z = 0).
+        // Projects a screen point onto the ground at the hero's height.
         public static Vector2? ScreenToGround(Vector2 screen)
         {
             var cam = Camera.main;
             if (cam == null) return null;
             var ray = cam.ScreenPointToRay(screen);
-            if (Mathf.Abs(ray.direction.z) < 0.0001f) return null;
-            float t = (-GroundHeight - ray.origin.z) / ray.direction.z;
+            if (Mathf.Abs(ray.direction.y) < 0.0001f) return null;
+            float t = (GroundHeight - ray.origin.y) / ray.direction.y;
             if (t < 0f) return null;
-            return (Vector2)(ray.origin + ray.direction * t);
+            return (ray.origin + ray.direction * t).G();
         }
     }
 }

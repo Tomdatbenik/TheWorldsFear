@@ -29,13 +29,13 @@ namespace TWF
         float W => HalfWidth + 0.5f;
         float L => HalfLength + 0.5f;
         float Depth => Steps * Rise;
-        Vector2 Mouth => (Vector2)transform.position + Vector2.down * (L + 0.4f);
+        Vector2 Mouth => transform.G() + Vector2.down * (L + 0.4f);
         int MonsterLevel => areaLevel + LevelBonus;
         // Cleared once its warden falls (or every chest is opened); after that the way down caves in for good.
         bool Cleared => Profile.Data.openedChests.Contains(DoneKey(key));
         bool Fallen => Profile.Data.openedChests.Contains(FallenKey(key));
-        Biome LandBiome => WorldGen.BiomeAt(transform.position);
-        int Seed => (int)(WorldGen.Hash(Mathf.FloorToInt(transform.position.x), Mathf.FloorToInt(transform.position.y)) & 0x7FFFFFFF);
+        Biome LandBiome => WorldGen.BiomeAt(transform.G());
+        int Seed => (int)(WorldGen.Hash(Mathf.FloorToInt(transform.position.x), Mathf.FloorToInt(transform.position.z)) & 0x7FFFFFFF);
         DungeonVariant Variant => DungeonVariant.For(LandBiome, Seed);
 
         public static string DoneKey(string gateKey) => $"dgn_{gateKey}_done";
@@ -47,7 +47,7 @@ namespace TWF
             BuildColliders();
             foreach (float side in new[] { -1f, 1f })
             {
-                var light = PointLights.Attach(transform, Variant.torch, 6f, 0.8f, new Vector3(side * (W + 0.2f), -L + 0.5f, -1.2f), true);
+                var light = PointLights.Attach(transform, Variant.torch, 6f, 0.8f, new Vector3(side * (W + 0.2f), 1.2f, -L + 0.5f), true);
                 if (light != null) lights.Add(light);
             }
 
@@ -147,17 +147,14 @@ namespace TWF
             var solid = new GameObject("Well Collider");
             solid.transform.SetParent(transform, false);
             solid.layer = LayerMask.NameToLayer("Walls");
-            var box = solid.AddComponent<BoxCollider2D>();
-            box.size = new Vector2(2f * W + 1f, 2f * L);
-            var solidBody = solid.AddComponent<Rigidbody2D>();
-            solidBody.bodyType = RigidbodyType2D.Static;
+            Phys.Box(solid, new Vector2(2f * W + 1f, 2f * L));
         }
 
         void Update()
         {
             var hero = HeroController.Instance;
             if (hero == null || walking || ConfirmDialog.IsOpen) return;
-            bool near = Vector2.Distance(hero.transform.position, Mouth) < ReachRadius;
+            bool near = Vector2.Distance(hero.transform.G(), Mouth) < ReachRadius;
             if (near && !prompted)
             {
                 prompted = true;
@@ -183,7 +180,7 @@ namespace TWF
         {
             yield return new WaitForSeconds(1f);   // let the scene fade in first
             var hero = HeroController.Instance;
-            if (hero == null || Vector2.Distance(hero.transform.position, transform.position) > CrumbleViewRange)
+            if (hero == null || Vector2.Distance(hero.transform.G(), transform.G()) > CrumbleViewRange)
             {
                 Collapse();
                 yield break;
@@ -203,21 +200,21 @@ namespace TWF
                 float fall = k * k * (3f - 2f * k);
                 float jitter = (1f - k) * 0.07f;
                 if (kerb != null)
-                    kerb.transform.localPosition = kerbStart + new Vector3(Random.Range(-jitter, jitter), 0f, (PortalHeight + RimHeight) * fall);
-                if (rubble != null) rubble.transform.localPosition = new Vector3(0f, 0f, Depth * (1f - fall));
+                    kerb.transform.localPosition = kerbStart + new Vector3(Random.Range(-jitter, jitter), -((PortalHeight + RimHeight) * fall), 0f);
+                if (rubble != null) rubble.transform.localPosition = new Vector3(0f, -(Depth * (1f - fall)), 0f);
                 for (int i = 0; i < lights.Count; i++)
                     if (lights[i] != null) lights[i].intensity = lightStart[i] * (1f - fall);
                 if (t >= nextDust)
                 {
                     nextDust = t + 0.12f;
-                    var at = (Vector2)transform.position + new Vector2(Random.Range(-W, W), Random.Range(-L, L));
+                    var at = transform.G() + new Vector2(Random.Range(-W, W), Random.Range(-L, L));
                     VFX.Burst(at, Dust, 6, 0.9f);
                     CameraFollow.Shake(0.18f * (1f - k) + 0.04f);
                 }
                 yield return null;
             }
             for (int i = 0; i < 4; i++)
-                VFX.Burst((Vector2)transform.position + new Vector2(Random.Range(-W, W), Random.Range(-L, L)), Dust, 10, 1.2f);
+                VFX.Burst(transform.G() + new Vector2(Random.Range(-W, W), Random.Range(-L, L)), Dust, 10, 1.2f);
             Collapse();
         }
 
@@ -266,7 +263,7 @@ namespace TWF
         {
             walking = true;
             Panels.CloseAll();
-            Vector2 centre = transform.position;
+            Vector2 centre = transform.G();
             var biome = WorldGen.BiomeAt(centre);
             var cell = new Vector2Int(Mathf.FloorToInt(centre.x), Mathf.FloorToInt(centre.y));
             hero.StartCoroutine(DungeonTravel.WalkStairs(hero, centre + Vector2.down * L, centre + Vector2.up * (L - 0.6f), 0f, Depth,

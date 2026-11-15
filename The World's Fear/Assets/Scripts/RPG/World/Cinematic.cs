@@ -48,29 +48,29 @@ namespace TWF
             Vector2 farm = WorldGen.Farms.Count > 0 ? WorldGen.Farms[0].rect.center : new Vector2(0f, -80f);
             var keys = new List<Key>
             {
-                new Key { focus = new Vector3(0f, -70f, 0f), yaw = 0f, size = 11f, pitch = 34f, hold = 0f },
-                new Key { focus = new Vector3(0f, -46f, -2f), yaw = 0f, size = 13f, pitch = 38f, hold = 5f },        // up the south road to the gate
-                new Key { focus = new Vector3(0f, -24f, -3f), yaw = 0f, size = 15f, pitch = 44f, hold = 5f },        // through it into the plaza
-                new Key { focus = new Vector3(0f, 0f, -6f), yaw = 70f, size = 24f, pitch = 48f, hold = 7f },         // round the citadel
-                new Key { focus = new Vector3(0f, 0f, -4f), yaw = 160f, size = 36f, pitch = 58f, hold = 7f },        // the whole town
-                new Key { focus = new Vector3(farm.x, farm.y, -1f), yaw = 200f, size = 16f, pitch = 46f, hold = 7f }, // the farms
+                new Key { focus = new Vector3(0f, 0f, -70f), yaw = 0f, size = 11f, pitch = 34f, hold = 0f },
+                new Key { focus = new Vector3(0f, 2f, -46f), yaw = 0f, size = 13f, pitch = 38f, hold = 5f },        // up the south road to the gate
+                new Key { focus = new Vector3(0f, 3f, -24f), yaw = 0f, size = 15f, pitch = 44f, hold = 5f },        // through it into the plaza
+                new Key { focus = new Vector3(0f, 6f, 0f), yaw = 70f, size = 24f, pitch = 48f, hold = 7f },         // round the citadel
+                new Key { focus = new Vector3(0f, 4f, 0f), yaw = 160f, size = 36f, pitch = 58f, hold = 7f },        // the whole town
+                new Key { focus = new Vector3(farm.x, 1f, farm.y), yaw = 200f, size = 16f, pitch = 46f, hold = 7f }, // the farms
             };
             // The highest land near the town, and a waterfall on it if there is one.
             if (FindPeak(out var peak, out int level, out var fall))
             {
                 float h = level * WorldGen.LevelHeight;
                 var mid = Vector2.Lerp(farm, peak, 0.55f);
-                keys.Add(new Key { focus = new Vector3(mid.x, mid.y, -h * 0.4f), yaw = 230f, size = 30f, pitch = 40f, hold = 7f });
-                keys.Add(new Key { focus = new Vector3(peak.x, peak.y, -h * 0.7f), yaw = 300f, size = 28f, pitch = 34f, hold = 8f });
+                keys.Add(new Key { focus = new Vector3(mid.x, -(-h * 0.4f), mid.y), yaw = 230f, size = 30f, pitch = 40f, hold = 7f });
+                keys.Add(new Key { focus = new Vector3(peak.x, -(-h * 0.7f), peak.y), yaw = 300f, size = 28f, pitch = 34f, hold = 8f });
                 if (fall != Vector2.zero)
-                    keys.Add(new Key { focus = new Vector3(fall.x, fall.y, -WorldGen.HeightAt(fall) - 2f), yaw = 340f, size = 14f, pitch = 30f, hold = 7f });
-                keys.Add(new Key { focus = new Vector3(peak.x, peak.y, -h * 0.5f), yaw = 380f, size = 40f, pitch = 55f, hold = 7f });
+                    keys.Add(new Key { focus = new Vector3(fall.x, -(-WorldGen.HeightAt(fall) - 2f), fall.y), yaw = 340f, size = 14f, pitch = 30f, hold = 7f });
+                keys.Add(new Key { focus = new Vector3(peak.x, -(-h * 0.5f), peak.y), yaw = 380f, size = 40f, pitch = 55f, hold = 7f });
                 // Make sure the land is there to be seen: load round each stop along the way.
-                foreach (var k in keys) ChunkWorld.Instance.LoadAround(k.focus);
+                foreach (var k in keys) ChunkWorld.Instance.LoadAround(k.focus.G());
             }
             var hero = HeroController.Instance.transform.position;
             keys.Add(new Key { focus = hero, yaw = 360f * Mathf.Ceil(keys[keys.Count - 1].yaw / 360f), size = 9f, pitch = 52f, hold = 4f });
-            foreach (var k in keys) ChunkWorld.Instance.LoadAround(k.focus);
+            foreach (var k in keys) ChunkWorld.Instance.LoadAround(k.focus.G());
 
             // Recording renders into its own 1600x900 target, whatever size the window is.
             RenderTexture target = null;

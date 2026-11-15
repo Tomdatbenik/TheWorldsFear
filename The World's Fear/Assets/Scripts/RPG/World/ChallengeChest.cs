@@ -43,10 +43,10 @@ namespace TWF
             RenderAssets.MakeLit(sr);
             var shadow = GameAssets.CreateWorldSprite("Shadow", GameAssets.SoftCircle, transform, new Color(0, 0, 0, 0.35f), SortOrder.Units - 1, 1.6f);
             shadow.transform.localScale = new Vector3(shadow.transform.localScale.x, shadow.transform.localScale.y * 0.5f, 1f);
-            shadow.transform.localPosition = new Vector3(0, 0, Ground.DecalZ);
-            if (!opened) glow = PointLights.Attach(transform, TierColor(waves), 4f, 1.4f, new Vector3(0, 0, -1f), true);
+            shadow.transform.localPosition = new Vector3(0, Ground.DecalH, 0);
+            if (!opened) glow = PointLights.Attach(transform, TierColor(waves), 4f, 1.4f, new Vector3(0, 1f, 0), true);
             gameObject.layer = LayerMask.NameToLayer("Walls");
-            gameObject.AddComponent<BoxCollider2D>().size = new Vector2(1.2f, 0.7f);
+            Phys.Box(gameObject, new Vector2(1.2f, 0.7f));
 
             label = new GameObject("Label").AddComponent<TextMeshPro>();
             label.transform.SetParent(Billboard.Create(transform), false);
@@ -73,7 +73,7 @@ namespace TWF
             var hero = HeroController.Instance;
             if (hero == null || GameUI.Instance == null) return;
             if (glow != null) glow.intensity = 1.2f + Mathf.Sin(Time.time * 3f) * 0.3f;
-            bool near = state == State.Idle && Vector2.Distance(hero.transform.position, transform.position) < 2.4f;
+            bool near = state == State.Idle && Vector2.Distance(hero.transform.G(), transform.G()) < 2.4f;
             if (near && !inRange)
                 GameUI.Instance.ShowInteract("Start", () => ConfirmDialog.Show(
                     $"Start the challenge?\n<size=70%>{waves} waves, the last one {BiggestWave(waves)} monsters strong. Stay near the chest; " +
@@ -95,10 +95,10 @@ namespace TWF
             state = State.Running;
             label.text = $"Challenge\n<size=70%>starting...</size>";
             arenaRing = GameAssets.CreateWorldSprite("Arena", GameAssets.PixelRing, transform, new Color(TierColor(waves).r, TierColor(waves).g, TierColor(waves).b, 0.6f), SortOrder.Ground + 4, ArenaRadius * 2f).gameObject;
-            arenaRing.transform.localPosition = new Vector3(0, 0, Ground.DecalZ);
+            arenaRing.transform.localPosition = new Vector3(0, Ground.DecalH, 0);
             Sound.Play(Sfx.MetalRoar, transform.position, 0.5f);
-            int level = WorldGen.LevelAt(transform.position);
-            var zone = WorldGen.RegionAt(transform.position);
+            int level = WorldGen.LevelAt(transform.G());
+            var zone = WorldGen.RegionAt(transform.G());
             var rng = new System.Random(key.GetHashCode() ^ System.Environment.TickCount);
             var pool = MonsterPool(zone);
             yield return new WaitForSeconds(1.5f);
@@ -187,16 +187,16 @@ namespace TWF
             for (int tries = 0; tries < 12; tries++)
             {
                 float a = (float)rng.NextDouble() * Mathf.PI * 2f;
-                var p = (Vector2)transform.position + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * (7f + (float)rng.NextDouble() * 5f);
-                if (Physics2D.OverlapCircle(p, 0.5f, Walls.Mask) == null) return p;
+                var p = transform.G() + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * (7f + (float)rng.NextDouble() * 5f);
+                if (Phys.OverlapCircle(p, 0.5f, Walls.Mask) == null) return p;
             }
-            return (Vector2)transform.position + Random.insideUnitCircle.normalized * 4f;
+            return transform.G() + Random.insideUnitCircle.normalized * 4f;
         }
 
         bool Failed()
         {
             var hero = HeroController.Instance;
-            return hero == null || hero.Combatant.IsDead || Vector2.Distance(hero.transform.position, transform.position) > ArenaRadius + 4f;
+            return hero == null || hero.Combatant.IsDead || Vector2.Distance(hero.transform.G(), transform.G()) > ArenaRadius + 4f;
         }
 
         IEnumerator Fail()
@@ -226,7 +226,7 @@ namespace TWF
             VFX.Burst(transform.position, Palette.Gold, 60, 3f);
 
             var rng = new System.Random(key.GetHashCode() ^ System.Environment.TickCount);
-            Vector2 at = transform.position + Vector3.down * 1.4f;
+            Vector2 at = transform.G() + Vector2.down * 1.4f;
             Vector2 Spot() => at + Random.insideUnitCircle * 2.2f;
 
             // Gear: more pieces and better rarities the longer the challenge.

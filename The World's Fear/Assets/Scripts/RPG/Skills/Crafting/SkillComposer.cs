@@ -265,7 +265,7 @@ namespace TWF
             Pop(ctx, target);
             if (chain > 0) Chain(ctx, target, chain);
             if (lingering)
-                AreaEffect.Spawn(ctx.caster, target.transform.position, new AreaSpec
+                AreaEffect.Spawn(ctx.caster, target.transform.G(), new AreaSpec
                 {
                     radius = 1.3f * ctx.Area, delay = 0.1f, ticks = 4, interval = 0.5f, damageMult = 0.25f * ctx.power,
                     status = ctx.Scale(status), color = color, elements = elements,
@@ -276,7 +276,7 @@ namespace TWF
         public void Pop(SkillContext ctx, Combatant target)
         {
             if (pop <= 0f || target == null || ctx.caster == null) return;
-            AreaEffect.Spawn(ctx.caster, target.transform.position, new AreaSpec
+            AreaEffect.Spawn(ctx.caster, target.transform.G(), new AreaSpec
             {
                 radius = 0.75f * Mathf.Sqrt(ctx.Area), delay = 0.08f, damageMult = pop * ctx.power, status = ctx.Scale(status), color = color, elements = elements,
             });
@@ -293,17 +293,17 @@ namespace TWF
             {
                 Combatant next = null;
                 float best = 4.5f;
-                foreach (var c in Combat.HostilesInRadius(ctx.caster.team, current.transform.position, 4.5f))
+                foreach (var c in Combat.HostilesInRadius(ctx.caster.team, current.transform.G(), 4.5f))
                 {
                     if (hitSet.Contains(c)) continue;
-                    float d = Vector2.Distance(c.transform.position, current.transform.position);
+                    float d = Vector2.Distance(c.transform.G(), current.transform.G());
                     if (d < best) { best = d; next = c; }
                 }
                 if (next == null) break;
                 hitSet.Add(next);
-                Vector2 a = current.transform.position, b = next.transform.position;
+                Vector2 a = current.transform.G(), b = next.transform.G();
                 var line = LineTelegraph.Show(a, (b - a).normalized, Vector2.Distance(a, b), 0.18f, color, 0.15f);
-                line.transform.position += Vector3.back * 0.6f;
+                line.transform.position += Vector3.up * 0.6f;
                 Combat.Hit(ctx.caster, next, chainMult * ctx.power, ctx.Scale(status), false, 0f, -1f, elements);
                 current = next;
             }
@@ -366,7 +366,7 @@ namespace TWF
             {
                 var t = list[i];
                 Vector3 p = t.transform.position;
-                VFX.Burst(p + Vector3.back * 0.8f, hit.color, 14, 0.8f);
+                VFX.Burst(p + Vector3.up * 0.8f, hit.color, 14, 0.8f);
                 VFX.Ring(p, hit.color, 1f, 0.25f);
                 Fx.HitOn(t, hit.elements, hit.color);
                 Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, hit.knockback, -1f, hit.elements);
@@ -376,7 +376,7 @@ namespace TWF
 
         static float Score(SkillContext ctx, Combatant c)
         {
-            Vector2 to = (Vector2)c.transform.position - ctx.origin;
+            Vector2 to = c.transform.G() - ctx.origin;
             return to.magnitude * 0.3f + Vector2.Angle(ctx.direction, to) * 0.05f;
         }
 
@@ -394,7 +394,7 @@ namespace TWF
 
         public override void Apply(SkillContext ctx)
         {
-            Vector2 center = atCaster ? (Vector2)ctx.caster.transform.position : ctx.point;
+            Vector2 center = atCaster ? ctx.caster.transform.G() : ctx.point;
             Spawn(ctx, center, radius * ctx.Area, damageMult);
             // Split: smaller blasts in a ring around the main one.
             for (int i = 0; i < extraBlasts; i++)
@@ -430,7 +430,7 @@ namespace TWF
         {
             float r = radius * ctx.Area;
             Fx.Slash(ctx.caster.transform.position, ctx.direction, r, angle, hit.elements, hit.color);
-            foreach (var t in Combat.HostilesInArc(ctx.caster.team, ctx.caster.transform.position, ctx.direction, r, angle))
+            foreach (var t in Combat.HostilesInArc(ctx.caster.team, ctx.caster.transform.G(), ctx.direction, r, angle))
             {
                 Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(hit.status), false, hit.knockback, -1f, hit.elements);
                 hit.OnHit(ctx, t);
@@ -575,7 +575,7 @@ namespace TWF
         {
             for (int i = 0; i < pulses && ctx.caster != null && !ctx.caster.IsDead; i++)
             {
-                Vector2 at = ctx.caster.transform.position;
+                Vector2 at = ctx.caster.transform.G();
                 float r = radius * ctx.Area;
                 VFX.Ring(at, hit.color, r, 0.3f);
                 // Each pulse shows the next element of the spell, so every element takes a turn.
@@ -625,7 +625,7 @@ namespace TWF
 
         static float Score(SkillContext ctx, Combatant c)
         {
-            Vector2 to = (Vector2)c.transform.position - ctx.origin;
+            Vector2 to = c.transform.G() - ctx.origin;
             return to.magnitude * 0.3f + Vector2.Angle(ctx.direction, to) * 0.05f;
         }
 

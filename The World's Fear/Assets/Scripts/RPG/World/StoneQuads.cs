@@ -60,7 +60,7 @@ namespace TWF
             mesh.SetUVs(0, uvs);
             mesh.SetColors(colors);
             mesh.SetTriangles(tris, 0);
-            mesh.RecalculateBounds();
+            Ground.ToY(mesh);
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
             go.AddComponent<MeshFilter>().sharedMesh = mesh;

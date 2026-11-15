@@ -44,6 +44,7 @@ namespace TWF
         const float ArtPPU = 72f;
         // How far behind its focus the camera sits; fog distances were made for 17, so they add the difference.
         public const float Back = 70f, FogShift = Back - 17f;
+        const float ShadowReach = 27f;   // how far past the focus shadows still fall
         const float MinViewSize = 7.5f;   // never closer than 15 units top to bottom
 
         // Keeps the camera on whole art pixels so the world never shimmers as it scrolls.
@@ -65,8 +66,13 @@ namespace TWF
                 // Orthographic: the world art is rendered flat, so a perspective ground would slide against it.
                 cam.orthographic = true;
                 cam.orthographicSize = distance * ZoomScale;
+                // The camera sits Back units behind its focus, so shadows must reach past it: at URP's 45 they stopped
+                // 25 units short and nothing on screen had one. (The near plane stays put: the fog is measured from it.)
                 cam.nearClipPlane = 0.3f;
                 cam.farClipPlane = 200f;
+                if (UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline is UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset urp
+                    && urp.shadowDistance < Back + ShadowReach)
+                    urp.shadowDistance = Back + ShadowReach;
                 cam.transparencySortMode = TransparencySortMode.Orthographic;
                 cam.clearFlags = CameraClearFlags.SolidColor;
                 var data = UnityEngine.Rendering.Universal.CameraExtensions.GetUniversalAdditionalCameraData(cam);
@@ -193,13 +199,13 @@ namespace TWF
             Vector2 ahead = Vector2.zero;
             if (HeroController.Instance != null && target == HeroController.Instance.transform)
                 ahead = Vector2.Scale(MobaInput.Move, lookAhead);
-            Vector3 goal = new Vector3(target.position.x + ahead.x, target.position.y + ahead.y, -Mathf.Max(focusHeight, groundHeight));
+            Vector3 goal = (target.G() + ahead).W(Mathf.Max(focusHeight, groundHeight));
             focus = Vector3.SmoothDamp(focus, goal, ref velocity, smoothTime);
             shake = Mathf.MoveTowards(shake, 0f, Time.unscaledDeltaTime * 1.5f);
             Apply(shake);
         }
 
-        // The ground is the XY plane and "up" points toward -Z.
+        // The world is Y-up: the ground is the XZ plane.
         void Apply(float shakeAmount)
         {
             // One grid for the whole picture: the view size is always a whole number of screen pixels per art pixel.
@@ -212,13 +218,13 @@ namespace TWF
             // The world art has a baked view every 22.5 degrees; the camera stops on those so ground and buildings always match.
             float shownYaw = CinematicActive ? yaw : Mathf.Round(yaw / ViewStep) * ViewStep;
             float shownPitch = CinematicActive ? CinematicPitch : pitch;
-            var orbit = Quaternion.Euler(0f, 0f, shownYaw);
-            Vector3 back = orbit * new Vector3(0f, -Mathf.Cos(shownPitch * Mathf.Deg2Rad), -Mathf.Sin(shownPitch * Mathf.Deg2Rad));
+            var orbit = Ground.Spin(shownYaw);
+            Vector3 back = orbit * new Vector3(0f, Mathf.Sin(shownPitch * Mathf.Deg2Rad), -Mathf.Cos(shownPitch * Mathf.Deg2Rad));
             // Orthographic: how far back only matters for clipping; far enough that a mountain between camera and hero still shows.
             Vector3 pos = focus + back * Back;
             Vector3 forward = (focus - pos).normalized;
-            var rot = Quaternion.LookRotation(forward, Vector3.back);
-            pos += (Vector3)(Random.insideUnitCircle * shakeAmount);
+            var rot = Quaternion.LookRotation(forward, Vector3.up);
+            pos += rot * (Vector3)(Random.insideUnitCircle * shakeAmount);
             if (cam && cam.orthographic) pos = SnapToPixels(pos, rot);
             transform.SetPositionAndRotation(pos, rot);
             View.Set(rot, shownYaw);
@@ -230,6 +236,8 @@ namespace TWF
         static AudioSource source;
         static readonly System.Collections.Generic.Dictionary<AudioClip, float> lastPlayed = new System.Collections.Generic.Dictionary<AudioClip, float>();
         const float MinGap = 0.08f;   // the same sound can't restart faster than this
+
+        public static void Play(AudioClip clip, Vector2 at, float volume = 1f) => Play(clip, Ground.On(at), volume);
 
         public static void Play(AudioClip clip, Vector3 at, float volume = 1f)
         {

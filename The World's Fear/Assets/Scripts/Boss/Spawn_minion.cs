@@ -1,3 +1,4 @@
+using TWF;
 using UnityEngine;
 
 public class Spawn_minion : MonoBehaviour
@@ -8,6 +9,6 @@ public class Spawn_minion : MonoBehaviour
     // The boss now summons generated monsters instead of the old spider.
     public void SpawnSpider()
     {
-        TWF.BossHelpers.SpawnMinions((Vector2)transform.position + Vector2.down * 8f, 2);
+        TWF.BossHelpers.SpawnMinions(transform.G() + Vector2.down * 8f, 2);
     }
 }

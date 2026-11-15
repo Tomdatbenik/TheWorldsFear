@@ -1,0 +1,17 @@
+{
+ "name": "portal",
+ "kind": "portal",
+ "mesh": true,
+ "footprint": [
+  4.6,
+  1.2
+ ],
+ "height": 5.211111068725586,
+ "verts": 495,
+ "tris": 253,
+ "materials": [
+  "runestone",
+  "rune",
+  "swirl"
+ ]
+}

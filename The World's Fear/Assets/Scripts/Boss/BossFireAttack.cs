@@ -1,4 +1,5 @@
-﻿using System.Collections;
+using TWF;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -33,7 +34,7 @@ public class BossFireAttack : MonoBehaviour
         {
             GameObject fireball = Fireball;
             fireball = Instantiate(fireball);
-            fireball.transform.position = fireballs[i];
+            fireball.transform.position = (fireballs[i]).W();
         }
     }
 }

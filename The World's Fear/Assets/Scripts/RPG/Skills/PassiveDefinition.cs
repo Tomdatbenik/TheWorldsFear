@@ -218,7 +218,7 @@ namespace TWF
             Action<Combatant> h = victim =>
             {
                 if (UnityEngine.Random.value > chancePerRank * rank) return;
-                Vector2 p = victim.transform.position;
+                Vector2 p = victim.transform.G();
                 VFX.Ring(p, color, radius, 0.3f);
                 VFX.Burst(p, color, 14, radius);
                 foreach (var c in Combat.HostilesInRadius(owner.team, p, radius))

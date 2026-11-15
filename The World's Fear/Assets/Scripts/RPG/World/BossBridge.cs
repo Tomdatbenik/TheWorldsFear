@@ -41,7 +41,7 @@ namespace TWF
         {
             legacyMax = legacy != null ? Mathf.Max(1, legacy.HealthPoints) : 1;
             // The boss's attack triggers check against the hero's collider.
-            var heroCollider = HeroController.Instance != null ? HeroController.Instance.GetComponent<Collider2D>() : null;
+            var heroCollider = HeroController.Instance != null ? HeroController.Instance.GetComponent<Collider2D>() : null;   // unused: the hero is 3D now
             var root = transform.root;
             foreach (var f in root.GetComponentsInChildren<FistAttack>(true)) f.playercollider = heroCollider;
             foreach (var f in root.GetComponentsInChildren<FistAttackClose>(true)) f.playercollider = heroCollider;
@@ -87,7 +87,7 @@ namespace TWF
             GameUI.Instance?.Toast("The World's Fear is defeated!\nLegendary loot added to your bag", Palette.Gold, 4f);
             for (int i = 0; i < 12; i++)
             {
-                VFX.Burst(transform.position + (Vector3)Random.insideUnitCircle * 3f, new Color(1f, 0.5f, 0.2f), 20, 2f);
+                VFX.Burst(transform.position + (Random.insideUnitCircle * 3f).W(), new Color(1f, 0.5f, 0.2f), 20, 2f);
                 CameraFollow.Shake(0.3f);
                 yield return new WaitForSeconds(0.25f);
             }

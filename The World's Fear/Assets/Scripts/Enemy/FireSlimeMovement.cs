@@ -1,4 +1,5 @@
-﻿using System.Collections;
+using TWF;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -25,7 +26,7 @@ public class FireSlimeMovement : MonoBehaviour
 
     void moveCharacter(Vector2 direction)
     {
-        rb.MovePosition((Vector2)transform.position + (direction * speed.GetSpeed() * Time.deltaTime));
+        rb.MovePosition(transform.G() + (direction * speed.GetSpeed() * Time.deltaTime));
     }
 }
 

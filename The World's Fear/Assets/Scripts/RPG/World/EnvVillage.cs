@@ -79,7 +79,7 @@ namespace TWF
                 var p = new Vector2(area.xMin + (float)rng.NextDouble() * area.width, area.yMin + (float)rng.NextDouble() * area.height);
                 if (Inside(blocked, p, 0.2f) || Vector2.Distance(p, plaza) < plazaRadius + 1f) continue;
                 var bush = EnvArt.PlaceTree("bush", parent, p);
-                if (bush != null) Object.Destroy(bush.GetComponent<CircleCollider2D>());
+                if (bush != null) Object.Destroy(bush.GetComponent<Collider>());
                 blocked.Add(new Rect(p.x - 0.7f, p.y - 0.7f, 1.4f, 1.4f));
                 placed++;
             }
@@ -175,7 +175,7 @@ namespace TWF
                 int start = rng.Next(nodes.Count);
                 var go = new GameObject("Townsperson " + i);
                 go.transform.SetParent(transform, false);
-                go.transform.position = nodes[start];
+                go.transform.position = (nodes[start]).W();
                 var walker = go.AddComponent<EnvWalker>();
                 walker.Init(looks[i], nodes, links, start, rng.Next());
             }
@@ -266,7 +266,7 @@ namespace TWF
 
             var shadow = GameAssets.CreateWorldSprite("Shadow", GameAssets.SoftCircle, transform, new Color(0, 0, 0, 0.3f), SortOrder.Units - 1, 1f);
             shadow.transform.localScale = new Vector3(shadow.transform.localScale.x, shadow.transform.localScale.y * 0.4f, 1f);
-            shadow.transform.localPosition = new Vector3(0f, 0f, Ground.DecalZ);
+            shadow.transform.localPosition = new Vector3(0f, Ground.DecalH, 0f);
         }
 
         void Update()
@@ -277,13 +277,13 @@ namespace TWF
                 npc.Walking = false;
                 return;
             }
-            var pos = (Vector2)transform.position;
+            var pos = transform.G();
             var goal = nodes[target];
             var to = goal - pos;
             float step = Speed * Time.deltaTime;
             if (to.magnitude <= step)
             {
-                transform.position = goal;
+                transform.position = goal.W();
                 current = target;
                 var options = links[current];
                 target = options[rng.Next(options.Count)];
@@ -292,7 +292,7 @@ namespace TWF
             }
             npc.Walking = true;
             npc.Facing = to.normalized;
-            transform.position = pos + to.normalized * step;
+            transform.position = (pos + to.normalized * step).W();
         }
     }
 }

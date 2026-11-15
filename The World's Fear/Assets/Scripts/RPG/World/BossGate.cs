@@ -32,7 +32,7 @@ namespace TWF
         TextMeshPro label;
         bool sealedShown;
 
-        BossKind Kind => WorldManager.KindForGate(transform.position);
+        BossKind Kind => WorldManager.KindForGate(transform.G());
         bool Sealed => !WorldManager.IsUnlocked(Kind);
         string SealedText => $"Sealed: first defeat {BossTitan.BossName(WorldManager.Previous(Kind))}";
 
@@ -45,7 +45,7 @@ namespace TWF
                 label.text = BossTitan.LairName(Kind) + $"\n<size=70%>{BossTitan.BossName(Kind)} · Recommended level {recommendedLevel}</size>";
         }
 
-        bool Defeated => Profile.Data.defeatedGates.Contains(WorldManager.GateKey(transform.position));
+        bool Defeated => Profile.Data.defeatedGates.Contains(WorldManager.GateKey(transform.G()));
 
         void Update()
         {
@@ -68,7 +68,7 @@ namespace TWF
             {
                 // Sealed: a dim, still portal that won't let you in.
                 transform.GetChild(0).gameObject.SetActive(false);
-                bool near = Vector2.Distance(hero.transform.position, transform.position) < 1.3f;
+                bool near = Vector2.Distance(hero.transform.G(), transform.G()) < 1.3f;
                 if (near && !prompted)
                 {
                     prompted = true;
@@ -79,12 +79,12 @@ namespace TWF
             }
             transform.GetChild(0).gameObject.SetActive(true);
             transform.GetChild(1).Rotate(0, 0, 40f * Time.deltaTime);
-            bool inside = Vector2.Distance(hero.transform.position, transform.position) < 1.3f;
+            bool inside = Vector2.Distance(hero.transform.G(), transform.G()) < 1.3f;
             if (inside && !prompted)
             {
                 prompted = true;
                 ConfirmDialog.Show($"Enter the boss arena?\n<size=70%>Recommended level {recommendedLevel}. You are level {Profile.Data.level}.</size>",
-                    "Enter", () => WorldManager.Instance.EnterBoss(recommendedLevel, transform.position));
+                    "Enter", () => WorldManager.Instance.EnterBoss(recommendedLevel, transform.G()));
             }
             if (!inside) prompted = false;
         }

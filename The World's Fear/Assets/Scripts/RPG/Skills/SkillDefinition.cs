@@ -72,7 +72,7 @@ namespace TWF
     {
         public Combatant caster;
         public MonoBehaviour runner;   // for coroutines
-        public Rigidbody2D body;
+        public GroundBody body;
         public Vector2 origin;
         public Vector2 direction;      // normalized
         public Vector2 point;          // ground target
@@ -119,7 +119,7 @@ namespace TWF
         {
             float r = radius * ctx.Area;
             VFX.Slash(ctx.caster.transform.position, ctx.direction, r, angle, color);
-            foreach (var t in Combat.HostilesInArc(ctx.caster.team, ctx.caster.transform.position, ctx.direction, r, angle))
+            foreach (var t in Combat.HostilesInArc(ctx.caster.team, ctx.caster.transform.G(), ctx.direction, r, angle))
                 Combat.Hit(ctx.caster, t, damageMult * ctx.power, ctx.Scale(status), false, knockback);
         }
 
@@ -188,7 +188,7 @@ namespace TWF
 
         public override void Apply(SkillContext ctx)
         {
-            Vector2 center = atCaster ? (Vector2)ctx.caster.transform.position : ctx.point;
+            Vector2 center = atCaster ? ctx.caster.transform.G() : ctx.point;
             AreaEffect.Spawn(ctx.caster, center, new AreaSpec
             {
                 radius = radius * ctx.Area, delay = delay, ticks = ticks, interval = interval,
@@ -226,13 +226,13 @@ namespace TWF
         {
             var caster = ctx.caster;
             var body = ctx.body;
-            Vector2 start = caster.transform.position;
+            Vector2 start = caster.transform.G();
             float dist = distance * ctx.Range;
             float hitR = hitRadius * ctx.Area;
 
             // Don't dash through walls.
-            var hit = Physics2D.CircleCast(start, 0.3f, ctx.direction, dist, LayerMask.GetMask("Walls", "Default"));
-            if (hit.collider != null && !hit.collider.isTrigger && hit.collider.attachedRigidbody != body)
+            var hit = Phys.CircleCast(start, 0.3f, ctx.direction, dist, LayerMask.GetMask("Walls", "Default"));
+            if (hit.collider != null && !hit.collider.isTrigger && (body == null || hit.collider.attachedRigidbody != body.Rigidbody))
                 dist = Mathf.Max(0f, hit.distance - 0.1f);
 
             Vector2 end = start + ctx.direction * dist;
@@ -242,7 +242,7 @@ namespace TWF
             if (blink)
             {
                 VFX.Burst(start, color, 12, 0.6f);
-                if (body) body.position = end; else caster.transform.position = end;
+                if (body) body.position = end; else caster.transform.position = end.W();
                 VFX.Burst(end, color, 12, 0.6f);
                 yield return null;
             }
@@ -253,7 +253,7 @@ namespace TWF
                 {
                     t += Time.fixedDeltaTime;
                     Vector2 p = Vector2.Lerp(start, end, Mathf.SmoothStep(0, 1, t / duration));
-                    if (body) body.MovePosition(p); else caster.transform.position = p;
+                    if (body) body.MovePosition(p); else caster.transform.position = p.W();
                     if (damageMult > 0f && !damageAtEnd)
                     {
                         foreach (var c in Combat.HostilesInRadius(caster.team, p, hitR))
@@ -350,7 +350,7 @@ namespace TWF
             for (int i = 0; i < times; i++)
             {
                 if (ctx.caster == null || ctx.caster.IsDead) yield break;
-                ctx.origin = ctx.caster.transform.position;
+                ctx.origin = ctx.caster.transform.G();
                 foreach (var e in inner) e?.Apply(ctx);
                 yield return new WaitForSeconds(interval);
             }

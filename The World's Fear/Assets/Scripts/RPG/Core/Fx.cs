@@ -106,12 +106,12 @@ namespace TWF
             if (sheet.ground)
             {
                 go.transform.position = Ground.Decal(at);
-                go.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+                go.transform.rotation = Ground.Spin(angle) * Ground.Flat;
                 sr.sortingOrder = SortOrder.Telegraph + 2;
             }
             else
             {
-                go.transform.position = new Vector3(at.x, at.y, 0f);
+                go.transform.position = at.W();
                 go.AddComponent<Billboard>();
                 sr.sortingOrder = SortOrder.Effects;
             }
@@ -157,7 +157,7 @@ namespace TWF
         // A spark at a point in the air (at keeps its height).
         public static void Hit(Vector3 at, string element, float size = 0.4f)
         {
-            var p = Play("hit_" + element, at, size);
+            var p = Play("hit_" + element, at.G(), size);
             if (p != null) p.transform.position = at;
             Lift(p, 1f);
         }
@@ -165,7 +165,7 @@ namespace TWF
         // On a creature's chest, in front of it.
         static FxPlayer OnBody(string name, Combatant c, float size)
         {
-            var p = Play(name, c.transform.position, size);
+            var p = Play(name, c.transform.G(), size);
             if (p != null) p.transform.position += View.Up * (c.height * 0.55f);
             return Lift(p, 1f);
         }
@@ -190,7 +190,9 @@ namespace TWF
             if (c != null && e != ElementPart.Physical) OnBody("proc_" + Name(e), c, 0.45f + 0.12f * c.height);
         }
 
-        // A swing trail on the ground in the element's look, centred on dir. Thin arcs become a thrust.
+        public const float SwingHeight = 0.7f;   // screen-up offset of a melee swing from the feet
+
+        // A swing trail in the element's look, centred on dir. Thin arcs become a thrust.
         public static void Slash(Vector3 pos, Vector2 dir, float radius, float arc, string element)
         {
             float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
@@ -204,8 +206,23 @@ namespace TWF
                 foreach (int a in arcs) if (Mathf.Abs(a - arc) < Mathf.Abs(best - arc)) best = a;
                 name = "slash_" + best + "_" + element;
             }
-            // Lifted so a swing away from the camera isn't hidden behind the hero's own body.
-            Lift(Play(name, pos, radius, null, angle), 2.5f);
+            var p = Play(name, pos.G(), radius, null, angle);
+            if (p == null) return;
+            var sr = p.GetComponent<SpriteRenderer>();
+            // The sheets sweep counter-clockwise; the blade (HeroController.SwingRoutine) swings clockwise, from
+            // +arc/2 to -arc/2. Mirrored across the swing direction, the trail follows the blade.
+            sr.flipY = true;
+            if (arc < 300f)
+            {
+                // Drawn like the blade: facing the camera, round the chest, turned to the swing's direction on screen.
+                // Laid on the ground instead, the tilted view squashed it and a swing to the side read as angled down.
+                Vector2 onScreen = View.ToScreen(dir);
+                p.transform.SetPositionAndRotation(pos + View.Up * SwingHeight,
+                    View.Rotation * Quaternion.Euler(0f, 0f, Mathf.Atan2(onScreen.y, onScreen.x) * Mathf.Rad2Deg));
+                sr.sortingOrder = SortOrder.Effects;
+            }
+            // Lifted toward the camera so a swing away from it isn't hidden behind the hero's own body.
+            Lift(p, 2.5f);
         }
 
         // A multi-element swing: one trail per element, each extra a little shorter so they nest.
@@ -250,14 +267,14 @@ namespace TWF
             for (int i = 1; i < els.Count; i++)
             {
                 float side = (i % 2 == 1 ? 1f : -1f) * ball * 0.32f;
-                Attach("bolt_" + Name(els[i]), parent, ball * 0.6f, new Vector3(-ball * 0.3f * i, side, 0f), SortOrder.Projectiles - i);
+                Attach("bolt_" + Name(els[i]), parent, ball * 0.6f, new Vector3(-ball * 0.3f * i, 0f, side), SortOrder.Projectiles - i);
             }
             return p;
         }
 
         static FxPlayer Attach(string name, Transform parent, float size, Vector3 local, int order)
         {
-            var p = Play(name, parent.position, size);
+            var p = Play(name, parent.G(), size);
             if (p == null) return null;
             p.transform.SetParent(parent, false);
             p.transform.localPosition = local;

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+using TWF;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -19,7 +20,7 @@ public class Sword : MonoBehaviour
 
         Vector2 DirectionFloats = new Vector2(joystick.Direction.x, joystick.Direction.y);
 
-        this.transform.position = new Vector2(wielder.transform.position.x + DirectionFloats.x, wielder.transform.position.y + DirectionFloats.y);
+        this.transform.position = (new Vector2(wielder.transform.position.x + DirectionFloats.x, wielder.transform.position.y + DirectionFloats.y)).W();
         animator.SetFloat("Attack Horizontal", DirectionFloats.x);
         animator.SetFloat("Attack Vertical", DirectionFloats.y);
     }

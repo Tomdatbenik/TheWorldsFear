@@ -55,7 +55,7 @@ namespace TWF
         public static Projectile Fire(Combatant owner, Vector2 origin, Vector2 direction, ProjectileSpec spec, Combatant homingTarget = null)
         {
             var go = new GameObject("Projectile");
-            go.transform.position = origin;
+            go.transform.position = origin.W();
             var p = go.AddComponent<Projectile>();
             p.spec = spec;
             if (owner != null) p.spec.snapshotDamage = owner.Stats.Get(StatType.Damage);
@@ -78,11 +78,11 @@ namespace TWF
                 var core = GameAssets.CreateWorldSprite("core", GameAssets.PixelDot, go.transform,
                     new Color(1f, 1f, 1f, 0.9f), SortOrder.Projectiles + 1, spec.size * 0.45f);
             }
-            // Fly at chest height (the ground is z = 0 and up is -z).
-            foreach (Transform child in go.transform) child.localPosition += Vector3.back * 0.7f;
-            if (owner != null && owner.team == Team.Player) PointLights.Attach(go.transform, spec.color, 3.5f, 2.2f, new Vector3(0, 0, -0.9f));
+            // Fly at chest height.
+            foreach (Transform child in go.transform) child.localPosition += Vector3.up * 0.7f;
+            if (owner != null && owner.team == Team.Player) PointLights.Attach(go.transform, spec.color, 3.5f, 2.2f, new Vector3(0, 0.9f, 0));
             if (spec.rotateSprite || spec.sprite != null || drawn != null)
-                go.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(p.dir.y, p.dir.x) * Mathf.Rad2Deg);
+                go.transform.rotation = Ground.Facing(p.dir);
             return p;
         }
 
@@ -91,26 +91,26 @@ namespace TWF
             float step = spec.speed * Time.deltaTime;
             if (spec.homing && homingTarget != null && !homingTarget.IsDead)
             {
-                Vector2 to = ((Vector2)homingTarget.transform.position - (Vector2)transform.position).normalized;
+                Vector2 to = (homingTarget.transform.G() - transform.G()).normalized;
                 dir = Vector2.Lerp(dir, to, Time.deltaTime * 8f).normalized;
-                transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+                transform.rotation = Ground.Facing(dir);
             }
-            transform.position += (Vector3)(dir * step);
+            transform.position += (dir * step).W();
             travelled += step;
 
             // Walls, pillars, rocks and trees stop projectiles.
-            if (Physics2D.OverlapPoint(transform.position, Walls.Mask) is Collider2D wall && !wall.isTrigger)
+            if (Phys.OverlapPoint(transform.G(), Walls.Mask) is Collider wall && !wall.isTrigger)
             {
                 if (spec.explodeRadius > 0f) Explode();
                 else
                 {
-                    Fx.Hit(transform.position + Vector3.back * 0.7f, Element, 0.3f);
+                    Fx.Hit(transform.position + Vector3.up * 0.7f, Element, 0.3f);
                     Destroy(gameObject);
                 }
                 return;
             }
 
-            foreach (var c in Combat.HostilesInRadius(team, transform.position, spec.hitRadius))
+            foreach (var c in Combat.HostilesInRadius(team, transform.G(), spec.hitRadius))
             {
                 if (hit.Contains(c)) continue;
                 hit.Add(c);
@@ -153,8 +153,8 @@ namespace TWF
 
         void Explode()
         {
-            Fx.Blast(transform.position, spec.explodeRadius, spec.elements, spec.color);
-            foreach (var c in Combat.HostilesInRadius(team, transform.position, spec.explodeRadius).ToArray())
+            Fx.Blast(transform.G(), spec.explodeRadius, spec.elements, spec.color);
+            foreach (var c in Combat.HostilesInRadius(team, transform.G(), spec.explodeRadius).ToArray())
             {
                 Combat.Hit(owner, c, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);
                 spec.onHit?.Invoke(c);
@@ -171,16 +171,17 @@ namespace TWF
         // True when a wall (pillar, cliff) stands between two points.
         public static bool Blocked(Vector2 from, Vector2 to)
         {
-            var hit = Physics2D.Linecast(from, to, Mask);
+            var hit = Phys.Linecast(from, to, Mask);
             return hit.collider != null && !hit.collider.isTrigger;
         }
 
         // The same, but the thin edges between levels of land don't count (for climbers and flyers).
-        static readonly RaycastHit2D[] hits = new RaycastHit2D[8];
+        static readonly RaycastHit[] hits = new RaycastHit[8];
         public static bool BlockedIgnoringLevels(Vector2 from, Vector2 to)
         {
-            var filter = new ContactFilter2D { useLayerMask = true, layerMask = Mask, useTriggers = false };
-            int n = Physics2D.Linecast(from, to, filter, hits);
+            var d = to - from;
+            if (d.sqrMagnitude < 1e-8f) return false;
+            int n = Physics.RaycastNonAlloc(from.W(), d.normalized.W(), hits, d.magnitude, Mask, QueryTriggerInteraction.Ignore);
             for (int i = 0; i < n; i++)
                 if (!LevelPass.IsEdge(hits[i].collider)) return true;
             return false;
@@ -250,16 +251,16 @@ namespace TWF
             var els = Fx.Parts(spec.elements, c);
             bool lingers = spec.ticks > 1;
             if (lingers)
-                Fx.Linger(transform.position, spec.radius, spec.elements, c, spec.interval * (spec.ticks - 1) + 0.5f,
+                Fx.Linger(transform.G(), spec.radius, spec.elements, c, spec.interval * (spec.ticks - 1) + 0.5f,
                     spec.followOwner && owner != null ? owner.transform : null);
             for (int i = 0; i < spec.ticks; i++)
             {
                 Follow();
                 fillSr.color = new Color(c.r, c.g, c.b, lingers ? 0.16f : 0.22f);
-                if (!lingers) Fx.Blast(transform.position, spec.radius, spec.elements, c);
-                else if (i == 0 && !spec.followOwner && !spec.quiet) Fx.Blast(transform.position, spec.radius * 0.8f, spec.elements, c);
-                else Fx.Shock(transform.position, spec.radius, Fx.Name(els[i % els.Count]), 0.55f);   // pulses take turns per element
-                foreach (var target in Combat.HostilesInRadius(team, transform.position, spec.radius).ToArray())
+                if (!lingers) Fx.Blast(transform.G(), spec.radius, spec.elements, c);
+                else if (i == 0 && !spec.followOwner && !spec.quiet) Fx.Blast(transform.G(), spec.radius * 0.8f, spec.elements, c);
+                else Fx.Shock(transform.G(), spec.radius, Fx.Name(els[i % els.Count]), 0.55f);   // pulses take turns per element
+                foreach (var target in Combat.HostilesInRadius(team, transform.G(), spec.radius).ToArray())
                 {
                     Combat.Hit(owner, target, spec.damageMult, spec.status, false, spec.knockback, spec.snapshotDamage, spec.elements);
                     spec.onHit?.Invoke(target);
@@ -298,7 +299,7 @@ namespace TWF
         {
             var go = new GameObject("LineTelegraph");
             go.transform.position = Ground.Decal(from);
-            go.transform.rotation = Quaternion.Euler(0, 0, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+            go.transform.rotation = Ground.Facing(dir);
             var sr = GameAssets.CreateWorldSprite("rect", GameAssets.Pixel, go.transform, color, SortOrder.Telegraph);
             float unit = sr.sprite.bounds.size.x;
             sr.transform.localScale = new Vector3(length / unit, width / unit, 1f);
@@ -320,18 +321,21 @@ namespace TWF
         float growTo;
         Vector3 startScale;
 
+        public static void Burst(Vector2 at, Color color, int count, float spread) => Burst(Ground.On(at), color, count, spread);
+        public static void Ring(Vector2 at, Color color, float radius, float duration) => Ring(Ground.On(at), color, radius, duration);
+
         public static void Burst(Vector3 pos, Color color, int count, float spread)
         {
             for (int i = 0; i < count; i++)
             {
                 // Square sparks of 2-3 art pixels, the same pixel size as the characters.
                 var sr = GameAssets.CreateWorldSprite("spark", GameAssets.Pixel, null, color, SortOrder.Effects, Random.Range(2, 4) / Fx.PPU);
-                sr.transform.position = new Vector3(pos.x, pos.y, -0.5f);
+                sr.transform.position = new Vector3(pos.x, pos.y + 0.5f, pos.z);
                 sr.transform.rotation = View.Rotation;
                 var v = sr.gameObject.AddComponent<VFX>();
                 v.sr = sr;
                 v.color = color;
-                v.velocity = (Vector3)(Random.insideUnitCircle.normalized * Random.Range(1.5f, 4f) * Mathf.Max(0.4f, spread));
+                v.velocity = (Random.insideUnitCircle.normalized * Random.Range(1.5f, 4f) * Mathf.Max(0.4f, spread)).W();
                 v.life = v.maxLife = Random.Range(0.25f, 0.45f);
                 v.startScale = sr.transform.localScale;
                 v.growTo = 1f;
@@ -341,7 +345,7 @@ namespace TWF
         public static void Ring(Vector3 pos, Color color, float radius, float duration)
         {
             var sr = GameAssets.CreateWorldSprite("ring", Fx.Ring(radius), null, color, SortOrder.Effects, radius * 2f);
-            sr.transform.position = new Vector3(pos.x, pos.y, Ground.DecalZ * 2f);
+            sr.transform.position = new Vector3(pos.x, pos.y + Ground.DecalH * 2f, pos.z);
             var v = sr.gameObject.AddComponent<VFX>();
             v.sr = sr;
             v.color = color;

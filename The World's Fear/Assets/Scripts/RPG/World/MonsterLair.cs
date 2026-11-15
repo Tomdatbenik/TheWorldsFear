@@ -108,7 +108,7 @@ namespace TWF
         {
             kind = k; zone = z; level = Mathf.Max(1, lvl); seed = s;
             rng = new System.Random(s);
-            key = Mathf.RoundToInt(transform.position.x) + "_" + Mathf.RoundToInt(transform.position.y);
+            key = Mathf.RoundToInt(transform.position.x) + "_" + Mathf.RoundToInt(transform.position.z);
             roster = new List<MonsterSpecies>();
             foreach (var id in Minions(k))
             {
@@ -140,7 +140,7 @@ namespace TWF
         // Further from the village a lair starts bigger: level 1 near home, up to 3 at the edge.
         LairRecord NewState()
         {
-            float d = ((Vector2)transform.position).magnitude;
+            float d = (transform.G()).magnitude;
             int start = 1 + Mathf.Clamp(Mathf.FloorToInt((d - 60f) / 220f), 0, 2) + ((seed >> 3) % 3 == 0 ? 1 : 0);
             return new LairRecord { key = key, born = Clock, startSize = Mathf.Clamp(start, 1, 3) };
         }
@@ -162,7 +162,7 @@ namespace TWF
             }
             foreach (var s in spawners) if (s != null && !s.IsDead) SetLabel(s);
             var hero = HeroController.Instance;
-            if (hero != null && Vector2.Distance(hero.transform.position, transform.position) < ActivateRange)
+            if (hero != null && Vector2.Distance(hero.transform.G(), transform.G()) < ActivateRange)
                 FloatingText.Spawn(transform.position + View.Up * 2.8f, $"The {Title(kind).ToLower()} grows!  Lv {size}", new Color(1f, 0.7f, 0.3f), 1.2f, 2f);
             if (nextChampionAt < 0f) championLevel = level + 1 + size;
         }
@@ -174,7 +174,7 @@ namespace TWF
             var hero = HeroController.Instance;
             if (hero == null || rng == null) return;
             alive.RemoveAll(m => m == null || m.Combatant.IsDead);
-            float d = Vector2.Distance(hero.transform.position, transform.position);
+            float d = Vector2.Distance(hero.transform.G(), transform.G());
             if (!cleared && Time.frameCount % 30 == 0) Grow();
 
             if (d > ResetRange)
@@ -236,10 +236,10 @@ namespace TWF
 
         Vector2 DoorOf(Combatant s)
         {
-            Vector2 away = (Vector2)s.transform.position - (Vector2)transform.position;
+            Vector2 away = s.transform.G() - transform.G();
             if (away.sqrMagnitude < 0.01f) away = Vector2.down;
             Vector2 side = new Vector2(-away.y, away.x).normalized * (float)(rng.NextDouble() * 2 - 1) * 0.8f;
-            return (Vector2)s.transform.position + away.normalized * (s.radius + 0.7f) + side;
+            return s.transform.G() + away.normalized * (s.radius + 0.7f) + side;
         }
 
         void SpawnFrom(Combatant s)
@@ -255,11 +255,11 @@ namespace TWF
         void Enlist(MonsterBrain m)
         {
             m.transform.SetParent(transform.parent, true);
-            m.Home = transform.position;
+            m.Home = transform.G();
             m.Pack = alive;
             alive.Add(m);
             // Whoever comes out of a lair that is under attack joins the fight.
-            if (HeroController.Instance != null && Vector2.Distance(HeroController.Instance.transform.position, transform.position) < 12f) m.Aggro();
+            if (HeroController.Instance != null && Vector2.Distance(HeroController.Instance.transform.G(), transform.G()) < 12f) m.Aggro();
         }
 
         void SummonChampion()
@@ -286,7 +286,7 @@ namespace TWF
             Profile.Save();
             Legacy.OnLairDestroyed();
             int bonus = championLevel - (level + 1 + size) + (size - 1);     // champions faced, and the lair's size
-            Pickup.SpawnGold((Vector2)transform.position + Random.insideUnitCircle, Mathf.Max(5, level * 12 * (1 + bonus)));
+            Pickup.SpawnGold(transform.G() + Random.insideUnitCircle, Mathf.Max(5, level * 12 * (1 + bonus)));
             Profile.AddXP(Profile.MonsterXP(level, MonsterRank.Rare) * (1 + bonus));
             FloatingText.Spawn(transform.position + View.Up * 2.6f, Title(kind) + " destroyed", Palette.Gold, 1.3f, 2.2f);
         }
@@ -322,11 +322,11 @@ namespace TWF
                 case LairKind.SpiderNest:
                     for (int i = 0; i < 4; i++) Prop(Random.insideUnitCircle * 1.1f, 0.35f, 0.4f, "eggsac", EggTex());
                     break;
-                case LairKind.MireDen: PointLights.Attach(transform, new Color(0.55f, 0.9f, 0.4f), 7f, 0.9f, new Vector3(0, 0, -1.4f), true); break;
+                case LairKind.MireDen: PointLights.Attach(transform, new Color(0.55f, 0.9f, 0.4f), 7f, 0.9f, new Vector3(0, 1.4f, 0), true); break;
                 case LairKind.BoneCairn:
                     for (int i = 0; i < 3; i++) Prop(Random.insideUnitCircle * 1.1f, 0.3f, 0.25f, "bones", BoneTex());
                     break;
-                default: PointLights.Attach(transform, new Color(1f, 0.45f, 0.15f), 7f, 1.2f, new Vector3(0, 0, -1.2f), true); break;
+                default: PointLights.Attach(transform, new Color(1f, 0.45f, 0.15f), 7f, 1.2f, new Vector3(0, 1.2f, 0), true); break;
             }
         }
 
@@ -362,12 +362,12 @@ namespace TWF
         {
             var go = new GameObject(SpawnerName(kind));
             go.transform.SetParent(transform, false);
-            go.transform.localPosition = offset;
+            go.transform.localPosition = offset.W();
             go.layer = LayerMask.NameToLayer("Monsters");
             var visual = new GameObject("Visual");
             visual.transform.SetParent(go.transform, false);
             shape(visual, radius, height);
-            go.AddComponent<CircleCollider2D>().radius = radius * 0.9f;
+            Phys.Circle(go, radius * 0.9f);
 
             var c = go.AddComponent<Combatant>();
             c.team = Team.Enemy;
@@ -391,17 +391,17 @@ namespace TWF
 
         void OnSpawnerDied(Combatant c, Transform visual)
         {
-            foreach (var col in c.GetComponents<Collider2D>()) col.enabled = false;
+            foreach (var col in c.GetComponents<Collider>()) col.enabled = false;
             if (rng != null && !cleared)
             {
-                Loot.Drop(c, c.transform.position);
+                Loot.Drop(c, c.transform.G());
                 VFX.Burst(c.transform.position + View.Up * 0.8f, new Color(0.45f, 0.35f, 0.25f), 20, 1.2f);
                 Sound.Play(Sfx.MonsterDeath, c.transform.position, 0.5f);
             }
             var bar = c.GetComponentInChildren<WorldBar>();
             if (bar != null) bar.gameObject.SetActive(false);
             if (isActiveAndEnabled) StartCoroutine(Collapse(visual, cleared ? 0f : 0.6f));
-            else visual.localScale = new Vector3(1.1f, 1.1f, 0.18f);
+            else visual.localScale = new Vector3(1.1f, 0.18f, 1.1f);
         }
 
         // A broken hut or nest slumps into a low heap of rubble.
@@ -409,7 +409,7 @@ namespace TWF
         {
             float time = 0f;
             var from = t.localScale;
-            var to = new Vector3(1.15f, 1.15f, 0.18f);
+            var to = new Vector3(1.15f, 0.18f, 1.15f);
             while (time < duration && t != null)
             {
                 time += Time.deltaTime;
@@ -421,7 +421,7 @@ namespace TWF
 
         static IEnumerator Shake(Transform t)
         {
-            if (t == null || t.localScale.z < 0.5f) yield break;
+            if (t == null || t.localScale.y < 0.5f) yield break;
             float time = 0f;
             while (time < 0.15f && t != null)
             {
@@ -437,7 +437,7 @@ namespace TWF
         {
             var go = new GameObject("Campfire");
             go.transform.SetParent(transform, false);
-            go.transform.localPosition = at;
+            go.transform.localPosition = at.W();
             var mb = new Mesh3();
             // Stones in a ring, logs crossed in the middle.
             for (int i = 0; i < 8; i++)
@@ -450,10 +450,10 @@ namespace TWF
             logs.Box(new Vector3(0, 0, -0.08f), new Vector3(0.9f, 0.16f, 0.16f), 30f);
             logs.Box(new Vector3(0, 0, -0.18f), new Vector3(0.9f, 0.16f, 0.16f), -40f);
             Render(go, "logs", logs, WoodTex(), true);
-            var fire = Fx.Play("flame_fire", (Vector2)go.transform.position, 0.75f, null, 0f, 1e7f);
+            var fire = Fx.Play("flame_fire", go.transform.G(), 0.75f, null, 0f, 1e7f);
             if (fire != null) fire.transform.SetParent(go.transform, true);
-            PointLights.Attach(go.transform, new Color(1f, 0.55f, 0.2f), 7f, 1.6f, new Vector3(0, 0, -0.8f), true);
-            go.AddComponent<CircleCollider2D>().radius = 0.65f;
+            PointLights.Attach(go.transform, new Color(1f, 0.55f, 0.2f), 7f, 1.6f, new Vector3(0, 0.8f, 0), true);
+            Phys.Circle(go, 0.65f);
             go.layer = LayerMask.NameToLayer("Monsters");
             go.AddComponent<HeightProp>();
         }
@@ -468,7 +468,7 @@ namespace TWF
             roof.Cone(new Vector3(0, 0, -wall), r * 1.3f, h - wall, 9);
             Render(go, "hutroof", roof, ThatchTex(), true);
             // The door faces the fire.
-            Vector2 toFire = -(Vector2)go.transform.parent.localPosition;
+            Vector2 toFire = -go.transform.parent.localPosition.G();
             var door = new Mesh3();
             Vector2 n = toFire.normalized;
             Vector2 u = new Vector2(-n.y, n.x);
@@ -509,7 +509,7 @@ namespace TWF
         {
             var go = new GameObject(key);
             go.transform.SetParent(transform, false);
-            go.transform.localPosition = at;
+            go.transform.localPosition = at.W();
             var m = new Mesh3();
             m.Dome(Vector3.zero, r, h, 8, 3);
             Render(go, key, m, tex, false);
@@ -642,8 +642,7 @@ namespace TWF
                 for (int i = 0; i < colors.Length; i++) colors[i] = Color.white;
                 m.colors = colors;
                 m.SetTriangles(t, 0);
-                m.RecalculateBounds();
-                return m;
+                return Ground.ToY(m);
             }
         }
     }
@@ -655,7 +654,7 @@ namespace TWF
         {
             if (TerrainHeight.World == null) return;
             var p = transform.position;
-            transform.position = new Vector3(p.x, p.y, -TerrainHeight.At(p));
+            transform.position = Ground.On(p);
         }
     }
 }

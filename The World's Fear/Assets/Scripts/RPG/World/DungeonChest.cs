@@ -35,10 +35,10 @@ namespace TWF
             RenderAssets.MakeLit(sprite);
             var shadow = GameAssets.CreateWorldSprite("Shadow", GameAssets.SoftCircle, transform, new Color(0, 0, 0, 0.35f), SortOrder.Units - 1, 1.6f);
             shadow.transform.localScale = new Vector3(shadow.transform.localScale.x, shadow.transform.localScale.y * 0.5f, 1f);
-            shadow.transform.localPosition = new Vector3(0, 0, Ground.DecalZ);
-            if (!isOpen) glow = PointLights.Attach(transform, ChallengeChest.TierColor(Tier), 4.5f, 1.5f, new Vector3(0, 0, -1f), true);
+            shadow.transform.localPosition = new Vector3(0, Ground.DecalH, 0);
+            if (!isOpen) glow = PointLights.Attach(transform, ChallengeChest.TierColor(Tier), 4.5f, 1.5f, new Vector3(0, 1f, 0), true);
             gameObject.layer = LayerMask.NameToLayer("Walls");
-            gameObject.AddComponent<BoxCollider2D>().size = new Vector2(vault ? 1.8f : 1.2f, 0.7f);
+            Phys.Box(gameObject, new Vector2(vault ? 1.8f : 1.2f, 0.7f));
 
             label = new GameObject("Label").AddComponent<TextMeshPro>();
             label.transform.SetParent(Billboard.Create(transform), false);
@@ -66,7 +66,7 @@ namespace TWF
             var hero = HeroController.Instance;
             if (hero == null || GameUI.Instance == null) return;
             if (!isOpen && lockedLast == roomClear()) RefreshLabel();
-            bool near = !isOpen && roomClear() && Vector2.Distance(hero.transform.position, transform.position) < Reach;
+            bool near = !isOpen && roomClear() && Vector2.Distance(hero.transform.G(), transform.G()) < Reach;
             if (near && !inRange) GameUI.Instance.ShowInteract("Open", Open);
             else if (!near && inRange) GameUI.Instance.HideInteract();
             inRange = near;
@@ -113,7 +113,7 @@ namespace TWF
         void DropLoot()
         {
             var rng = new System.Random(key.GetHashCode() ^ Environment.TickCount);
-            Vector2 at = transform.position + Vector3.down * 1.4f;
+            Vector2 at = transform.G() + Vector2.down * 1.4f;
             Vector2 Spot() => at + UnityEngine.Random.insideUnitCircle * 1.8f;
 
             int items = vault ? 5 : 2;

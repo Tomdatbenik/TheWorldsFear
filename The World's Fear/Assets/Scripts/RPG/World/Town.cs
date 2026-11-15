@@ -52,7 +52,7 @@ namespace TWF
         void Make()
         {
             TerrainHeight.Clear();
-            stone = new Solid(); keepStone = new Solid(); top = new Solid(); roof = new Solid(); purpleRoof = new Solid();
+            stone = new Solid { topAnchoredHeight = CappedWallHeight }; keepStone = new Solid(); top = new Solid(); roof = new Solid(); purpleRoof = new Solid();
             wood = new Solid(); dark = new Solid(); cloth = new Solid(); glass = new Solid();
 
             PaintGround();
@@ -61,7 +61,7 @@ namespace TWF
             ArcaneTower(new Vector2(-29f, 29f));
             Pond(new Rect(-27f, -29f, 6f, 4f));
 
-            stone.Build(transform, "Stone", Mat("stone", EnvArt.Tex("stone_wall_tile")), true);
+            stone.Build(transform, "Stone", Mat("stone", CappedWall(EnvArt.Tex("stone_wall_tile"))), true);
             keepStone.Build(transform, "Keep Stone", Mat("keep", EnvArt.Tex("dgn_keep_wall")), true);
             top.Build(transform, "Paving", Mat("paving", EnvArt.Tex("cobble_tile")), true);
             roof.Build(transform, "Roofs", Mat("roof", SlateTexture(new Color32(78, 92, 122, 255))), true);
@@ -152,7 +152,7 @@ namespace TWF
             Box(stone, top, t, 0f, h);
             Box(stone, top, Grow(t, 0.2f), h - 0.45f, h);
             if (roofed) Pyramid(roof, Grow(t, 0.4f), h, 3.4f);
-            else Crenels(stone, Grow(t, 0.2f), h, 0.75f, 0.45f);
+            else Crenels(stone, top, Grow(t, 0.2f), h, 0.75f, 0.45f);
             // Arrow slits on the outer face.
             var outward = RotDir(Vector2Int.down, k);
             var c = t.center;
@@ -183,7 +183,7 @@ namespace TWF
 
             // The keep, its corner turrets with pointed slate roofs, and a tall roof behind the battlements.
             Box(keepStone, top, Keep, PlinthH, KeepTop);
-            Crenels(keepStone, Keep, KeepTop, 0.8f, 0.5f);
+            Crenels(keepStone, top, Keep, KeepTop, 0.8f, 0.5f);
             Box(stone, top, Grow(Keep, 0.25f), PlinthH, PlinthH + 0.6f);
             Box(keepStone, top, Grow(Keep, 0.12f), 7.6f, 8.0f);
             foreach (var c in new[] { new Vector2(Keep.xMin, Keep.yMin), new Vector2(Keep.xMax, Keep.yMin), new Vector2(Keep.xMin, Keep.yMax), new Vector2(Keep.xMax, Keep.yMax) })
@@ -239,7 +239,7 @@ namespace TWF
             blocked.Add(Grow(t, 2f));
             var light = new GameObject("Tower Glow");
             light.transform.SetParent(transform, false);
-            light.transform.position = new Vector3(c.x, c.y - 3.2f, -6f);
+            light.transform.position = new Vector3(c.x, 6f, c.y - 3.2f);
             var pl = PointLights.Attach(light.transform, new Color(0.7f, 0.5f, 1f), 9f, 1.2f, Vector3.zero, true);
             if (pl != null) light.AddComponent<NightLight>().target = pl;
         }
@@ -321,7 +321,7 @@ namespace TWF
             EnvArt.Place("lamp", transform, p, height);
             var holder = new GameObject("Lamp Light");
             holder.transform.SetParent(transform, false);
-            holder.transform.position = new Vector3(p.x, p.y, -3.6f - height);
+            holder.transform.position = p.W(3.6f + height);
             var light = PointLights.Attach(holder.transform, new Color(1f, 0.78f, 0.45f), 7f, 1.3f, Vector3.zero, true);
             if (light != null) holder.AddComponent<NightLight>().target = light;
         }
@@ -346,7 +346,7 @@ namespace TWF
                 else if (bushes < 90)
                 {
                     var bush = EnvArt.PlaceTree("bush", transform, p);
-                    if (bush != null) Destroy(bush.GetComponent<CircleCollider2D>());
+                    if (bush != null) Destroy(bush.GetComponent<Collider>());
                     blocked.Add(new Rect(p.x - 0.7f, p.y - 0.7f, 1.4f, 1.4f));
                     bushes++;
                 }
@@ -373,13 +373,13 @@ namespace TWF
             };
             foreach (var m in FindObjectsByType<Merchant>())
                 if (spots.TryGetValue(m.displayName, out var p) || spots.TryGetValue(m.name, out p))
-                    m.transform.position = new Vector3(p.x, p.y, m.transform.position.z);
+                    m.transform.position = p.W(m.transform.position.y);
         }
 
         void PlaceWaypoint()
         {
             foreach (var w in FindObjectsByType<Waypoint>())
-                if (w.id == "village") w.transform.position = new Vector3(Spawn.x, Spawn.y, w.transform.position.z);
+                if (w.id == "village") w.transform.position = Spawn.W(w.transform.position.y);
             var wm = FindAnyObjectByType<WorldManager>();
             if (wm != null) wm.villageWaypoint = Spawn;
         }
@@ -394,7 +394,7 @@ namespace TWF
                     var p = Rot(new Vector2(i == 0 ? -3.9f : 3.9f, -Outer + Thick + 1.2f), k);
                     var go = new GameObject("Gate Guard");
                     go.transform.SetParent(transform, false);
-                    go.transform.position = p;
+                    go.transform.position = p.W();
                     var visual = Billboard.Create(go.transform, "Visual");
                     var sr = visual.gameObject.AddComponent<SpriteRenderer>();
                     sr.sortingOrder = SortOrder.Units;
@@ -455,6 +455,8 @@ namespace TWF
         public static void Box(Solid sides, Solid lid, Rect r, float h0, float h1)
         {
             float x0 = r.xMin, x1 = r.xMax, y0 = r.yMin, y1 = r.yMax, z0 = -h0, z1 = -h1;
+            float th = sides.topAnchoredHeight;
+            Vector2 Side(float along, float h) => th > 0f ? new Vector2(along / 4f, 1f - (h1 - h) / th) : Town.Side(along, h);
             sides.Quad(new Vector3(x0, y0, z0), new Vector3(x1, y0, z0), new Vector3(x1, y0, z1), new Vector3(x0, y0, z1), Vector3.down,
                 Side(x0, h0), Side(x1, h0), Side(x1, h1), Side(x0, h1));
             sides.Quad(new Vector3(x1, y1, z0), new Vector3(x0, y1, z0), new Vector3(x0, y1, z1), new Vector3(x1, y1, z1), Vector3.up,
@@ -469,19 +471,19 @@ namespace TWF
 
         static Vector2 Side(float along, float h) => new Vector2(along / 4f, h / 1.5f);
 
-        static void Crenels(Solid s, Rect r, float h, float tall, float deep)
+        public static void Crenels(Solid s, Solid lid, Rect r, float h, float tall, float deep)
         {
             const float step = 1.3f, w = 0.65f;
             for (float x = r.xMin; x < r.xMax - w * 0.5f; x += step)
             {
                 float xe = Mathf.Min(x + w, r.xMax);
-                Box(s, s, new Rect(x, r.yMin, xe - x, deep), h, h + tall);
-                Box(s, s, new Rect(x, r.yMax - deep, xe - x, deep), h, h + tall);
+                Box(s, lid, new Rect(x, r.yMin, xe - x, deep), h, h + tall);
+                Box(s, lid, new Rect(x, r.yMax - deep, xe - x, deep), h, h + tall);
             }
             for (float y = r.yMin + step; y < r.yMax - step * 0.5f; y += step)
             {
-                Box(s, s, new Rect(r.xMin, y, deep, w), h, h + tall);
-                Box(s, s, new Rect(r.xMax - deep, y, deep, w), h, h + tall);
+                Box(s, lid, new Rect(r.xMin, y, deep, w), h, h + tall);
+                Box(s, lid, new Rect(r.xMax - deep, y, deep, w), h, h + tall);
             }
         }
 
@@ -529,8 +531,7 @@ namespace TWF
             var go = new GameObject("Block");
             go.transform.SetParent(transform, false);
             go.layer = LayerMask.NameToLayer("Walls");
-            var bc = go.AddComponent<BoxCollider2D>();
-            bc.offset = r.center; bc.size = r.size;
+            Phys.Box(go, r.size, r.center);
         }
 
         // The rim of a raised level, given for the south side and turned k quarter turns.
@@ -539,10 +540,8 @@ namespace TWF
             var go = new GameObject("Level Edge");
             go.transform.SetParent(transform, false);
             go.layer = LayerMask.NameToLayer("Walls");
-            var e = go.AddComponent<EdgeCollider2D>();
             for (int i = 0; i < points.Length; i++) points[i] = Rot(points[i], k);
-            e.points = points;
-            e.edgeRadius = 0.05f;
+            Phys.Edge(go, points);
         }
 
         // ---------- Materials and textures (72 px per unit, like the sprites) ----------
@@ -556,8 +555,42 @@ namespace TWF
             tex.filterMode = FilterMode.Point;
             m = new Material(WorldTiles.MeshMaterial("town_" + key, tex)) { name = "Town " + key };
             m.SetFloat("_Cull", (float)CullMode.Back);
+            if (key != "dark" && key != "glass" && key != "cloth") m.SetFloat("_Relief", 1f);
             mats[key] = m;
             return m;
+        }
+
+        const float CappedWallHeight = 8f;   // world units the capped wall texture covers, top to bottom
+
+        // The stone wall tile (4 x 1.5 units, moss along its top) extended downward with plain brick courses to
+        // CappedWallHeight: one texture covers a whole wall, the moss only at its crown. Every other course is shifted
+        // half a brick so the bond keeps running.
+        public static Texture2D CappedWall(Texture2D src)
+        {
+            if (src == null) return null;
+            const int CourseTop = 82, Course = 26;               // the moss-free course at the foot of the tile (rows from the top)
+            int w = src.width, sh = src.height, h = Mathf.RoundToInt(CappedWallHeight * sh / 1.5f);
+            var s = src.GetPixels32();
+            var px = new Color32[w * h];
+            for (int y = 0; y < h; y++)                          // y counts rows from the top, like the source rows
+            {
+                int below = y - sh;
+                for (int x = 0; x < w; x++)
+                {
+                    Color32 c;
+                    if (below < 0) c = s[(sh - 1 - y) * w + x];
+                    else
+                    {
+                        int k = below / Course, ry = CourseTop + below % Course;
+                        int sx = (x + (k % 2 == 0 ? w / 12 : 0)) % w;
+                        c = s[(sh - 1 - ry) * w + sx];
+                    }
+                    px[(h - 1 - y) * w + x] = c;
+                }
+            }
+            var t = NewTex("TownCappedWall", w, h);
+            t.SetPixels32(px); t.Apply();
+            return t;
         }
 
         public static Texture2D NewTex(string name, int w, int h) =>
@@ -655,6 +688,9 @@ namespace TWF
             readonly List<Vector3> n = new List<Vector3>();
             readonly List<Vector2> uv = new List<Vector2>();
             readonly List<int> t = new List<int>();
+            // When set: side faces map the texture from each block's top down, this many units tall (a crown that
+            // belongs on top of the wall, like moss, stays at the top instead of repeating every tile).
+            public float topAnchoredHeight;
 
             public void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 normal, Vector2 ua, Vector2 ub, Vector2 uc, Vector2 ud)
             {
@@ -685,7 +721,7 @@ namespace TWF
                 for (int i = 0; i < colors.Length; i++) colors[i] = Color.white;
                 m.colors = colors;
                 m.SetTriangles(t, 0);
-                m.RecalculateBounds();
+                Ground.ToY(m);   // built with the ground on XY and up -Z; the world is Y-up
                 var go = new GameObject(name);
                 go.transform.SetParent(parent, false);
                 go.AddComponent<MeshFilter>().sharedMesh = m;

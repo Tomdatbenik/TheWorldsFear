@@ -19,9 +19,9 @@ namespace TWF
             var baseSr = GameAssets.CreateWorldSprite("Base", GameAssets.Diamond, transform, new Color(0.35f, 0.55f, 0.9f, 0.9f), SortOrder.Ground + 5, 1.8f);
             baseSr.transform.localScale = new Vector3(baseSr.transform.localScale.x, baseSr.transform.localScale.y * 0.5f, 1f);
             glow = GameAssets.CreateWorldSprite("Glow", GameAssets.PixelGlow, transform, new Color(0.5f, 0.8f, 1f, 0.5f), SortOrder.Ground + 6, 2.4f);
-            baseSr.transform.localPosition = new Vector3(0, 0, Ground.DecalZ);
-            glow.transform.localPosition = new Vector3(0, 0, Ground.DecalZ * 2f);
-            PointLights.Attach(transform, new Color(0.5f, 0.8f, 1f), 6f, 2.5f, new Vector3(0, 0, -1.5f), true);
+            baseSr.transform.localPosition = new Vector3(0, Ground.DecalH, 0);
+            glow.transform.localPosition = new Vector3(0, Ground.DecalH * 2f, 0);
+            PointLights.Attach(transform, new Color(0.5f, 0.8f, 1f), 6f, 2.5f, new Vector3(0, 1.5f, 0), true);
             var label = new GameObject("Label").AddComponent<TextMeshPro>();
             label.transform.SetParent(Billboard.Create(transform), false);
             label.transform.localPosition = new Vector3(0, 1.4f, 0);
@@ -44,7 +44,7 @@ namespace TWF
 
             var hero = HeroController.Instance;
             if (hero == null) return;
-            bool inside = Vector2.Distance(hero.transform.position, transform.position) < 1.4f;
+            bool inside = Vector2.Distance(hero.transform.G(), transform.G()) < 1.4f;
             if (inside && !heroInside)
             {
                 if (!unlocked)

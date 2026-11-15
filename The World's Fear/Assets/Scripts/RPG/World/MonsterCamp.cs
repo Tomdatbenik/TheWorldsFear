@@ -24,12 +24,12 @@ namespace TWF
         {
             var hero = HeroController.Instance;
             if (hero == null || zone == null) return;
-            float d = Vector2.Distance(hero.transform.position, transform.position);
+            float d = Vector2.Distance(hero.transform.G(), transform.G());
             alive.RemoveAll(m => m == null || m.Combatant.IsDead);
 
             if (!spawned && d < activateRange && Time.time >= respawnAt)
             {
-                MonsterSpawner.SpawnPack(zone, transform.position, depth, alive, new System.Random(seed + (int)(Time.time * 10)), fixedLevel);
+                MonsterSpawner.SpawnPack(zone, transform.G(), depth, alive, new System.Random(seed + (int)(Time.time * 10)), fixedLevel);
                 spawned = true;
             }
             else if (spawned && alive.Count == 0)

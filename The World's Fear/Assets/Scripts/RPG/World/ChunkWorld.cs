@@ -62,14 +62,13 @@ namespace TWF
         {
             var go = new GameObject(name);
             go.transform.SetParent(transform, false);
-            go.transform.localPosition = new Vector3(0, 0, z);
+            go.transform.localPosition = new Vector3(0, -z, 0);   // z: the old height (negative is up)
+            go.transform.localRotation = Ground.Flat;              // the tiles lie on the ground, cell (x, y) at world (x, z)
             var tm = go.AddComponent<Tilemap>();
             if (collider)
             {
                 go.layer = LayerMask.NameToLayer("Walls");
-                go.AddComponent<TilemapCollider2D>();
-                var rb = go.AddComponent<Rigidbody2D>();
-                rb.bodyType = RigidbodyType2D.Static;
+                go.AddComponent<TilemapBoxes>();
                 return tm;
             }
             var r = go.AddComponent<TilemapRenderer>();
@@ -117,7 +116,7 @@ namespace TWF
             {
                 checkTimer = CameraFollow.CinematicActive ? 0.1f : 0.25f;
                 // A cinematic flight streams the land round the camera's focus instead of the hero.
-                var c = WorldGen.ChunkOf(CameraFollow.CinematicActive ? (Vector2)CameraFollow.CinematicFocus : (Vector2)hero.transform.position);
+                var c = WorldGen.ChunkOf(CameraFollow.CinematicActive ? CameraFollow.CinematicFocus.G() : hero.transform.G());
                 // Reveal the map around the hero.
                 if (!CameraFollow.CinematicActive)
                     for (int dx = -1; dx <= 1; dx++)
@@ -188,7 +187,8 @@ namespace TWF
             var rims = new MeshBuilder();          // a lit lip along every top edge: what is raised reads at a glance
             var footShadows = new MeshBuilder();   // a dithered shadow on the ground at the foot of every wall
             var edges = new List<Vector2[]>();     // thin walls along plateau edges and stair sides: you stay on your level
-            var water = new MeshBuilder();
+            var water = new MeshBuilder();       // clear ponds
+            var marshWater = new MeshBuilder();  // the marsh's own dark water
             var puddles = new MeshBuilder();
             var lava = new MeshBuilder();
             var decorRng = new System.Random((int)WorldGen.Hash(c.x, c.y));
@@ -218,11 +218,18 @@ namespace TWF
                         break;
                     case Cell.Water:
                     case Cell.Lava:
+                    {
                         blockTiles[i] = tiles.blocker;
-                        (cell == Cell.Water ? water : lava).Quad(new Vector3(wx, wy, z + 0.12f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1);
-                        // Shore: the pool sits slightly below the ground.
-                        AddDrop(cells, elev, x, y, wx, wy, cell, cell == Cell.Water ? water : lava);
+                        // The pool lies on its own shore ground, its outer corners rounded off and a shore band along
+                        // its open edges (TWF_Water), so ponds and lava pools read as one round body, not tiles.
+                        var shore = EnvArt.PathTile(biome, wx, wy) ?? PathTile(biome, h);
+                        if (lv > 0) LevelTiles(lv)[i] = shore; else groundTiles[i] = shore;
+                        bool Same(int dx, int dy) => cells[x + dx + 1, y + dy + 1] == cell && elev[x + dx + 1, y + dy + 1] == lv;
+                        var pool = cell == Cell.Lava ? lava : WorldGen.BiomeAt(new Vector2(wx + 0.5f, wy + 0.5f)) == Biome.Marsh ? marshWater : water;
+                        pool.Quad(new Vector3(wx, wy, z - 0.004f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1,
+                            -1f, RoundCorners(Same), OpenSides(Same));
                         break;
+                    }
                     case Cell.Plateau:
                         if (WorldGen.FortressAt(wx, wy, out var fortHere))
                         {
@@ -231,7 +238,8 @@ namespace TWF
                             LevelTiles(lv)[i] = fortHere.kind == BossKind.Skeleton ? CastleFloorTile(wx, wy, h)
                                 : EnvArt.GroundTile(fb, wx, wy) ?? GroundTile(fb, h >> 3);
                             if (fortHere.IsPuddle(wx, wy))
-                                puddles.Quad(new Vector3(wx, wy, -WorldGen.PlateauHeight - 0.006f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1);
+                                puddles.Quad(new Vector3(wx, wy, -WorldGen.PlateauHeight - 0.006f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1,
+                                    -1f, RoundCorners((dx, dy) => fortHere.IsPuddle(wx + dx, wy + dy)), OpenSides((dx, dy) => fortHere.IsPuddle(wx + dx, wy + dy)));
                         }
                         else LevelTiles(lv)[i] = Shore(cells, elev, x, y) ? EnvArt.PathTile(biome, wx, wy) ?? PathTile(biome, h)
                             : EnvArt.GroundTile(groundBiome, wx, wy) ?? GroundTile(groundBiome, h >> 3);
@@ -268,7 +276,8 @@ namespace TWF
                     case Cell.Puddle:
                         // Shallow water just over the ground: walked through, not round.
                         groundTiles[i] = EnvArt.GroundTile(biome, wx, wy) ?? GroundTile(biome, h);
-                        puddles.Quad(new Vector3(wx, wy, -0.006f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1);
+                        puddles.Quad(new Vector3(wx, wy, -0.006f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1,
+                            -1f, RoundCorners((dx, dy) => cells[x + dx + 1, y + dy + 1] == Cell.Puddle), OpenSides((dx, dy) => cells[x + dx + 1, y + dy + 1] == Cell.Puddle));
                         break;
                     default:
                         groundTiles[i] = Shore(cells, elev, x, y) ? EnvArt.PathTile(biome, wx, wy) ?? PathTile(biome, h)
@@ -310,22 +319,20 @@ namespace TWF
                 var eg = new GameObject("LevelEdges");
                 eg.transform.SetParent(chunk.root.transform, false);
                 eg.layer = LayerMask.NameToLayer("Walls");
-                var poly = eg.AddComponent<PolygonCollider2D>();
-                poly.pathCount = edges.Count;
-                for (int k = 0; k < edges.Count; k++) poly.SetPath(k, edges[k]);
-                LevelPass.AddEdges(poly);
+                LevelPass.AddEdges(Phys.Prisms(eg, edges));
             }
-            MeshObject(chunk.root, "Water", water, chunkBiome == Biome.Marsh ? RenderAssets.Instance.water
-                : WaterTint("pond", new Color(0.14f, 0.5f, 0.74f), new Color(0.36f, 0.78f, 0.9f)), false);
+            // Picked per cell, not per chunk: a pond crossing a chunk border keeps one colour.
+            MeshObject(chunk.root, "Water", water, WaterTint("pond", new Color(0.14f, 0.5f, 0.74f), new Color(0.36f, 0.78f, 0.9f)), false);
+            MeshObject(chunk.root, "Marsh Water", marshWater, WaterTint("marsh", RenderAssets.Instance.water.GetColor("_Deep"), RenderAssets.Instance.water.GetColor("_Shallow")), false);
             MeshObject(chunk.root, "Puddles", puddles, WaterTint("puddle", new Color(0.42f, 0.74f, 0.9f), new Color(0.7f, 0.92f, 1f)), false);
-            MeshObject(chunk.root, "Lava", lava, RenderAssets.Instance.lava, false);
+            MeshObject(chunk.root, "Lava", lava, LavaPool(), false);
             foreach (var kv in slopes) kv.Value.Build(chunk.root.transform, "Slopes", SlopeMaterial(kv.Key), false);
             slopeSides.Build(chunk.root.transform, "Slope Sides", WorldTiles.MeshMaterial("cliff" + chunkBiome, cliffTex), true);
             MeshObject(chunk.root, "Waterfalls", falls, WaterfallMaterial(), false);
             MeshObject(chunk.root, "Lavafalls", lavaFalls, LavafallMaterial(), false);
             MeshObject(chunk.root, "Foam", foam, WaterTint("foam", new Color(0.75f, 0.9f, 1f), new Color(0.97f, 1f, 1f)), false);
             if (falls.Count > 0) chunk.root.AddComponent<FallSpray>().Init(cells, elev, x0, y0);
-            if (lava.Count > 0) PointLights.Attach(chunk.root.transform, new Color(1f, 0.45f, 0.15f), 10f, 1.4f, (Vector3)LavaCenter(cells, x0, y0) + new Vector3(0, 0, -1.5f), true);
+            if (lava.Count > 0) PointLights.Attach(chunk.root.transform, new Color(1f, 0.45f, 0.15f), 10f, 1.4f, LavaCenter(cells, x0, y0).W(1.5f), true);
 
             chunkElev = elev;
             PlaceDecor(chunk, cells, x0, y0, decorRng);
@@ -670,12 +677,22 @@ namespace TWF
         // The marsh's water material in other colours: clear ponds, and light shallow puddles.
         static readonly Dictionary<string, Material> waterTints = new Dictionary<string, Material>();
 
+        static Material lavaPool;
+        static Material LavaPool()
+        {
+            if (lavaPool) return lavaPool;
+            lavaPool = new Material(RenderAssets.Instance.lava) { name = "Lava_pool" };
+            lavaPool.SetFloat("_Round", 1f);
+            return lavaPool;
+        }
+
         static Material WaterTint(string key, Color deep, Color shallow)
         {
             if (waterTints.TryGetValue(key, out var m) && m) return m;
             m = new Material(RenderAssets.Instance.water) { name = "Water_" + key };
             m.SetColor("_Deep", deep);
             m.SetColor("_Shallow", shallow);
+            if (key != "foam") m.SetFloat("_Round", 1f);   // round pools and puddles, not square tiles of water
             waterTints[key] = m;
             return m;
         }
@@ -769,7 +786,7 @@ namespace TWF
                 var sprite = lv >= WorldGen.RockLevel ? (art != null ? (rng.NextDouble() < 0.5 ? Any(art.rockLarge, rng) : Any(art.rockSmall, rng)) : null) : DecorSprite(biome, rng);
                 if (sprite == null) continue;
                 bool solid = !sprite.name.StartsWith("bush") && !sprite.name.StartsWith("fern");
-                Decor(chunk.root.transform, sprite, new Vector3(wx + 0.5f, wy + 0.3f, -lv * WorldGen.LevelHeight), biome, solid, rng);
+                Decor(chunk.root.transform, sprite, new Vector3(wx + 0.5f, lv * WorldGen.LevelHeight, wy + 0.3f), biome, solid, rng);
             }
         }
 
@@ -784,7 +801,8 @@ namespace TWF
         // A tree, bush or rock mesh at p (turned and sized at random). False when none are installed for this biome.
         bool Nature(Transform parent, Biome biome, int lv, Vector2 p, System.Random rng)
         {
-            if (!EnvMesh.Has("tree_green")) return false;
+            // Off: the pixel-art trees, bushes and rocks read better than the kit's meshes (set true to bring them back).
+            if (!EnvArt.MeshNature || !EnvMesh.Has("tree_green")) return false;
             string name;
             if (lv >= WorldGen.RockLevel) name = biome == Biome.Ember ? "rock_ash" : rng.NextDouble() < 0.25 ? "tree_pine" : "rock_grey";
             else
@@ -881,8 +899,7 @@ namespace TWF
             RenderAssets.MakeLit(sr, true, sways ? RenderAssets.Instance.litWind : null);
             if (solid)
             {
-                var col = go.AddComponent<CircleCollider2D>();
-                col.radius = Mathf.Clamp(sprite.bounds.size.x * s * 0.18f, 0.3f, 1.4f);
+                Phys.Circle(go, Mathf.Clamp(sprite.bounds.size.x * s * 0.18f, 0.3f, 1.4f));
             }
         }
 
@@ -898,11 +915,11 @@ namespace TWF
                 if (!OpenGround(cells, x, y, x0, y0, 0) || WorldGen.InFarmland(x0 + x, y0 + y)) continue;
                 int glv = Lv(chunkElev, x, y);
                 if (glv >= WorldGen.RockLevel) continue;
-                var p = new Vector3(x0 + x + (float)rng.NextDouble(), y0 + y + (float)rng.NextDouble(), -glv * WorldGen.LevelHeight);
+                var p = new Vector3(x0 + x + (float)rng.NextDouble(), glv * WorldGen.LevelHeight, y0 + y + (float)rng.NextDouble());
                 float sc = 0.7f + (float)rng.NextDouble() * 0.6f;
                 // Store position + scale; rotation is applied each frame from the camera.
                 // Each tuft takes the look of the ground it stands on (the z scale carries the biome).
-                var gb = WorldGen.LookBiomeAt(p);
+                var gb = WorldGen.LookBiomeAt(p.G());
                 if (gb == Biome.Ruins || (gb == Biome.Ember && rng.NextDouble() > 0.1)) continue;
                 chunk.grass.Add(Matrix4x4.TRS(p, Quaternion.identity, new Vector3(sc, sc, 1f + (int)gb)));
             }
@@ -914,7 +931,7 @@ namespace TWF
         {
             var hero = HeroController.Instance;
             if (hero == null || grassQuad == null) return;
-            var hc = WorldGen.ChunkOf(CameraFollow.CinematicActive ? (Vector2)CameraFollow.CinematicFocus : (Vector2)hero.transform.position);
+            var hc = WorldGen.ChunkOf(CameraFollow.CinematicActive ? CameraFollow.CinematicFocus.G() : hero.transform.G());
             foreach (var list in grassBatches.Values) list.Clear();
             var rot = View.Rotation;
             foreach (var chunk in chunks.Values)
@@ -987,7 +1004,7 @@ namespace TWF
                 }
                 var camp = new GameObject("Camp").AddComponent<MonsterCamp>();
                 camp.transform.SetParent(chunk.root.transform, false);
-                camp.transform.position = new Vector3(pos.x, pos.y, -campLv * WorldGen.LevelHeight);
+                camp.transform.position = pos.W(campLv * WorldGen.LevelHeight);
                 camp.zone = WorldGen.RegionAt(pos);
                 camp.fixedLevel = WorldGen.LevelAt(pos);
                 camp.seed = (int)(h & 0x7FFFFFFF);
@@ -1014,12 +1031,12 @@ namespace TWF
             {
                 var t = chunk.root.transform.GetChild(i);
                 if (t.gameObject.layer != LayerMask.NameToLayer("Walls") || t.Find("Visual") == null || t.GetComponent<EnvSprite>() != null) continue;
-                if (((Vector2)t.position - pos).sqrMagnitude < Clear * Clear) Destroy(t.gameObject);
+                if ((t.G() - pos).sqrMagnitude < Clear * Clear) Destroy(t.gameObject);
             }
-            chunk.grass.RemoveAll(m => ((Vector2)(Vector3)m.GetColumn(3) - pos).sqrMagnitude < 3.5f * 3.5f);
+            chunk.grass.RemoveAll(m => (((Vector3)m.GetColumn(3)).G() - pos).sqrMagnitude < 3.5f * 3.5f);
             var go = new GameObject("Lair");
             go.transform.SetParent(chunk.root.transform, false);
-            go.transform.position = pos;
+            go.transform.position = pos.W();
             go.AddComponent<MonsterLair>().Init(MonsterLair.KindFor(WorldGen.BiomeAt(pos), h >> 7), WorldGen.RegionAt(pos), WorldGen.LevelAt(pos), (int)(h & 0x7FFFFFFF));
         }
 
@@ -1031,7 +1048,7 @@ namespace TWF
                 ClearAround(wpCell, 3);
                 var go = new GameObject("Waypoint");
                 go.transform.SetParent(chunk.root.transform, false);
-                go.transform.position = (Vector2)wpCell + Vector2.one * 0.5f;
+                go.transform.position = ((Vector2)wpCell + Vector2.one * 0.5f).W();
                 var wp = go.AddComponent<Waypoint>();
                 wp.id = $"wp_{c.x}_{c.y}";
                 wp.displayName = WorldGen.RegionTitle(wpCell);
@@ -1043,7 +1060,7 @@ namespace TWF
                 ClearAround(chestCell, 4);
                 var go = new GameObject("ChallengeChest");
                 go.transform.SetParent(chunk.root.transform, false);
-                go.transform.position = (Vector2)chestCell + Vector2.one * 0.5f;
+                go.transform.position = ((Vector2)chestCell + Vector2.one * 0.5f).W();
                 var chest = go.AddComponent<ChallengeChest>();
                 chest.waves = waves;
                 chest.key = $"{chestCell.x}_{chestCell.y}";
@@ -1052,7 +1069,7 @@ namespace TWF
             {
                 var go = new GameObject("BossFortress");
                 go.transform.SetParent(chunk.root.transform, false);
-                go.transform.position = (Vector2)bossCell;
+                go.transform.position = ((Vector2)bossCell).W();
                 go.AddComponent<BossFortress>().Init(fort);
             }
             if (WorldGen.HasDungeon(c.x, c.y, out var dungeonCell))
@@ -1061,7 +1078,7 @@ namespace TWF
                 CarveStairwell(chunk, dungeonCell);
                 var go = new GameObject("DungeonGate");
                 go.transform.SetParent(chunk.root.transform, false);
-                go.transform.position = (Vector2)dungeonCell + Vector2.one * 0.5f;
+                go.transform.position = ((Vector2)dungeonCell + Vector2.one * 0.5f).W();
                 var gate = go.AddComponent<DungeonGate>();
                 gate.areaLevel = WorldGen.LevelAt(dungeonCell);
                 gate.key = WorldManager.GateKey(dungeonCell);
@@ -1091,7 +1108,7 @@ namespace TWF
 
             var go = new GameObject("CastleChest");
             go.transform.SetParent(chunk.root.transform, false);
-            go.transform.position = new Vector2(keepCentre.x, k.yMax - 2f);
+            go.transform.position = (new Vector2(keepCentre.x, k.yMax - 2f)).W();
             var chest = go.AddComponent<DungeonChest>();
             chest.key = $"castle_{r.x}_{r.y}";
             chest.level = level + 2;
@@ -1108,7 +1125,7 @@ namespace TWF
         {
             var camp = new GameObject("CastleCamp").AddComponent<MonsterCamp>();
             camp.transform.SetParent(chunk.root.transform, false);
-            camp.transform.position = pos;
+            camp.transform.position = pos.W();
             camp.zone = zone;
             camp.fixedLevel = level;
             camp.seed = seed;
@@ -1125,7 +1142,7 @@ namespace TWF
             detail.SetTilesBlock(hole, none);
 
             const float ClearX = 5f, ClearY = 7f;
-            bool OnSpot(Vector3 p) => Mathf.Abs(p.x - cell.x) < ClearX && Mathf.Abs(p.y - cell.y) < ClearY;
+            bool OnSpot(Vector3 p) => Mathf.Abs(p.x - cell.x) < ClearX && Mathf.Abs(p.z - cell.y) < ClearY;
             chunk.grass.RemoveAll(m => OnSpot(m.GetColumn(3)));
             foreach (var t in chunk.root.GetComponentsInChildren<Transform>(true))
                 if (t != chunk.root.transform && OnSpot(t.position)) Destroy(t.gameObject);
@@ -1143,12 +1160,26 @@ namespace TWF
             for (int i = 0; i < fill.Length; i++)
             {
                 int x = center.x - r + i % (2 * r + 1), y = center.y - r + i / (2 * r + 1);
-                fill[i] = EnvArt.PathTile(biome, x, y) ?? tiles.dirt[i % tiles.dirt.Length];
+                // The biome's own path (as the roads round it), never the old tileset's dirt: in the ruins that put
+                // a solid red square under every waypoint, chest and dungeon gate.
+                fill[i] = EnvArt.PathTile(biome, x, y) ?? PathTile(biome, WorldGen.Hash(x, y));
             }
             ground.SetTilesBlock(b, fill);
         }
 
         // ---------- Mesh helper ----------
+
+        // Which corners of a puddle cell are rounded off (r: lower left, g: lower right, b: upper left, a: upper right):
+        // those where neither neighbour along the corner's two sides is puddle too. A lone cell is a disc, a run a capsule.
+        static Color RoundCorners(System.Func<int, int, bool> wet)
+        {
+            bool l = wet(-1, 0), r = wet(1, 0), d = wet(0, -1), u = wet(0, 1);
+            return new Color(!l && !d ? 1 : 0, !r && !d ? 1 : 0, !l && !u ? 1 : 0, !r && !u ? 1 : 0);
+        }
+
+        // Which sides of a pool cell are its shore (x left, y right, z bottom, w top).
+        static Vector4 OpenSides(System.Func<int, int, bool> wet) =>
+            new Vector4(wet(-1, 0) ? 0 : 1, wet(1, 0) ? 0 : 1, wet(0, -1) ? 0 : 1, wet(0, 1) ? 0 : 1);
 
         class MeshBuilder
         {
@@ -1156,13 +1187,16 @@ namespace TWF
             readonly List<Vector3> normals = new List<Vector3>();
             readonly List<Vector2> uvs = new List<Vector2>();
             readonly List<int> tris = new List<int>();
+            readonly List<Color> colors = new List<Color>();
+            readonly List<Vector4> extra = new List<Vector4>();
 
             public int Count => verts.Count;
 
             // A rectangle from origin along u (width w) and v (height h), facing normal.
-            public void Quad(Vector3 origin, Vector3 u, Vector3 v, Vector3 normal, float w, float h, float uvH = -1f)
+            public void Quad(Vector3 origin, Vector3 u, Vector3 v, Vector3 normal, float w, float h, float uvH = -1f, Color? color = null, Vector4 data = default)
             {
                 int i = verts.Count;
+                for (int k = 0; k < 4; k++) { colors.Add(color ?? Color.white); extra.Add(data); }
                 verts.Add(origin);
                 verts.Add(origin + u * w);
                 verts.Add(origin + v * h);
@@ -1184,12 +1218,13 @@ namespace TWF
                 m.SetVertices(verts);
                 m.SetNormals(normals);
                 m.SetUVs(0, uvs);
-                var colors = new Color[verts.Count];
-                for (int i = 0; i < colors.Length; i++) colors[i] = Color.white;
-                m.colors = colors;
+                while (colors.Count < verts.Count) colors.Add(Color.white);
+                while (extra.Count < verts.Count) extra.Add(Vector4.zero);
+                m.SetColors(colors);
+                m.SetUVs(1, extra);
                 m.SetTriangles(tris, 0);
                 m.RecalculateBounds();
-                return m;
+                return Ground.ToY(m);   // built with the ground on XY and up -Z; the world is Y-up
             }
         }
     }

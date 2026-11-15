@@ -6,14 +6,19 @@ using UnityEngine.Rendering;
 namespace TWF
 {
     // Buildings and props as real 3D meshes, made by the Blender environment kit (pixelart-gen: env_kit.py --mesh,
-    // env_install.py --mesh) into Resources/TWF/Env3D/<name>.bytes. Every piece keeps its own flat colour; a fine
-    // pixel grain at the sprites' density (72 px per unit) and banded light make it read as pixel art.
+    // env_install.py --mesh) into Resources/TWF/Env3D/<name>.bytes. A mesh is a list of faces per material: the kit's
+    // flat colours (with a fine pixel grain), glass, leaves, bark and rock, or a pixel-art texture by name
+    // (Env3D/tex/<name>.png, from env_textures.py) that the faces carry by their own uv at 72 px per unit, tinted by
+    // the vertex colour. Point filtering and banded light keep it reading as pixel art on a 3D shape.
     public static class EnvMesh
     {
         [System.Serializable]
         class Meta { public string name; public float[] footprint; public float height; }
 
-        public class Asset { public Mesh mesh; public Vector2 footprint; public float height; }
+        public class Asset { public Mesh mesh; public Vector2 footprint; public float height; public string[] materials; }
+
+        // The five materials every older mesh has, in this order; a version 3 mesh names its own.
+        static readonly string[] Classic = { "flat", "glass", "leaf", "bark", "rock" };
 
         static readonly Dictionary<string, Asset> cache = new Dictionary<string, Asset>();
         static Material body, glass;
@@ -25,7 +30,8 @@ namespace TWF
             if (cache.TryGetValue(name, out var a)) return a;
             var bytes = Resources.Load<TextAsset>("TWF/Env3D/" + name);
             if (bytes == null) { cache[name] = null; return null; }
-            a = new Asset { mesh = Read(bytes.bytes, name) };
+            a = new Asset();
+            a.mesh = Read(bytes.bytes, name, out a.materials);
             var metaText = Resources.Load<TextAsset>("TWF/Env3D/" + name + "_meta");
             var meta = metaText != null ? JsonUtility.FromJson<Meta>(metaText.text) : null;
             if (meta != null)
@@ -37,8 +43,9 @@ namespace TWF
             return a;
         }
 
-        static Mesh Read(byte[] data, string name)
+        static Mesh Read(byte[] data, string name, out string[] materials)
         {
+            materials = null;
             using var r = new BinaryReader(new MemoryStream(data));
             if (new string(r.ReadChars(4)) != "TWFM") { Debug.LogError("EnvMesh: bad file " + name); return null; }
             int version = r.ReadInt32();
@@ -53,7 +60,9 @@ namespace TWF
                 pos[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
                 nrm[i] = new Vector3(r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
                 col[i] = new Color32(r.ReadByte(), r.ReadByte(), r.ReadByte(), r.ReadByte());
+                if (version >= 3) uv[i] = new Vector2(r.ReadSingle(), r.ReadSingle());
             }
+            var fileUv = version >= 3 ? (Vector2[])uv.Clone() : null;
             // Grain coordinates: projected along the face's main axis, 4 units per texture repeat.
             for (int i = 0; i < nv; i++)
             {
@@ -62,16 +71,36 @@ namespace TWF
                 uv[i] = (az >= ax && az >= ay ? new Vector2(p.x, p.y) : ax >= ay ? new Vector2(p.y, p.z) : new Vector2(p.x, p.z)) / 4f;
             }
             // Version 1: flat colours and glass. Version 2: a list per material (flat, glass, leaves, bark, rock).
+            // Version 3: any lists, each with its material's name, and a uv per vertex for the textured ones.
             var lists = new List<int[]>();
+            var names = new List<string>();
             if (version == 1) { lists.Add(ReadTris(r, nb, pos, nrm)); lists.Add(ReadTris(r, ng, pos, nrm)); }
-            else { int n = r.ReadInt32(); for (int k = 0; k < n; k++) lists.Add(ReadTris(r, r.ReadInt32(), pos, nrm)); }
+            else
+            {
+                int n = r.ReadInt32();
+                for (int k = 0; k < n; k++)
+                {
+                    if (version >= 3) names.Add(System.Text.Encoding.ASCII.GetString(r.ReadBytes(r.ReadByte())));
+                    lists.Add(ReadTris(r, r.ReadInt32(), pos, nrm));
+                }
+            }
+            if (version < 3) for (int k = 0; k < lists.Count; k++) names.Add(Classic[k]);
+            materials = names.ToArray();
             var m = new Mesh { name = "Env3D " + name, indexFormat = nv > 65000 ? IndexFormat.UInt32 : IndexFormat.UInt16 };
             m.vertices = pos; m.normals = nrm; m.colors32 = col; m.uv = uv;
             // Textured faces (leaves, bark, rock) carry rounded normals: their texture is laid out from each face's
             // true angle instead, so it doesn't stretch.
-            for (int k = 2; k < lists.Count; k++)
+            for (int k = 0; k < lists.Count; k++)
             {
                 var t = lists[k];
+                int classic = System.Array.IndexOf(Classic, names[k]);
+                if (classic < 0)
+                {
+                    // A texture from the kit: the faces bring their own uv.
+                    for (int i = 0; i < t.Length; i++) uv[t[i]] = fileUv[t[i]];
+                    continue;
+                }
+                if (classic < 2) continue;
                 for (int i = 0; i + 2 < t.Length; i += 3)
                 {
                     Vector3 fa = pos[t[i]], fb = pos[t[i + 1]], fc = pos[t[i + 2]];
@@ -87,7 +116,7 @@ namespace TWF
             m.uv = uv;
             m.subMeshCount = lists.Count;
             for (int k = 0; k < lists.Count; k++) m.SetTriangles(lists[k], k);
-            m.RecalculateBounds();
+            Ground.ToY(m);   // the kit exports the ground on XY and up -Z; the world is Y-up
             m.UploadMeshData(true);
             return m;
         }
@@ -112,23 +141,78 @@ namespace TWF
             if (a == null || a.mesh == null) return null;
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
-            go.transform.position = new Vector3(p.x, p.y, -height);
-            go.transform.rotation = Quaternion.Euler(0f, 0f, yaw);
+            go.transform.position = p.W(height);
+            go.transform.rotation = Ground.Spin(yaw);
             go.layer = LayerMask.NameToLayer("Walls");
             var visual = new GameObject("Mesh");
             visual.transform.SetParent(go.transform, false);
             visual.AddComponent<MeshFilter>().sharedMesh = a.mesh;
             var mr = visual.AddComponent<MeshRenderer>();
-            mr.sharedMaterials = a.mesh.subMeshCount <= 2 ? new[] { BodyMaterial(), GlassMaterial() }
-                : new[] { BodyMaterial(), GlassMaterial(), Textured("leaf", LeafTexture(), 1.55f), Textured("bark", BarkTexture(), 1.15f), Textured("rock", RockTexture(), 1.2f) };
+            var mats = new Material[a.materials.Length];
+            for (int k = 0; k < mats.Length; k++)
+            {
+                mats[k] = MaterialFor(a.materials[k]);
+                if (Frames(a.materials[k]) > 1) visual.AddComponent<EnvFlipbook>().Init(mats[k], Frames(a.materials[k]));
+            }
+            mr.sharedMaterials = mats;
             mr.shadowCastingMode = ShadowCastingMode.On;
             mr.receiveShadows = true;
             if (a.footprint.x > 0f)
             {
-                var bc = go.AddComponent<BoxCollider2D>();
-                bc.size = a.footprint;
+                Phys.Box(go, a.footprint);
             }
             return go;
+        }
+
+        static Material MaterialFor(string name)
+        {
+            switch (name)
+            {
+                case "flat": return BodyMaterial();
+                case "glass": return GlassMaterial();
+                case "leaf": return Textured("leaf", LeafTexture(), 1.55f);
+                case "bark": return Textured("bark", BarkTexture(), 1.15f);
+                case "rock": return Textured("rock", RockTexture(), 1.2f);
+                default: return KitMaterial(name);
+            }
+        }
+
+        // How many frames a kit texture holds side by side (the portal's swirl plays through them).
+        static int Frames(string name) => name == "swirl" ? 8 : 1;
+
+        // A pixel-art texture from the kit on the faces that carry its uv. Stone, wood and roofs are lit by their own
+        // texture's light and dark (relief); the portal's runes and swirl glow.
+        static Material KitMaterial(string name)
+        {
+            if (textured.TryGetValue("kit_" + name, out var m) && m != null) return m;
+            var tex = Resources.Load<Texture2D>("TWF/Env3D/tex/" + name);
+            if (tex == null) { Debug.LogWarning("EnvMesh: no texture Env3D/tex/" + name); return BodyMaterial(); }
+            tex.filterMode = FilterMode.Point;        // whatever the import settings say: crisp pixels that repeat
+            tex.wrapMode = TextureWrapMode.Repeat;
+            m = new Material(WorldTiles.MeshMaterial("env3d_kit_" + name, tex)) { name = "Env3D " + name };
+            m.SetFloat("_Cull", (float)CullMode.Back);
+            m.SetColor("_Color", new Color(1.1f, 1.1f, 1.1f, 1f));
+            switch (name)
+            {
+                case "plaster": case "cloth": case "burlap": case "straw": case "face":
+                    m.SetFloat("_Relief", 0.5f);
+                    break;
+                case "rune":
+                    m.SetFloat("_Cutoff", 0.5f);
+                    m.SetFloat("_Relief", 0f);
+                    m.SetFloat("_Emission", 1.4f);
+                    break;
+                case "swirl":
+                    m.SetFloat("_Cull", (float)CullMode.Off);
+                    m.SetFloat("_Relief", 0f);
+                    m.SetFloat("_NoReveal", 1f);
+                    m.SetFloat("_Emission", 0.75f);
+                    m.SetColor("_Color", new Color(0.6f, 0.6f, 0.6f, 1f));
+                    m.mainTextureScale = new Vector2(1f / Frames(name), 1f);
+                    break;
+            }
+            textured["kit_" + name] = m;
+            return m;
         }
 
         public static Material BodyMaterial()
@@ -254,6 +338,22 @@ namespace TWF
             }
             t.SetPixels32(px); t.Apply();
             return t;
+        }
+    }
+
+    // Plays a texture that holds its frames side by side, by sliding the material along it (the portal's swirl).
+    public class EnvFlipbook : MonoBehaviour
+    {
+        Material mat;
+        int frames;
+        public float fps = 9f;
+
+        public void Init(Material m, int n) { mat = m; frames = n; }
+
+        void Update()
+        {
+            if (mat == null || frames < 2) return;
+            mat.mainTextureOffset = new Vector2(Mathf.Floor(Time.time * fps % frames) / frames, 0f);
         }
     }
 }

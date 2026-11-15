@@ -80,7 +80,7 @@ namespace TWF
             foreach (var m in pack)
             {
                 m.Pack = pack;
-                m.Home = m.transform.position;
+                m.Home = m.transform.G();
             }
             into.AddRange(pack);
         }
