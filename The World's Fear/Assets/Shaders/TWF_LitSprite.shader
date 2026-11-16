@@ -19,6 +19,7 @@ Shader "TWF/LitSprite"
         _Bands ("Light Bands", Range(2,8)) = 4
         _ShadowTint ("Shadow Tint", Color) = (0.42,0.36,0.62,1)
         _Relief ("Relief (height from the texture's own light and dark)", Range(0,4)) = 0
+        _PathMask ("Rounded path edges (TEXCOORD1: tile uv, cut corners, filled corners)", Float) = 0
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
     }
 
@@ -56,7 +57,39 @@ Shader "TWF/LitSprite"
             half4 _ShadowTint;
             half _Relief;
             float4 _MainTex_TexelSize;
+            half _PathMask;
         CBUFFER_END
+
+        // Rounded path edges, like the ponds: m.xy is the spot in its tile (0..1), m.z the corners cut to a quarter
+        // circle (grass showing), m.w the corners filled outside a quarter circle (a path bend sweeping over a grass
+        // tile's corner). Corner bits: 1 lower left, 2 lower right, 4 upper left, 8 upper right. On the pixel grid,
+        // with a little wobble so the edge reads as worn ground, not a drawn circle.
+        float PathHash(float2 p) { return frac(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+        float PathNoise(float2 p)
+        {
+            float2 i = floor(p), f = frac(p);
+            f = f * f * (3 - 2 * f);
+            return lerp(lerp(PathHash(i), PathHash(i + float2(1, 0)), f.x), lerp(PathHash(i + float2(0, 1)), PathHash(i + 1), f.x), f.y);
+        }
+
+        // Worn ground (paths, shores) as an organic patch: wear holds how much of the ground round each corner of the
+        // tile is worn (x lower left, y lower right, z upper right, w upper left), local the spot in the tile. The blend
+        // of the four, wobbled by noise, is the path where it passes a half; a darker rim of trodden grass and dirt
+        // runs along the edge. On the pixel grid (16 per tile), like the art. Returns how far inside the edge (0..1).
+        float PathEdge(float4 wear, float2 local, float3 positionWS)
+        {
+            float2 f = (floor(saturate(local) * 16.0) + 0.5) / 16.0;
+            float v = lerp(lerp(wear.x, wear.y, f.x), lerp(wear.w, wear.z, f.x), f.y);
+            float2 g = floor(positionWS.xz * 16.0) / 16.0;
+            // Each kind of blend (paths 1, ground of another biome 2) wobbles to its own noise, so their edges differ.
+            float seed = _PathMask * 17.3;
+            v += (PathNoise(g * 2.3 + seed) - 0.5) * 0.3;
+            // A soft band, not a line: across it the dirt thins out pixel by pixel into the grass, the chance of a
+            // dirt pixel rising from none at its outer side to all at its inner side.
+            float t = saturate((v - 0.32) / 0.36);
+            if (PathHash(floor(positionWS.xz * 16.0) + 0.37 + seed) > t * t * (3 - 2 * t)) discard;
+            return t;
+        }
 
         // The texture as a heightmap: bright stones stand up, dark mortar and gaps sink.
         float TexHeight(float2 uv)
@@ -122,6 +155,8 @@ Shader "TWF/LitSprite"
                 float3 normalOS : NORMAL;
                 float4 color : COLOR;
                 float2 uv : TEXCOORD0;
+                float4 uv1 : TEXCOORD1;
+                float2 uv2 : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -131,6 +166,8 @@ Shader "TWF/LitSprite"
                 float4 color : COLOR;
                 float2 uv : TEXCOORD0;
                 float3 positionWS : TEXCOORD1;
+                float4 pathMask : TEXCOORD7;
+                float2 pathLocal : TEXCOORD8;
                 float fog : TEXCOORD2;
                 float3 normalWS : TEXCOORD3;
                 float3 tangentWS : TEXCOORD4;
@@ -154,6 +191,8 @@ Shader "TWF/LitSprite"
                 o.tangentWS = normalize(TransformObjectToWorldDir(float3(1, 0, 0)));
                 o.bitangentWS = normalize(TransformObjectToWorldDir(float3(0, 1, 0)));
                 o.faceWS = normalize(TransformObjectToWorldDir(float3(0, 0, -1)));
+                o.pathMask = v.uv1;
+                o.pathLocal = v.uv2;
                 return o;
             }
 
@@ -161,6 +200,15 @@ Shader "TWF/LitSprite"
             {
                 half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv) * i.color;
                 clip(tex.a - _Cutoff);
+
+                if (_PathMask > 0.5)
+                {
+                    float inside = PathEdge(i.pathMask, i.pathLocal, i.positionWS);
+                    // the outer band: darker, trodden grass over the dirt
+                    // Near the grass the dirt is mixed with it: greener and darker, sprinkled through the grass.
+                    if (_PathMask < 1.5)
+                        tex.rgb = lerp(lerp(tex.rgb, half3(0.27, 0.42, 0.13), 0.55), tex.rgb, smoothstep(0.15, 0.85, inside));
+                }
                 if (RevealsHero()) TWF_RevealClip(i.positionWS, i.positionWS, i.positionCS);
 
                 // Sprites are lit as if they face the sky, so the whole sprite gets even light
@@ -319,6 +367,8 @@ Shader "TWF/LitSprite"
                 float4 positionOS : POSITION;
                 float4 color : COLOR;
                 float2 uv : TEXCOORD0;
+                float4 uv1 : TEXCOORD1;
+                float2 uv2 : TEXCOORD2;
             };
 
             struct Varyings
@@ -327,6 +377,8 @@ Shader "TWF/LitSprite"
                 float2 uv : TEXCOORD0;
                 float alpha : TEXCOORD1;
                 float3 positionWS : TEXCOORD2;
+                float4 pathMask : TEXCOORD3;
+                float2 pathLocal : TEXCOORD4;
             };
 
             Varyings vert(Attributes v)
@@ -337,12 +389,16 @@ Shader "TWF/LitSprite"
                 o.positionCS = TransformWorldToHClip(ws);
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.alpha = v.color.a * _Color.a;
+                o.pathMask = v.uv1;
+                o.pathLocal = v.uv2;
                 return o;
             }
 
             half4 frag(Varyings i) : SV_Target
             {
                 clip(SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).a * i.alpha - _Cutoff);
+                // The same cut as the colour pass: depth priming draws only where the depth pass wrote.
+                if (_PathMask > 0.5) PathEdge(i.pathMask, i.pathLocal, i.positionWS);
                 if (RevealsHero()) TWF_RevealClip(i.positionWS, i.positionWS, i.positionCS);
                 return 0;
             }

@@ -17,7 +17,8 @@ namespace TWF
     {
         public static bool On = true;
         public static readonly RectInt HubRect = new RectInt(-48, -48, 96, 96);
-        public static readonly Vector2 Spawn = new Vector2(0f, -19.5f);   // the waypoint: the plaza at the citadel's feet
+        public static readonly Vector2 Spawn = new Vector2(0f, -19.5f);   // where a new hero starts: the plaza at the citadel's feet
+        static readonly Vector2 WaypointSpot = new Vector2(-12f, -16.5f);  // the town's portal, west of the citadel's stairs
 
         // Walls (given for the south side; the other three are the same turned round the centre).
         const float Outer = 40f, Thick = 2f, WallH = 5f;
@@ -378,10 +379,11 @@ namespace TWF
 
         void PlaceWaypoint()
         {
+            // Off to the side of the plaza, clear of the citadel's stairs: the portal arch is tall and wide.
             foreach (var w in FindObjectsByType<Waypoint>())
-                if (w.id == "village") w.transform.position = Spawn.W(w.transform.position.y);
+                if (w.id == "village") w.transform.position = WaypointSpot.W(0f);
             var wm = FindAnyObjectByType<WorldManager>();
-            if (wm != null) wm.villageWaypoint = Spawn;
+            if (wm != null) wm.villageWaypoint = WaypointSpot;
         }
 
         // Two guards at each gate, looking out.

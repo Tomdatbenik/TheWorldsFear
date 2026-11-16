@@ -107,6 +107,12 @@ Shader "TWF/Water"
                     if (i.sides.y > 0.5) edge = min(edge, 1 - c.x);
                     if (i.sides.z > 0.5) edge = min(edge, c.y);
                     if (i.sides.w > 0.5) edge = min(edge, 1 - c.y);
+                    // A ragged rim, not a ruled line: the edge wanders, and over its last pixels the water thins out
+                    // into the shore pixel by pixel, like the paths do into the grass.
+                    float2 cell = floor(i.positionWS.xz * _PixelSize);
+                    edge += (noise(cell / _PixelSize * 1.7 + 11.0) - 0.5) * 0.34 - 0.04;
+                    float soft = saturate(edge / (4.0 / _PixelSize));
+                    if (hash(cell + 0.71) > soft * soft * (3 - 2 * soft)) discard;
                 }
                 float px = 1.0 / _PixelSize;
                 // Snap to the pixel grid so it matches the pixel art.

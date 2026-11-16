@@ -13,18 +13,19 @@ namespace TWF
 
         SpriteRenderer glow;
         bool heroInside;
+        // The kit's stone portal arch (walk into its opening), when installed; its swirl is dark until unlocked.
+        MeshRenderer arch;
+        Material swirlLit, swirlDark;
+        bool shownUnlocked, shown;
 
         void Start()
         {
-            var baseSr = GameAssets.CreateWorldSprite("Base", GameAssets.Diamond, transform, new Color(0.35f, 0.55f, 0.9f, 0.9f), SortOrder.Ground + 5, 1.8f);
-            baseSr.transform.localScale = new Vector3(baseSr.transform.localScale.x, baseSr.transform.localScale.y * 0.5f, 1f);
-            glow = GameAssets.CreateWorldSprite("Glow", GameAssets.PixelGlow, transform, new Color(0.5f, 0.8f, 1f, 0.5f), SortOrder.Ground + 6, 2.4f);
-            baseSr.transform.localPosition = new Vector3(0, Ground.DecalH, 0);
-            glow.transform.localPosition = new Vector3(0, Ground.DecalH * 2f, 0);
+            float labelHeight = MakeArch() ? 5.8f : 1.4f;
+            if (arch == null) MakeMarker();
             PointLights.Attach(transform, new Color(0.5f, 0.8f, 1f), 6f, 2.5f, new Vector3(0, 1.5f, 0), true);
             var label = new GameObject("Label").AddComponent<TextMeshPro>();
             label.transform.SetParent(Billboard.Create(transform), false);
-            label.transform.localPosition = new Vector3(0, 1.4f, 0);
+            label.transform.localPosition = new Vector3(0, labelHeight, 0);
             label.font = GameAssets.Font;
             label.text = displayName;
             label.fontSize = 2.6f;
@@ -36,11 +37,54 @@ namespace TWF
             label.rectTransform.sizeDelta = new Vector2(8, 1);
         }
 
+        bool MakeArch()
+        {
+            var go = EnvMesh.Place("portal", transform, transform.G(), transform.position.y);
+            if (go == null) return false;
+            go.transform.localPosition = Vector3.zero;
+            go.transform.localRotation = Quaternion.identity;
+            // Walk into the opening: only the two pillars block.
+            var box = go.GetComponent<BoxCollider>();
+            if (box != null)
+            {
+                float w = box.size.x, d = box.size.z;
+                DestroyImmediate(box);
+                const float pillar = 0.8f;
+                Phys.Box(go, new Vector2(pillar, d), new Vector2(-(w - pillar) / 2f, 0f));
+                Phys.Box(go, new Vector2(pillar, d), new Vector2((w - pillar) / 2f, 0f));
+            }
+            arch = go.GetComponentInChildren<MeshRenderer>();
+            var mats = arch.sharedMaterials;
+            swirlLit = mats[mats.Length - 1];   // the swirl is the arch's last material
+            swirlDark = new Material(swirlLit) { name = "Portal Dormant" };
+            swirlDark.SetFloat("_Emission", 0.15f);
+            swirlDark.color = new Color(0.35f, 0.35f, 0.42f);
+            return true;
+        }
+
+        // Without the kit: the old diamond and glow on the ground.
+        void MakeMarker()
+        {
+            var baseSr = GameAssets.CreateWorldSprite("Base", GameAssets.Diamond, transform, new Color(0.35f, 0.55f, 0.9f, 0.9f), SortOrder.Ground + 5, 1.8f);
+            baseSr.transform.localScale = new Vector3(baseSr.transform.localScale.x, baseSr.transform.localScale.y * 0.5f, 1f);
+            glow = GameAssets.CreateWorldSprite("Glow", GameAssets.PixelGlow, transform, new Color(0.5f, 0.8f, 1f, 0.5f), SortOrder.Ground + 6, 2.4f);
+            baseSr.transform.localPosition = new Vector3(0, Ground.DecalH, 0);
+            glow.transform.localPosition = new Vector3(0, Ground.DecalH * 2f, 0);
+        }
+
         void Update()
         {
             bool unlocked = Profile.Data.waypoints.Contains(id);
             float pulse = 0.35f + Mathf.Sin(Time.time * 3f) * 0.15f;
-            glow.color = unlocked ? new Color(0.5f, 0.8f, 1f, pulse + 0.2f) : new Color(0.6f, 0.6f, 0.6f, 0.25f);
+            if (glow != null) glow.color = unlocked ? new Color(0.5f, 0.8f, 1f, pulse + 0.2f) : new Color(0.6f, 0.6f, 0.6f, 0.25f);
+            if (arch != null && (!shown || unlocked != shownUnlocked))
+            {
+                var mats = arch.sharedMaterials;
+                mats[mats.Length - 1] = unlocked ? swirlLit : swirlDark;
+                arch.sharedMaterials = mats;
+                shown = true;
+                shownUnlocked = unlocked;
+            }
 
             var hero = HeroController.Instance;
             if (hero == null) return;

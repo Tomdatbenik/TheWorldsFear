@@ -363,6 +363,56 @@
    ]
   },
   {
+   "id": "cave_bat",
+   "name": "Cave Bat",
+   "biome": "Forest",
+   "role": "Swarmling",
+   "body": "flyer",
+   "size": "small",
+   "w": 120,
+   "h": 128,
+   "pivotY": 0.3125,
+   "heightUnits": 0.7600000301996866,
+   "walkPerFrame": 0.07980000317096708,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
    "id": "cinder_mite",
    "name": "Cinder Mite",
    "biome": "Ember",

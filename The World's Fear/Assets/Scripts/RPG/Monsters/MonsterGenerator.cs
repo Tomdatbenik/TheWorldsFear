@@ -138,6 +138,21 @@ namespace TWF
         }
 
         // The farmland's creatures: field rats and the forest's spiders.
+        // The flyers of a biome (bats, wisps, imps...), else every flyer there is: who lives up in the mountains.
+        static readonly Dictionary<Biome, List<MonsterSpecies>> flyerRosters = new Dictionary<Biome, List<MonsterSpecies>>();
+        public static List<MonsterSpecies> FlyerRoster(Biome biome)
+        {
+            if (flyerRosters.TryGetValue(biome, out var list)) return list;
+            list = new List<MonsterSpecies>();
+            foreach (var d in MobCatalog.ForBiome(biome))
+                if (d.body == "flyer" && !d.warbandOnly) list.Add(CreateMob(d));
+            if (list.Count == 0)
+                foreach (var d in MobCatalog.All)
+                    if (d.body == "flyer" && !d.warbandOnly) list.Add(CreateMob(d));
+            flyerRosters[biome] = list;
+            return list;
+        }
+
         static List<MonsterSpecies> farmRoster;
         public static List<MonsterSpecies> FarmRoster()
         {

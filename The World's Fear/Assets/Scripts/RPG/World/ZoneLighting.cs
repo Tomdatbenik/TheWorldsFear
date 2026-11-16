@@ -24,6 +24,10 @@ namespace TWF
         int target = (int)Biome.Village;
         Mood current;
         bool boss, dungeon;
+        static readonly Vector2 WorldSun = new Vector2(48, 45);   // the town's sun (elevation, azimuth)
+
+        // In a dungeon: no sky, so the hero's lantern stays lit.
+        public static bool Underground => Instance != null && Instance.dungeon;
         // How much the time of day shows (1 most biomes, less in the Ember, 0 in boss arenas), blended like the rest
         // of the mood: switched outright, crossing into a biome snapped the light from one look to the other.
         float dayAmount = 1f;
@@ -68,6 +72,7 @@ namespace TWF
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             current = MoodFor(target, false);
+            current.sunAngles = WorldSun;
             dayAmount = DayAmountGoal;
             ApplyMood(current);
         }
@@ -107,6 +112,9 @@ namespace TWF
             float k = 1f - Mathf.Exp(-Time.unscaledDeltaTime * 0.6f);
             dayAmount = Mathf.Lerp(dayAmount, DayAmountGoal, k);
             var goal = dungeon ? dungeonMood : MoodFor(target, boss);
+            // One sun over the whole overworld, moved only by the time of day: per-biome sun directions swung every
+            // shadow round when you crossed a border. Biomes keep their own colour, strength, ambient and fog.
+            if (!boss && !dungeon) goal.sunAngles = WorldSun;
             current.sun = Color.Lerp(current.sun, goal.sun, k);
             current.sunIntensity = Mathf.Lerp(current.sunIntensity, goal.sunIntensity, k);
             current.sunAngles = Vector2.Lerp(current.sunAngles, goal.sunAngles, k);

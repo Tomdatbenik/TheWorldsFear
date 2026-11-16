@@ -32,6 +32,7 @@ namespace TWF
             Hero = heroGo.GetComponent<HeroController>();
             heroGo.GetComponent<GroundBody>().mass = 3f;
             Hero.Died += OnHeroDied;
+            heroGo.AddComponent<HeroLantern>();   // lights the way at night
 
             var cam = Camera.main;
             if (cam != null)

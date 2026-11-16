@@ -32,6 +32,9 @@ namespace TWF
             // The farmland round the town: rats and spiders, rarely anything special, never a warband.
             bool farm = roster == null && WorldGen.InFarmRing(center);
             var species = roster ?? (farm ? MonsterGenerator.FarmRoster() : MonsterGenerator.SpeciesFor(zone));
+            // High in the mountain ranges, where cliffs keep walkers out, only flyers live.
+            bool mountain = roster == null && !farm && WorldGen.ElevAt(Mathf.FloorToInt(center.x), Mathf.FloorToInt(center.y)) >= WorldGen.MountainLevel;
+            if (mountain && MonsterGenerator.FlyerRoster(zone.biome).Count > 0) species = MonsterGenerator.FlyerRoster(zone.biome);
             if (species.Count == 0) return;
             int level = fixedLevel > 0
                 ? Mathf.Max(1, fixedLevel + rng.Next(-1, 2))
@@ -41,6 +44,7 @@ namespace TWF
             float eliteChance = eliteOverride >= 0f ? eliteOverride : fixedLevel > 0 ? WorldGen.EliteChance(center) : zone.eliteChance;
             // Sometimes an organised warband instead of an ordinary pack: a separate, harder tier.
             if (farm) { rareChance *= 0.3f; eliteChance *= 0.4f; }
+            else if (mountain) { }   // no warbands on the peaks
             else if (rng.NextDouble() < (warbandOverride >= 0f ? warbandOverride : Warband.SpawnChance) && Warband.Spawn(zone, zone.biome, center, level, into, rng)) return;
 
             var main = species[rng.Next(species.Count)];

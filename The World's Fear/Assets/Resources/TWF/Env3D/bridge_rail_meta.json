@@ -1,0 +1,12 @@
+{
+ "name": "bridge_rail",
+ "kind": "bridge_rail",
+ "mesh": true,
+ "footprint": null,
+ "height": 0.6550000309944153,
+ "verts": 144,
+ "tris": 72,
+ "materials": [
+  "wood"
+ ]
+}

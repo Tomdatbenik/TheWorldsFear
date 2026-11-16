@@ -109,7 +109,10 @@ namespace TWF
             visualGo.AddComponent<Billboard>();
 
             float radius = species.look.pixelSize / 16f * 0.3f * scale;
-            var body = GroundBody.Ensure(go, radius, new Vector2(0, radius * 0.6f));
+            // The body that collides stays slimmer than a tile, centred on the feet: the world has one-tile ramps,
+            // bridge ends and gaps between walls, and a wider body would jam in them though its route is open.
+            float bodyRadius = Mathf.Min(radius, MaxBodyRadius);
+            var body = GroundBody.Ensure(go, bodyRadius, new Vector2(0, Mathf.Min(radius * 0.6f, 0.15f)));
             body.mass = species.archetype == MonsterArchetype.Brute || species.archetype == MonsterArchetype.Guardian ? 6f : 1f;
             body.Rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
 
@@ -177,6 +180,7 @@ namespace TWF
         GroundFollow ground;
         float leapUntil;
         const float ReachHeight = 1.6f;          // melee reaches this far up or down
+        const float MaxBodyRadius = 0.42f;       // fits a one-tile gap with room to spare
 
         static Mobility MobilityOf(MonsterSpecies sp)
         {

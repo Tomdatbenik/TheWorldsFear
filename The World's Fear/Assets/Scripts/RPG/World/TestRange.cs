@@ -22,6 +22,10 @@ namespace TWF
         static readonly Rect Slope = new Rect(16f, 0f, 8f, 10f);
         static readonly Rect WallRun = new Rect(-34f, 22f, 26f, 2f);
         static readonly Vector2 PortalSpot = new Vector2(10f, -3f), MillSpot = new Vector2(-28f, 0f);
+        // A 1 x 4 plank bridge over a strip of water, one level up, with a stepped ramp at each end.
+        static readonly Vector2Int BridgeCell = new Vector2Int(30, 5);
+        const int BridgeTiles = 4;
+        const float BridgeH = 1.2f;
 
         readonly List<MonsterBrain> spawned = new List<MonsterBrain>();
         readonly List<(string name, System.Func<Vector2, MonsterBrain> spawn)> kinds = new List<(string, System.Func<Vector2, MonsterBrain>)>();
@@ -136,6 +140,63 @@ namespace TWF
             EnvMesh.Place("portal", transform, PortalSpot);
             EnvMesh.Place("timber_house", transform, new Vector2(32f, -6f));
 
+            BuildBridge();
+        }
+
+        // The river bridge pieces (BridgeArt) the way the world uses them: tile by tile, a railing on each open side.
+        void BuildBridge()
+        {
+            var bank = new Town.Solid();
+            var pool = new Town.Solid();
+            float x0 = BridgeCell.x, y0 = BridgeCell.y, x1 = x0 + BridgeTiles;
+            Town.Box(pool, pool, new Rect(x0, y0 - 3f, BridgeTiles, 7f), 0f, 0.03f);
+            // Banks: a raised block at each end and steps down to the yard.
+            const int steps = 6;
+            foreach (int side in new[] { -1, 1 })
+            {
+                float edge = side < 0 ? x0 : x1;
+                var block = Rect.MinMaxRect(Mathf.Min(edge, edge + side), y0, Mathf.Max(edge, edge + side), y0 + 1f);
+                Town.Box(bank, bank, block, 0f, BridgeH);
+                TerrainHeight.AddFlat(block, BridgeH);
+                float far = edge + side * 3f, near = edge + side;
+                for (int i = 0; i < steps; i++)
+                {
+                    float a = Mathf.Lerp(far, near, i / (float)steps);
+                    Town.Box(bank, bank, Rect.MinMaxRect(Mathf.Min(a, near), y0, Mathf.Max(a, near), y0 + 1f), 0f, BridgeH * (i + 1) / steps);
+                }
+                var ramp = Rect.MinMaxRect(Mathf.Min(far, near), y0, Mathf.Max(far, near), y0 + 1f);
+                TerrainHeight.AddRamp(ramp, side < 0 ? 0f : BridgeH, side < 0 ? BridgeH : 0f, Vector2Int.right);
+            }
+            TerrainHeight.AddFlat(new Rect(x0, y0, BridgeTiles, 1f), BridgeH);
+            bank.Build(transform, "Bridge Banks", Town.Mat("keep", EnvArt.Tex("dgn_keep_wall")), true);
+            pool.Build(transform, "Bridge Water", Town.Mat("test_water", WaterTexture()), false);
+            var holder = Holder("Bridge");
+            for (int i = 0; i < BridgeTiles; i++)
+                if (!BridgeArt.PlaceTile(holder.transform, new Vector2(x0 + i, y0), BridgeH, true, false, true, false))
+                {
+                    Debug.LogWarning("TestRange: bridge meshes not installed");
+                    break;
+                }
+            // The loose pieces side by side on the yard floor, to look at.
+            EnvMesh.Place(BridgeArt.Deck, transform, new Vector2(x0 + 0.5f, y0 + 6f), 0.22f);
+            EnvMesh.Place(BridgeArt.Rail, transform, new Vector2(x0 + 2f, y0 + 6f), 0f);
+            EnvMesh.Place(BridgeArt.Pier, transform, new Vector2(x0 + 3.5f, y0 + 6f), 1.5f);
+        }
+
+        static Texture2D WaterTexture()
+        {
+            const int N = 72;
+            var t = new Texture2D(N, N, TextureFormat.RGBA32, false) { name = "Test Water" };
+            var px = new Color32[N * N];
+            var rng = new System.Random(4);
+            for (int i = 0; i < px.Length; i++) px[i] = new Color32(44, 150, 196, 255);
+            for (int n = 0; n < 40; n++)
+            {
+                int x = rng.Next(N), y = rng.Next(N), w = 3 + rng.Next(6);
+                for (int k = 0; k < w; k++) px[y * N + (x + k) % N] = new Color32(120, 208, 232, 255);
+            }
+            t.SetPixels32(px); t.Apply();
+            return t;
         }
 
         GameObject Holder(string name)
@@ -201,6 +262,9 @@ namespace TWF
             }
             if (kinds.Count > 0) Spawn(0, CastleStairs.center);
             if (kinds.Count > 1) Spawn(1, Ledge.center);
+            // Flyers over the bridge (the cave bats, once they are in the catalogue).
+            int bat = kinds.FindIndex(k => k.name.StartsWith("Cave Bat"));
+            for (int i = 0; bat >= 0 && i < 3; i++) Spawn(bat, new Vector2(BridgeCell.x + 0.5f + i * 1.5f, BridgeCell.y - 1.5f - (i % 2)));
         }
 
         void Spawn(int kind, Vector2 at)
@@ -306,6 +370,7 @@ namespace TWF
             if (GUILayout.Button("Portal")) Teleport(PortalSpot + Vector2.down * 2.5f);
             if (GUILayout.Button("Scarecrow")) Teleport(new Vector2(-8f, -5.5f));
             if (GUILayout.Button("Windmill")) Teleport(MillSpot + Vector2.down * 7f);
+            if (GUILayout.Button("Bridge")) Teleport(new Vector2(BridgeCell.x - 4f, BridgeCell.y + 0.5f));
             GUILayout.EndHorizontal();
 
             GUILayout.Space(4);

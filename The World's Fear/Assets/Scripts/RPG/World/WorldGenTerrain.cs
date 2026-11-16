@@ -18,6 +18,7 @@ namespace TWF
         public const int PlateauLevel = 2;       // the old plateaus (PlateauHeight) are level 2
         public const int LeapDrop = 4;           // the most levels a leaper jumps down at once
         public const int RockLevel = 11;         // bare rock above this, no trees
+        public const int MountainLevel = 8;      // the high ranges: cliffs kept, flyers live up here
         const float FlatRadius = 125f;           // town and farmland: flat
         const float RiseRadius = 190f;           // relief reaches its full height here
 
@@ -83,8 +84,19 @@ namespace TWF
                 if (CastleAt(x, y, out _)) return 0;
             }
             if (InFarmland(x, y)) return 0;
-            return ElevRaw(x, y);
+            if (BridgeZone(x, y)) return BridgeLevel;   // a bridge and the raised ends it stands on
+            // The median of the 3x3 round the cell: lone bumps, one-tile notches and thin slivers of a level are
+            // smoothed away, so each tier is a solid stretch of ground you can walk about on.
+            int n = 0;
+            for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+                medianBuf[n++] = ElevRaw(x + dx, y + dy);
+            System.Array.Sort(medianBuf);
+            return medianBuf[4];
         }
+
+        [System.ThreadStatic] static int[] medianBufTS;
+        static int[] medianBuf => medianBufTS ??= new int[9];
 
         // The level from the noise alone (callers handle the hub, fortresses and castles).
         static int ElevRaw(int x, int y)
@@ -92,6 +104,7 @@ namespace TWF
             var p = new Vector2(x + 0.5f, y + 0.5f);
             float d = p.magnitude;
             if (d < FlatRadius) return 0;
+            if (BridgeZone(x, y)) return BridgeLevel;
             float ramp = Smooth(Mathf.InverseLerp(FlatRadius, RiseRadius, d));
             float clear = LandmarkClearance(x, y);
             if (clear <= 0f) return 0;
@@ -131,11 +144,90 @@ namespace TWF
             float pk = Smooth(Mathf.InverseLerp(0.68f, 0.93f, Noise(x, y, 0.0055f, 78)));
             if (m > 0.35f && pk > 0f) e = Mathf.Max(e, 6.5f + pk * Mathf.Min(1f, m * 1.6f) * 13.5f + (Noise(x, y, 0.05f, 77) - 0.5f) * 1.2f * pk);
 
-            e *= ramp * clear;
-            return Mathf.Clamp(Mathf.FloorToInt(e), 0, MaxLevel);
+            e *= ramp * clear * RiverValley(x, y);
+            int lv = Mathf.Clamp(Mathf.FloorToInt(e), 0, MaxLevel);
+            // Above the first two levels the land rises two at a time: half as many tiers, each twice as wide, so
+            // a mountain is a few broad terraces rather than rings of narrow ledges.
+            if (lv > 2) lv -= lv % 2;
+            return lv;
         }
 
         static float Smooth(float t) => t * t * (3f - 2f * t);
+
+        // ---------- Rivers ----------
+        // A river is a long winding line of noise (pushed about by more noise so it never runs straight), a few tiles
+        // wide, swelling now and then into a lake. The land falls away to the lowest level along it, so it runs in a
+        // shallow valley. Where a path meets it, the path rises a level onto raised ends and crosses on a bridge.
+        public const int BridgeLevel = 1;
+        const float RiverStart = 150f;           // beyond the farms and the town's four roads
+
+        static float RiverNoise(int x, int y)
+        {
+            float wx = (Noise(x, y, 0.006f, 63) - 0.5f) * 70f, wy = (Noise(x, y, 0.006f, 64) - 0.5f) * 70f;
+            return Mathf.Abs(Noise(x + wx, y + wy, 0.0026f, 61) - 0.5f);
+        }
+
+        // Half the river's width, in noise units: a few tiles, much more where it swells into a lake.
+        static float RiverHalf(int x, int y) => 0.0045f + Mathf.Max(0f, Noise(x, y, 0.012f, 62) - 0.6f) * 0.12f;
+
+        static bool RiverLand(int x, int y)
+        {
+            var p = new Vector2(x + 0.5f, y + 0.5f);
+            return p.magnitude > RiverStart && BiomeAt(p) != Biome.Ember;
+        }
+
+        public static bool RiverAt(int x, int y) => RiverLand(x, y) && RiverNoise(x, y) < RiverHalf(x, y);
+
+        // 0 in and right by the river, rising to 1 over the valley's sides.
+        static float RiverValley(int x, int y)
+        {
+            if (!RiverLand(x, y)) return 1f;
+            float half = RiverHalf(x, y);
+            return Smooth(Mathf.InverseLerp(half + 0.002f, half + 0.02f, RiverNoise(x, y)));
+        }
+
+        const int MaxSpan = 8;        // the longest bridge, in tiles
+        const int Abutment = 2;       // how far the raised path runs out from each end of a bridge
+
+        // A path tile in the river is a bridge only where the path crosses it: along one axis, the river ends on both
+        // sides within MaxSpan and the path is there on each bank. (A path running along a river just stops at it.)
+        public static bool BridgeCrosses(int x, int y)
+        {
+            for (int axis = 0; axis < 2; axis++)
+            {
+                int dx = axis == 0 ? 1 : 0, dy = 1 - dx;
+                bool Bank(int sign)
+                {
+                    for (int k = 1; k <= MaxSpan; k++)
+                    {
+                        int qx = x + dx * k * sign, qy = y + dy * k * sign;
+                        if (!RiverAt(qx, qy)) return OnPath(qx, qy);
+                    }
+                    return false;
+                }
+                if (Bank(1) && Bank(-1)) return true;
+            }
+            return false;
+        }
+
+        // A bridge, and the path on the banks for Abutment tiles out from it: raised to BridgeLevel.
+        static bool BridgeZone(int x, int y)
+        {
+            // (The banks may lie outside river land, at the edge of the ash wastes: an end is raised wherever a bridge
+            // needs one.)
+            if (!OnPath(x, y)) return false;
+            if (RiverAt(x, y)) return BridgeCrosses(x, y);
+            if (RiverNoise(x, y) > RiverHalf(x, y) + 0.03f) return false;
+            foreach (var d in new[] { new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1) })
+                for (int k = 1; k <= Abutment; k++)
+                {
+                    int qx = x + d.x * k, qy = y + d.y * k;
+                    if (!RiverAt(qx, qy)) { if (!OnPath(qx, qy)) break; continue; }
+                    if (OnPath(qx, qy) && BridgeCrosses(qx, qy)) return true;
+                    break;
+                }
+            return false;
+        }
 
         // What a raised cell holds: lava in a volcano's crater, a stream or a mountain lake, a path, or open high ground.
         static Cell RaisedCell(int x, int y, int elev, bool path)

@@ -4,7 +4,7 @@ using UnityEngine;
 namespace TWF
 {
     // CastleFloor/CastleWall/Tower: the open castles on the overworld (appended, so saved numbers keep their meaning).
-    public enum Cell : byte { Ground, Path, Water, Lava, Wall, Plateau, Hub, CastleFloor, CastleWall, Tower, Puddle, Stairs, Pillar }
+    public enum Cell : byte { Ground, Path, Water, Lava, Wall, Plateau, Hub, CastleFloor, CastleWall, Tower, Puddle, Stairs, Pillar, Bridge }
 
     // Deterministic infinite world: everything about a position comes from the hero's world seed.
     // Difficulty grows with distance from the village at the origin.
@@ -31,6 +31,7 @@ namespace TWF
             regions.Clear();
             castles.Clear();
             stairBlocks.Clear();
+            vertexHeights.Clear();
             fortresses.Clear();
             bool legacy = seed == LegacySeed;
             waypointShift = legacy ? Vector2Int.zero : GridShift(51, WaypointGrid);
@@ -118,7 +119,20 @@ namespace TWF
         public static Cell CellAt(int x, int y)
         {
             var c = BaseCell(x, y);
+            // The ground round a grassy slope bends up to meet it, and a puddle can't: there it is plain ground.
+            if (c == Cell.Puddle && NextToSlope(x, y)) return Cell.Ground;
             return (c == Cell.Ground || c == Cell.Path || c == Cell.Plateau) && StairAt(x, y, out _, out _) ? Cell.Stairs : c;
+        }
+
+        static bool NextToSlope(int x, int y)
+        {
+            for (int dx = -1; dx <= 1; dx++)
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                var b = BaseCell(x + dx, y + dy);
+                if ((b == Cell.Ground || b == Cell.Path || b == Cell.Plateau) && StairAt(x + dx, y + dy, out var st, out _) && st.natural) return true;
+            }
+            return false;
         }
 
         // The cell before stairs are laid against the plateaus (cached per chunk, see WorldGenTerrain).
@@ -144,6 +158,9 @@ namespace TWF
             bool path = Mathf.Abs(r - 0.5f) < 0.022f || Mathf.Abs(r2 - 0.5f) < 0.016f;
             // Four roads leave the village so you never start lost.
             if (d < 140f && (Mathf.Abs(x) < 2 || Mathf.Abs(y) < 2)) path = true;
+
+            // Rivers on the low ground, swelling into lakes; a path crosses on a bridge, a level up.
+            if (RiverAt(x, y)) return path && BridgeCrosses(x, y) ? Cell.Bridge : Cell.Water;
 
             // Raised land: hills, mesas, volcanoes and mountain ranges (see WorldGenTerrain).
             int elev = ElevRaw(x, y);
@@ -173,7 +190,7 @@ namespace TWF
             return Cell.Ground;
         }
 
-        public static bool Walkable(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Hub || c == Cell.CastleFloor || c == Cell.Puddle;
+        public static bool Walkable(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Hub || c == Cell.CastleFloor || c == Cell.Puddle || c == Cell.Bridge;
 
         // Raised and blocking: drawn as blocks with a lit rim on top and a shadow at the foot.
         public static bool Solid(Cell c) => c == Cell.Plateau || c == Cell.Wall || c == Cell.CastleWall || c == Cell.Tower || c == Cell.Pillar;
@@ -475,9 +492,9 @@ namespace TWF
         public struct Stair { public Vector2Int a, d, r; public int lo, hi, w, len; public bool natural, path; }
 
         public const int StairLength = 3;
-        const int StairApron = 2;
+        const int StairApron = 1;
         const int StairBlock = 16;
-        const int MaxFlights = 8;
+        const int MaxFlights = 12;
         const int MaxWidth = 8;
         static readonly Dictionary<long, List<Stair>> stairBlocks = new Dictionary<long, List<Stair>>();
         static readonly Vector2Int[] StairDirs = { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right };
@@ -506,10 +523,10 @@ namespace TWF
                 var top = a + d * len;
                 if (!Floor(BaseCell(top.x, top.y))) continue;
                 int lo = ElevAt(a.x, a.y), hi = ElevAt(top.x, top.y);
-                if (hi - lo < 1 || hi - lo > 2) continue;
+                if (hi - lo < 1 || hi - lo > 2 || hi >= MountainLevel) continue;
                 bool onPath = CrossesPath(a, d, r, 1, len);
-                // Short flights are only for paths that would otherwise run into a cliff.
-                if (len < StairLength && !onPath) continue;
+                // Short flights: for paths that would otherwise run into a cliff, and for a single level up.
+                if (len < StairLength && !onPath && hi - lo > 1) continue;
                 // As wide as the ground allows, up to MaxWidth: a broad grassy slope rather than a narrow stair.
                 int w = 0;
                 while (w < MaxWidth && InBlock(a + r * w + d * (len - 1), x0, y0) && InBlock(a + r * w, x0, y0) && Column(a + r * w, d, lo, hi, len)) w++;
@@ -529,29 +546,15 @@ namespace TWF
             }
             if (found.Count > 0)
             {
-                uint pick = Hash(bx * 131 + 7, by * 173 - 3);
                 // The widest first (ties broken by the seed).
                 found.Sort((p, q) => p.path != q.path ? q.path.CompareTo(p.path) : q.w != p.w ? q.w.CompareTo(p.w) : (Hash(p.a.x, p.a.y) & 0xFFFF).CompareTo(Hash(q.a.x, q.a.y) & 0xFFFF));
-                var first = found[0];
-                list.Add(first);
-                // One more for every other level that has a way up here.
-                var levels = new HashSet<int> { first.lo };
-                for (int pass = 0; pass < 2; pass++)
-                    for (int n = 0; n < found.Count && list.Count < MaxFlights; n++)
-                    {
-                        var f = found[n];
-                        if ((pass == 0 && levels.Contains(f.lo) && !f.path) || Overlaps(list, f)) continue;
-                        levels.Add(f.lo);
-                        list.Add(f);
-                    }
-                Stair far = first;
-                int best = 0;
+                // Every flight that fits, widest first, as long as they keep a little apart: most rises have a way up
+                // close by, so the high ground is somewhere to go rather than a wall to walk round.
                 foreach (var f in found)
                 {
-                    int dist = Mathf.Abs(f.a.x - first.a.x) + Mathf.Abs(f.a.y - first.a.y);
-                    if (dist > best && !Overlaps(list, f)) { best = dist; far = f; }
+                    if (list.Count >= MaxFlights) break;
+                    if (!Overlaps(list, f)) list.Add(f);
                 }
-                if (best >= 7 && list.Count < MaxFlights) list.Add(far);
             }
             stairBlocks[key] = list;
             return list;
@@ -614,6 +617,61 @@ namespace TWF
                 row = y - a.y;
                 return x >= a.x && x <= a.x + 1 && row >= 0 && row < StairLength;
             }
+            if (BlockStairAt(x, y, out stair, out row)) return true;
+            if (PathRampAt(x, y, out stair, out row)) return true;
+            return BankAt(x, y, out stair, out row);
+        }
+
+        // ---------- Banks: rises you can walk up anywhere ----------
+        // In the gentle lands (forest, marsh, round the town) every rise of one or two levels is a grassy bank, one
+        // tile per level, so the hills roll instead of walling you in. In the ruins and the ember wastes about half of
+        // the edges are banks, in long stretches, and the rest stay cliffs. Mountains above BankTopRugged keep their
+        // cliffs: the high ranges are for climbers and flyers.
+        const int BankTopRugged = 6;
+
+        static bool BankAllowed(int x, int y, int hi)
+        {
+            if (hi >= MountainLevel) return false;   // the high ranges are for flyers and climbers
+            var b = BiomeAt(new Vector2(x + 0.5f, y + 0.5f));
+            if (b == Biome.Forest || b == Biome.Marsh || b == Biome.Village) return true;
+            return hi <= BankTopRugged && Noise(x, y, 0.06f, 91) > 0.48f;
+        }
+
+        static bool BankAt(int x, int y, out Stair stair, out int row)
+        {
+            stair = default; row = 0;
+            if (!Floor(BaseCell(x, y))) return false;
+            // One level: this tile alone. Two levels: this tile and the next, as rows 0 and 1.
+            for (int len = 1; len <= 2; len++)
+            for (int r = 0; r < len; r++)
+            foreach (var d in StairDirs)
+            {
+                var a = new Vector2Int(x - d.x * r, y - d.y * r);
+                if (TryBank(a, d, len, out stair)) { row = r; return true; }
+            }
+            return false;
+        }
+
+        static bool TryBank(Vector2Int a, Vector2Int d, int len, out Stair stair)
+        {
+            stair = default;
+            var top = a + d * len;
+            int lo = ElevAt(a.x, a.y), hi = ElevAt(top.x, top.y);
+            if (hi - lo != len || !Floor(BaseCell(top.x, top.y))) return false;
+            if (!BankAllowed(a.x, a.y, hi)) return false;
+            for (int k = 0; k < len; k++)
+            {
+                var q = a + d * k;
+                if (!Floor(BaseCell(q.x, q.y)) || ElevAt(q.x, q.y) != lo) return false;
+                if (BlockStairAt(q.x, q.y, out _, out _)) return false;
+            }
+            if (FortressAt(a.x, a.y, out _) || FortressAt(top.x, top.y, out _)) return false;
+            stair = new Stair { a = a, d = d, r = new Vector2Int(Mathf.Abs(d.y), Mathf.Abs(d.x)), lo = lo, hi = hi, w = 1, len = len, natural = true, path = OnPath(a.x, a.y) };
+            return true;
+        }
+
+        static bool BlockStairAt(int x, int y, out Stair stair, out int row)
+        {
             foreach (var st in StairsIn(Mathf.FloorToInt(x / (float)StairBlock), Mathf.FloorToInt(y / (float)StairBlock)))
             {
                 int rx = x - st.a.x, ry = y - st.a.y;
@@ -626,6 +684,44 @@ namespace TWF
             return false;
         }
 
+        // Paths go up what they meet: where a road or trail runs into a rise of one or two levels, its last two
+        // tiles become a grassy slope up (one tile wide; the path's other tiles get their own beside it), so you can
+        // always follow a path onto the high ground.
+        const int RampLength = 2;
+        static bool PathRampAt(int x, int y, out Stair stair, out int row)
+        {
+            stair = default; row = 0;
+            if (!OnPath(x, y)) return false;
+            // Two tiles where the path meets the rise square on; one, steeper, where it comes at it slantwise.
+            for (int len = RampLength; len >= 1; len--)
+            for (int r = 0; r < len; r++)
+            foreach (var d in StairDirs)
+            {
+                var a = new Vector2Int(x - d.x * r, y - d.y * r);
+                if (TryPathRamp(a, d, len, out stair)) { row = r; return true; }
+            }
+            return false;
+        }
+
+        static bool TryPathRamp(Vector2Int a, Vector2Int d, int len, out Stair stair)
+        {
+            stair = default;
+            var top = a + d * len;
+            int lo = ElevAt(a.x, a.y), hi = ElevAt(top.x, top.y);
+            if (hi - lo < 1 || hi - lo > 2 || hi >= MountainLevel) return false;
+            if (!OnPath(top.x, top.y) || !Floor(BaseCell(top.x, top.y))) return false;
+            // The ramp's own tiles: path at the low level, not already part of a flight; the tile before it too.
+            for (int k = len > 1 ? -1 : 0; k < len; k++)
+            {
+                var q = a + d * k;
+                if (!OnPath(q.x, q.y) || !Floor(BaseCell(q.x, q.y)) || ElevAt(q.x, q.y) != lo) return false;
+                if (k >= 0 && BlockStairAt(q.x, q.y, out _, out _)) return false;
+            }
+            if (FortressAt(a.x, a.y, out _)) return false;
+            stair = new Stair { a = a, d = d, r = new Vector2Int(Mathf.Abs(d.y), Mathf.Abs(d.x)), lo = lo, hi = hi, w = 1, len = len, natural = true, path = true };
+            return true;
+        }
+
         // Something can stand here (at the cell's level).
         public static bool Standable(Cell c) => Walkable(c) || c == Cell.Plateau;
 
@@ -633,10 +729,71 @@ namespace TWF
         public static float HeightAt(Vector2 p)
         {
             int x = Mathf.FloorToInt(p.x), y = Mathf.FloorToInt(p.y);
+            // Grassy slopes and the ground they bend (SurfaceAt): the surface you see, corner to corner.
+            if (SurfaceAt(x, y, out float h00, out float h10, out float h11, out float h01))
+            {
+                float fx = p.x - x, fy = p.y - y;
+                return Mathf.Lerp(Mathf.Lerp(h00, h10, fx), Mathf.Lerp(h01, h11, fx), fy);
+            }
             var c = CellAt(x, y);
             if (c != Cell.Stairs || !StairAt(x, y, out var st, out _)) return ElevAt(x, y) * LevelHeight;
             float along = (p.x - st.a.x) * st.d.x + (p.y - st.a.y) * st.d.y + (st.d.x + st.d.y < 0 ? 1f : 0f);
             return (st.lo + (st.hi - st.lo) * Mathf.Clamp01(along / st.len)) * LevelHeight;
+        }
+
+        // ---------- The bent ground round grassy slopes ----------
+        // A grid corner touched by a grassy slope (a natural flight, a bank, a path ramp) gets one height, the same for
+        // every tile that shares it: the highest of each slope's own height there and the flat ground beside it (up to
+        // the top of the highest slope). Slope tiles take their four corners from it; so does flat ground touching a
+        // slope, which bends up to meet it - a triangle at an outside corner, a gentle side - so no step or notch is
+        // left anywhere round a slope. NaN where no slope touches the corner.
+        static readonly Dictionary<long, float> vertexHeights = new Dictionary<long, float>();
+
+        public static float SlopeVertexHeight(int cx, int cy)
+        {
+            long key = ((long)cx << 32) ^ (uint)cy;
+            if (vertexHeights.TryGetValue(key, out float h)) return h;
+            h = float.NaN;
+            int top = int.MinValue;
+            for (int ox = -1; ox <= 0; ox++)
+            for (int oy = -1; oy <= 0; oy++)
+            {
+                int qx = cx + ox, qy = cy + oy;
+                if (CellAt(qx, qy) != Cell.Stairs || !StairAt(qx, qy, out var st, out _) || !st.natural) continue;
+                float along = (cx - st.a.x) * st.d.x + (cy - st.a.y) * st.d.y + (st.d.x + st.d.y < 0 ? 1f : 0f);
+                float sh = (st.lo + (st.hi - st.lo) * Mathf.Clamp01(along / st.len)) * LevelHeight;
+                h = float.IsNaN(h) ? sh : Mathf.Max(h, sh);
+                top = Mathf.Max(top, st.hi);
+            }
+            if (top != int.MinValue)
+                for (int ox = -1; ox <= 0; ox++)
+                for (int oy = -1; oy <= 0; oy++)
+                {
+                    int qx = cx + ox, qy = cy + oy;
+                    if (!Bends(CellAt(qx, qy))) continue;
+                    int l = ElevAt(qx, qy);
+                    if (l <= top) h = Mathf.Max(h, l * LevelHeight);
+                }
+            if (vertexHeights.Count > 200000) vertexHeights.Clear();
+            vertexHeights[key] = h;
+            return h;
+        }
+
+        // Flat ground that bends to meet a slope (puddles and anything built stay flat).
+        public static bool Bends(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Plateau;
+
+        // The four corner heights of a grassy slope tile, or of flat ground bent by one; false for anything else.
+        public static bool SurfaceAt(int x, int y, out float h00, out float h10, out float h11, out float h01)
+        {
+            h00 = h10 = h11 = h01 = 0f;
+            var c = CellAt(x, y);
+            bool slope = c == Cell.Stairs && StairAt(x, y, out var st, out _) && st.natural;
+            if (!slope && !Bends(c)) return false;
+            float own = ElevAt(x, y) * LevelHeight;
+            float V(int cx, int cy) { float v = SlopeVertexHeight(cx, cy); return float.IsNaN(v) ? own : Mathf.Max(v, slope ? 0f : own); }
+            h00 = V(x, y); h10 = V(x + 1, y); h11 = V(x + 1, y + 1); h01 = V(x, y + 1);
+            if (slope) return true;
+            return h00 > own + 0.01f || h10 > own + 0.01f || h11 > own + 0.01f || h01 > own + 0.01f;
         }
 
         // Can a walker go from one cell to the one next to it (not diagonal)? Different levels only meet on stairs,

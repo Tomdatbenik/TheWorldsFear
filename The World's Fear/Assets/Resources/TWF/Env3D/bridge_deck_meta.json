@@ -1,0 +1,12 @@
+{
+ "name": "bridge_deck",
+ "kind": "bridge_deck",
+ "mesh": true,
+ "footprint": null,
+ "height": -0.0013487860560417175,
+ "verts": 216,
+ "tris": 108,
+ "materials": [
+  "wood"
+ ]
+}
