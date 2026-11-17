@@ -46,6 +46,25 @@ namespace TWF
         public event Action<Combatant> Died;                    // killer (may be null)
         public event Action<Combatant> Killed;                  // on the attacker: victim
         public event Action<float> Healed;
+        public event Action<float> Overhealed;                  // healing that went past full life
+        // On the attacker: a factor on every hit it deals to this target (mythic powers).
+        public Func<Combatant, DamageInfo, float> OutgoingMult;
+        // A status took hold on someone: victim, the status, who applied it, and whether the victim already carried a
+        // different one.
+        public static event Action<Combatant, StatusSpec, Combatant, bool> StatusApplied;
+        public bool HasAnyStatus => statuses.Count > 0 || IsStunned;
+
+        // Burn, poison, chill and slow jump to another body as they are (Cruel Hands).
+        public void SpreadStatusesTo(Combatant other)
+        {
+            if (other == null || other.IsDead) return;
+            foreach (var st in statuses)
+            {
+                if (other.statuses.Exists(o => o.type == st.type)) continue;
+                if (st.type == StatusType.Burn || st.type == StatusType.Poison || st.type == StatusType.Chill) StatusFx.Ensure(other);
+                other.statuses.Add(new ActiveStatus { type = st.type, magnitude = st.magnitude, remaining = Mathf.Max(st.remaining, 2f), damagePerSecond = st.damagePerSecond, source = st.source });
+            }
+        }
         // Asked when a hit would kill: return true to survive it (Phoenix Heart).
         public Func<DamageInfo, bool> CheatDeath;
 
@@ -214,6 +233,8 @@ namespace TWF
 
             float duration = spec.duration;
             if (rank == MonsterRank.Boss) duration *= 0.5f; // bosses shrug off crowd control faster
+            bool other = statuses.Exists(s => s.type != spec.type) || (spec.type != StatusType.Stun && IsStunned);
+            StatusApplied?.Invoke(this, spec, source, other);
 
             if (spec.type == StatusType.Stun)
             {
@@ -250,6 +271,7 @@ namespace TWF
             amount = Mathf.Max(info.amount > 0f ? 1f : 0f, amount);
             if (info.silent) amount = info.amount;
             if (IsExposed) amount *= exposedMult;
+            if (info.source != null && info.source.OutgoingMult != null && !info.silent) amount *= info.source.OutgoingMult(this, info);
             if (info.source != null && info.source.team != team) amount *= Combat.LevelGapFactor(info.source, this);
             float elemental = Elements.Factor(info.elements, element);
             amount *= elemental;
@@ -299,6 +321,7 @@ namespace TWF
             if (showText && healed >= 1f)
                 FloatingText.Spawn(transform.position + View.Up * HeadHeight, "+" + Mathf.RoundToInt(healed), Palette.Heal, 0.9f);
             Healed?.Invoke(healed);
+            if (amount - healed > 0.5f) Overhealed?.Invoke(amount - healed);
         }
 
         public void Die(Combatant killer)
@@ -306,9 +329,9 @@ namespace TWF
             if (IsDead) return;
             IsDead = true;
             HP = 0f;
-            statuses.Clear();
             Died?.Invoke(killer);
             if (killer != null) killer.Killed?.Invoke(this);
+            statuses.Clear();   // after the kill is told: Cruel Hands passes the dead one's ailments on
             if (destroyOnDeath) StartCoroutine(DeathFade());
         }
 

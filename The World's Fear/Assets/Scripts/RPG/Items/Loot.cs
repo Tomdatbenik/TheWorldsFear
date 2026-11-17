@@ -36,6 +36,7 @@ namespace TWF
                 case MonsterRank.Rare: items = rng.NextDouble() < 0.5 ? 2 : 1; break;
                 case MonsterRank.Boss: items = 4; break;
             }
+            if (rank != MonsterRank.Normal) items += MythicPowers.ExtraLoot;   // Vein of Fortune
             for (int i = 0; i < items; i++)
             {
                 var rarity = rank == MonsterRank.Boss && i == 0 ? Rarity.Legendary : ItemGenerator.RollRarity(rng, rank, WorldGen.MagicFind(level));
@@ -169,6 +170,7 @@ namespace TWF
                     transform.position = Vector2.MoveTowards(transform.G(), hero.transform.G(), Time.deltaTime * 12f).W(transform.position.y);
                     if (d < 0.4f)
                     {
+                        gold = Mathf.RoundToInt(gold * MythicPowers.GoldMult);
                         Profile.AddGold(gold);
                         Sound.Play(Sfx.Coin, transform.position, 0.3f);
                         FloatingText.Spawn(hero.transform.position + View.Up * 1.8f, $"+{gold} gold", Palette.Gold, 0.8f);

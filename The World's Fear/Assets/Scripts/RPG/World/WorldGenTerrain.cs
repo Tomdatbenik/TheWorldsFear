@@ -69,6 +69,7 @@ namespace TWF
         {
             terrainCache.Clear();
             caches.Clear(); summits.Clear(); chunkTops.Clear(); bridgeTiles.Clear(); bridgeApproach.Clear(); bridgeSeen.Clear(); bridgeRegions.Clear();
+            warmRegion = long.MinValue;
             landmarks.Clear();
             farms = null;
         }
@@ -348,19 +349,60 @@ namespace TWF
         static bool NearRiver(int x, int y) => RiverNoise(x, y) <= RiverHalf(x, y) + 0.03f;
         static bool Built(int x, int y) => FortressCell(x, y, out _) || CastleCell(x, y, out _);
 
+        // Bridges are worked out a region (64 x 64 tiles) at a time, the first time anything asks about a tile near it.
+        // A region costs up to 60 ms, so the chunk loader does it ahead, a few rows a frame (WarmBridges); whoever
+        // asks before that is done finishes the region on the spot.
+        static long warmRegion = long.MinValue;
+        static int warmRow;
+
         static void EnsureBridges(int x, int y)
         {
             int rx = Mathf.FloorToInt((float)x / BridgeRegion), ry = Mathf.FloorToInt((float)y / BridgeRegion);
             for (int j = -1; j <= 1; j++)
                 for (int i = -1; i <= 1; i++)
-                    if (bridgeRegions.Add(TileKey(rx + i, ry + j))) BridgeRegionWork((rx + i) * BridgeRegion, (ry + j) * BridgeRegion);
+                {
+                    long key = TileKey(rx + i, ry + j);
+                    if (!bridgeRegions.Add(key)) continue;
+                    int from = warmRegion == key ? warmRow : 0;
+                    if (warmRegion == key) warmRegion = long.MinValue;
+                    for (int row = from; row < BridgeRegion; row++) BridgeRegionRow((rx + i) * BridgeRegion, (ry + j) * BridgeRegion + row);
+                }
         }
 
-        static void BridgeRegionWork(int x0, int y0)
+        // The same work in slices: goes on with the regions round a tile until `over` says the frame's time is up.
+        // True once all of them are done.
+        public static bool WarmBridges(int x, int y, System.Func<bool> over)
         {
-            for (int y = y0; y < y0 + BridgeRegion; y++)
-                for (int x = x0; x < x0 + BridgeRegion; x++)
-                    if (OnPath(x, y) && RiverAt(x, y) && !Built(x, y) && !bridgeSeen.Contains(TileKey(x, y))) BridgeRun(x, y);
+            int rx = Mathf.FloorToInt((float)x / BridgeRegion), ry = Mathf.FloorToInt((float)y / BridgeRegion);
+            for (int j = -1; j <= 1; j++)
+                for (int i = -1; i <= 1; i++)
+                {
+                    long key = TileKey(rx + i, ry + j);
+                    if (bridgeRegions.Contains(key)) continue;
+                    if (warmRegion != key) { warmRegion = key; warmRow = 0; }
+                    for (; warmRow < BridgeRegion; warmRow++)
+                    {
+                        if (over()) return false;
+                        BridgeRegionRow((rx + i) * BridgeRegion, (ry + j) * BridgeRegion + warmRow);
+                    }
+                    bridgeRegions.Add(key);
+                    warmRegion = long.MinValue;
+                }
+            return true;
+        }
+
+        static void BridgeRegionRow(int x0, int y)
+        {
+            for (int x = x0; x < x0 + BridgeRegion; x++)
+                if (OnPath(x, y) && RiverAt(x, y) && !Built(x, y) && !bridgeSeen.Contains(TileKey(x, y))) BridgeRun(x, y);
+        }
+
+        // The land's own cell and level at a tile, fetched ahead: what stairs, slopes and cliffs round a chunk are
+        // worked out from. Cached, so asking again is free.
+        public static void WarmLand(int x, int y)
+        {
+            BaseCell(x, y);
+            BaseElevAt(x, y);
         }
 
         // One stretch of path lying in the water: all of it, the places it meets the path on the banks, and its bridge.

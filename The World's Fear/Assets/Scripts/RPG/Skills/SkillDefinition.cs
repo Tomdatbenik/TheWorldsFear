@@ -271,6 +271,7 @@ namespace TWF
                     Combat.Hit(caster, c, damageMult * ctx.power, ctx.Scale(status), false, 1.5f);
             }
             if (invulnerable) caster.Invulnerable = false;
+            MythicPowers.OnDashEnd(caster, end);
         }
 
         public override string Describe(float power)

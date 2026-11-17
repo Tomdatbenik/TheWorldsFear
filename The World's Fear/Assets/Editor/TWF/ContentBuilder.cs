@@ -198,6 +198,7 @@ namespace TWF.EditorTools
             var eagle = Passive("p_eagle", "Eagle Eye", "EYE", gold, "Find the weak spots.", 5, new[] { Flat(StatType.CritChance, 0.03f), Flat(StatType.CritDamage, 0.1f) });
             var reach = Passive("p_reach", "Far Reach", "RNG", ice, "Skills travel further.", 3, new[] { Flat(StatType.SkillRange, 0.08f), Flat(StatType.ProjectileSpeed, 0.08f), Flat(StatType.Handling, 0.04f) });
             var expanse = Passive("p_expanse", "Expanse", "AREA", arcane, "Bigger blasts.", 3, new[] { Flat(StatType.AreaSize, 0.08f) });
+            var sweep = Passive("p_sweep", "Long Reach", "SLH", red, "Melee slashes reach further and sweep wider.", 5, new[] { Flat(StatType.SlashRange, 0.08f) });
 
             var hardened = Passive("p_hardened", "Battle Hardened", "SHLD", "#9fc3ff", "Getting hit raises a barrier.", 3, null, new ShieldOnHitTakenProc { percentPerRank = 0.06f, cooldown = 8f });
             var ignite = Passive("p_ignite", "Ignite", "IGN", fire, "Hits may set enemies on fire.", 3, null, new StatusOnHitProc { chancePerRank = 0.1f, status = StatusSpec.Burn(0.4f, 3f) });
@@ -224,6 +225,9 @@ namespace TWF.EditorTools
                 Node(explosive, 4, 0, 15), Node(staticCharge, 4, 1, 15), Node(survivor, 4, 2, 15), Node(lingering, 4, 3, 15),
             };
             tree.nodes.Add(Node(hydra, 4, 4, 20));
+            // Flurry ("p_flurry": one more slash, tier 3, column 4, level 20) was added to the board by hand and is
+            // not built here yet: running this builder drops it. Add it here before rebuilding the content.
+            tree.nodes.Add(Node(sweep, 1, 4, 3));
 
             var cls = Asset<HeroClassDefinition>($"{Root}/Classes/Adventurer.asset");
             cls.id = "adventurer";

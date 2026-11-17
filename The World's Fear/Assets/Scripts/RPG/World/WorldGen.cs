@@ -31,6 +31,7 @@ namespace TWF
             regions.Clear();
             castles.Clear();
             stairBlocks.Clear();
+            warmStairKey = long.MinValue;
             vertexHeights.Clear();
             fortresses.Clear();
             bool legacy = seed == LegacySeed;
@@ -164,22 +165,26 @@ namespace TWF
             if (d < 140f && (Mathf.Abs(x) < 2 || Mathf.Abs(y) < 2)) path = true;
 
             if (BridgeApproach(x, y)) path = true;   // the path led along the bank to a bridge's end
+            // Round a waypoint, a dungeon's gate, a challenge chest or a boss's gate the ground is dry: no river,
+            // pond or lava. They are put down by the seed wherever it falls, and half the dungeons had water or lava
+            // in their yard, a third of them in the stairwell itself.
+            bool dry = d > HubRadius && NearLandmark(x, y);
             // Rivers on the low ground, swelling into lakes; a path crosses on a bridge.
-            if (RiverAt(x, y)) return BridgeCrosses(x, y) ? Cell.Bridge : Cell.Water;
+            if (!dry && RiverAt(x, y)) return BridgeCrosses(x, y) ? Cell.Bridge : Cell.Water;
 
             // Canyons through the high ground: water on the floor, lava in the ash wastes.
-            if (CanyonAt(x, y)) return BiomeAt(p) == Biome.Ember ? Cell.Lava : Cell.Water;
+            if (!dry && CanyonAt(x, y)) return BiomeAt(p) == Biome.Ember ? Cell.Lava : Cell.Water;
 
             // Raised land: hills, mesas, volcanoes and mountain ranges (see WorldGenTerrain).
             int elev = ElevRaw(x, y);
             if (elev > 0) return RaisedCell(x, y, elev, path);
             if (path) return Cell.Path;
-            if (PlungePool(x, y)) return Cell.Water;
+            if (!dry && PlungePool(x, y)) return Cell.Water;
             var biome = BiomeAt(p);
             float blob = Noise(x, y, 0.07f, 31);
             // Ponds and small lakes everywhere but the ash lands (deep water: blocks), and shallow puddles you
             // splash through. The ponds keep away from the roads; puddles may lie on them.
-            if (biome != Biome.Ember && d > HubRadius + 8f && !InFarmland(x, y))
+            if (!dry && biome != Biome.Ember && d > HubRadius + 8f && !InFarmland(x, y))
             {
                 float pond = Noise(x, y, 0.06f, 51) * 0.75f + Noise(x, y, 0.19f, 52) * 0.25f;
                 if (pond > (biome == Biome.Marsh ? 0.70f : 0.745f)) return Cell.Water;
@@ -188,8 +193,8 @@ namespace TWF
             }
             switch (biome)
             {
-                case Biome.Marsh: if (blob > 0.64f) return Cell.Water; break;
-                case Biome.Ember: if (blob > 0.68f) return Cell.Lava; break;
+                case Biome.Marsh: if (!dry && blob > 0.64f) return Cell.Water; break;
+                case Biome.Ember: if (!dry && blob > 0.68f) return Cell.Lava; break;
                 case Biome.Ruins:
                     // Broken straight walls on a coarse grid: stretches of at least three tiles (a lone tile of wall
                     // is a square block standing about, not a ruin).
@@ -703,21 +708,53 @@ namespace TWF
 
         // Every spot where a flight fits is found once, then the world seed picks: one flight for each level that
         // has a way up in this 16x16 block (so a mountain is climbed terrace by terrace), plus one far from the first.
+        // A block takes 30 ms and more to work out, so the chunk loader does it ahead, a row a time (WarmStairs);
+        // whoever asks before that is done finishes the block on the spot from where the warming had got to.
+        static long warmStairKey = long.MinValue;
+        static int warmStairRow;
+        static List<Stair> warmStairFound;
+
         static List<Stair> StairsIn(int bx, int by)
         {
             long key = ((long)bx << 32) ^ (uint)by;
             if (stairBlocks.TryGetValue(key, out var list)) return list;
-            list = new List<Stair>();
-            var found = new List<Stair>();
+            var found = warmStairKey == key ? warmStairFound : new List<Stair>();
+            int from = warmStairKey == key ? warmStairRow : 2;
+            if (warmStairKey == key) warmStairKey = long.MinValue;
             int x0 = bx * StairBlock, y0 = by * StairBlock;
-            for (int y = 2; y < StairBlock - 2; y++)
+            for (int y = from; y < StairBlock - 2; y++) StairRow(x0, y0, y, found);
+            return FinishStairs(key, found);
+        }
+
+        // The block holding a tile, worked out in slices until `over` says the frame's time is up. True once done.
+        public static bool WarmStairs(int x, int y, System.Func<bool> over)
+        {
+            int bx = Mathf.FloorToInt((float)x / StairBlock), by = Mathf.FloorToInt((float)y / StairBlock);
+            long key = ((long)bx << 32) ^ (uint)by;
+            if (stairBlocks.ContainsKey(key)) return true;
+            if (warmStairKey != key) { warmStairKey = key; warmStairRow = 2; warmStairFound = new List<Stair>(); }
+            for (; warmStairRow < StairBlock - 2; warmStairRow++)
+            {
+                if (over()) return false;
+                StairRow(bx * StairBlock, by * StairBlock, warmStairRow, warmStairFound);
+            }
+            var found = warmStairFound;
+            warmStairKey = long.MinValue;
+            FinishStairs(key, found);
+            return true;
+        }
+
+        static readonly int[] StairLengths = { StairLength, 2 };   // not made anew for every tile and direction
+
+        static void StairRow(int x0, int y0, int y, List<Stair> found)
+        {
             for (int x = 2; x < StairBlock - 2; x++)
             foreach (var d in StairDirs)
             {
                 var a = new Vector2Int(x0 + x, y0 + y);
                 if (FortressAt(a.x, a.y, out _)) continue;          // a fortress has one way up, its own
                 var r = new Vector2Int(Mathf.Abs(d.y), Mathf.Abs(d.x));
-                foreach (int len in new[] { StairLength, 2 })
+                foreach (int len in StairLengths)
                 {
                 var top = a + d * len;
                 if (!Floor(BaseCell(top.x, top.y))) continue;
@@ -746,6 +783,11 @@ namespace TWF
                 if (ok) { found.Add(new Stair { a = a, d = d, r = r, lo = lo, hi = hi, w = w, len = len, natural = BiomeAt(new Vector2(a.x, a.y)) != Biome.Ruins, path = onPath }); break; }
                 }
             }
+        }
+
+        static List<Stair> FinishStairs(long key, List<Stair> found)
+        {
+            var list = new List<Stair>();
             if (found.Count > 0)
             {
                 // The widest first (ties broken by the seed).

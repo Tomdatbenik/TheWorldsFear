@@ -30,6 +30,22 @@ namespace TWF
             new Power { id = "m_gravitywell", name = "Gravity Well", where = "orb", text = "Area spells pull enemies toward their center before they go off." },
             new Power { id = "m_timefracture", name = "Time Fracture", where = "tome", text = "Killing an elite, rare or boss monster resets every skill cooldown." },
             new Power { id = "m_volley", name = "Endless Volley", where = "quiver", text = "Every fifth shot also fans out five arrows in your weapon's element." },
+            new Power { id = "m_thoughtstorm", name = "Thought Storm", where = "helm", text = "Casting a crafted spell takes 1 second off every other skill's cooldown." },
+            new Power { id = "m_bloodward", name = "Bloodward", where = "chest", text = "Healing past full life becomes a shield, up to 20% of your maximum life." },
+            new Power { id = "m_tempo", name = "Tempo", where = "gloves", text = "Each basic hit gives +3% attack speed, up to 30%. It fades 3 seconds after your last hit." },
+            new Power { id = "m_cruelhands", name = "Cruel Hands", where = "gloves", text = "Enemies that burn, are poisoned, chilled, slowed or stunned take 25% more from you. When one dies, its ailments jump to a nearby enemy." },
+            new Power { id = "m_earthshaker", name = "Earthshaker", where = "boots", text = "A dash ends in a shockwave that stuns for 0.6 seconds, at most once every 6 seconds." },
+            new Power { id = "m_ambush", name = "Ambush Stride", where = "boots", text = "After 3 seconds without attacking you move 25% faster, and your next hit deals double damage." },
+            new Power { id = "m_resonance", name = "Resonance", where = "amulet", text = "Putting a second, different ailment on an enemy sets both off as a blast." },
+            new Power { id = "m_overcharge", name = "Overcharge", where = "amulet", text = "Every 10 seconds, your next crafted spell is 60% larger and stronger." },
+            new Power { id = "m_huntersmark", name = "Hunter's Mark", where = "ring", text = "Your first hit marks an enemy for 6 seconds: it takes 20% more from everything. One mark at a time." },
+            new Power { id = "m_fortune", name = "Vein of Fortune", where = "ring", text = "Elites, rares, bosses and chests drop one more item, and gold is worth 25% more." },
+            new Power { id = "m_shards", name = "Orbiting Shards", where = "orb", text = "Three shards circle you and strike whatever they touch, in your weapon's element." },
+            new Power { id = "m_forbiddenpage", name = "Forbidden Page", where = "tome", text = "Crafted spells deal 35% more and cost 5% of your current life. The cost never kills you." },
+            new Power { id = "m_ricochet", name = "Ricochet", where = "quiver", text = "A shot that kills bounces on to another enemy." },
+            new Power { id = "m_ripostewall", name = "Riposte Wall", where = "shield", text = "An enemy that strikes you in melee is stunned for 1 second, once per enemy every 5 seconds." },
+            new Power { id = "m_counterstrike", name = "Counterstrike", where = "parry dagger", text = "After you are hit, your next basic attack within 2 seconds is a critical hit and strikes twice." },
+            new Power { id = "m_keystone", name = "Keystone", where = "any off-hand but a sword", text = "The passive bonus on every other mythic you wear counts one rank higher (not Hydra or Flurry)." },
             new Power { id = "m_aegis", name = "Divine Aegis", where = "shield", text = "Damage your armor and shield stop is stored. 3 seconds later it comes down as a holy pillar on the closest enemy." },
         };
 
@@ -37,25 +53,25 @@ namespace TWF
 
         // ---------- Rolling ----------
 
-        static string[] PowersFor(ItemInstance item)
+        public static string[] PowersFor(ItemInstance item)
         {
             switch (item.slot)
             {
                 case ItemSlot.Weapon: return new[] { "m_convergence", "m_twinedge", "m_worldbreaker" };
-                case ItemSlot.Helm: return new[] { "m_starfall", "m_stormcrown" };
-                case ItemSlot.Chest: return new[] { "m_phoenix", "m_livingarmor" };
-                case ItemSlot.Gloves: return new[] { "m_hunger" };
-                case ItemSlot.Boots: return new[] { "m_frostbound" };
-                case ItemSlot.Amulet: return new[] { "m_echo" };
-                case ItemSlot.Ring: return new[] { "m_shadowtwin" };
+                case ItemSlot.Helm: return new[] { "m_starfall", "m_stormcrown", "m_thoughtstorm" };
+                case ItemSlot.Chest: return new[] { "m_phoenix", "m_livingarmor", "m_bloodward" };
+                case ItemSlot.Gloves: return new[] { "m_hunger", "m_tempo", "m_cruelhands" };
+                case ItemSlot.Boots: return new[] { "m_frostbound", "m_earthshaker", "m_ambush" };
+                case ItemSlot.Amulet: return new[] { "m_echo", "m_resonance", "m_overcharge" };
+                case ItemSlot.Ring: return new[] { "m_shadowtwin", "m_huntersmark", "m_fortune" };
                 case ItemSlot.OffHand:
                     switch ((OffHandKind)item.offHandKind)
                     {
-                        case OffHandKind.Orb: return new[] { "m_gravitywell" };
-                        case OffHandKind.Tome: return new[] { "m_timefracture" };
-                        case OffHandKind.Quiver: return new[] { "m_volley" };
-                        case OffHandKind.Shield: return new[] { "m_aegis" };
-                        case OffHandKind.ParryDagger: return new[] { "m_shadowtwin" };
+                        case OffHandKind.Orb: return new[] { "m_gravitywell", "m_shards", "m_keystone" };
+                        case OffHandKind.Tome: return new[] { "m_timefracture", "m_forbiddenpage", "m_keystone" };
+                        case OffHandKind.Quiver: return new[] { "m_volley", "m_ricochet", "m_keystone" };
+                        case OffHandKind.Shield: return new[] { "m_aegis", "m_ripostewall", "m_keystone" };
+                        case OffHandKind.ParryDagger: return new[] { "m_shadowtwin", "m_counterstrike", "m_keystone" };
                         default: return new[] { "m_convergence", "m_twinedge", "m_worldbreaker" };   // off-hand sword
                     }
             }
@@ -134,8 +150,10 @@ namespace TWF
         {
             if (Profile.Data?.equipment == null || passiveId == null) return 0;
             int n = 0;
+            // Keystone: every other mythic's bonus counts one rank higher (Hydra and Flurry only ever give +1).
+            bool keystone = passiveId != "p_hydra" && passiveId != "p_flurry" && Profile.Data.equipment.Exists(k => k != null && k.mythicPower == "m_keystone");
             foreach (var it in Profile.Data.equipment)
-                if (it != null && it.bonusPassive == passiveId) n += it.bonusRanks;
+                if (it != null && it.bonusPassive == passiveId) n += it.bonusRanks + (keystone && it.mythicPower != "m_keystone" ? 1 : 0);
             return n;
         }
 
@@ -157,6 +175,18 @@ namespace TWF
         static int armorStacks, hungerStacks;
         static float armorUntil, hungerUntil;
         static readonly Dictionary<string, SkillDefinition> echoes = new Dictionary<string, SkillDefinition>();
+        static int tempoStacks;
+        static float tempoUntil, quakeReady, lastAttack, overchargeAt, counterUntil, markUntil, resonanceReady, lastShotAt;
+        static bool ambushReady, overcharged;
+        static Combatant marked, lastShot;
+        static int ricochets;
+        static readonly Dictionary<Combatant, float> riposted = new Dictionary<Combatant, float>();
+
+        // Vein of Fortune.
+        public static int ExtraLoot => Has("m_fortune") ? 1 : 0;
+        public static float GoldMult => Has("m_fortune") ? 1.25f : 1f;
+        public static bool AmbushReady => ambushReady && Has("m_ambush");
+        public static bool Overcharged => overcharged && Has("m_overcharge");
 
         public static bool Has(string id) => active.Contains(id);
 
@@ -207,6 +237,32 @@ namespace TWF
                 owner.CheatDeath = info => Phoenix(owner);
                 cleanups.Add(() => owner.CheatDeath = null);
             }
+            tempoStacks = 0; ambushReady = false; overcharged = false; marked = null; lastShot = null; riposted.Clear();
+            lastAttack = Time.time; overchargeAt = Time.time + 10f; counterUntil = 0f;
+            if (Has("m_cruelhands") || Has("m_ambush"))
+            {
+                owner.OutgoingMult = (target, info) => Outgoing(owner, target, info);
+                cleanups.Add(() => owner.OutgoingMult = null);
+            }
+            if (Has("m_bloodward"))
+            {
+                Action<float> over = extra => owner.AddShield(Mathf.Min(owner.MaxHP * 0.2f, owner.ShieldHP + extra), 12f);
+                owner.Overhealed += over;
+                cleanups.Add(() => owner.Overhealed -= over);
+            }
+            if (Has("m_resonance"))
+            {
+                Action<Combatant, StatusSpec, Combatant, bool> applied = (victim, spec, source, other) => Resonance(owner, victim, source, other);
+                Combatant.StatusApplied += applied;
+                cleanups.Add(() => Combatant.StatusApplied -= applied);
+            }
+            if (Has("m_forbiddenpage"))
+            {
+                var page = new object();
+                owner.Stats.AddModifier(new StatModifier(StatType.SkillPower, ModKind.Flat, 0.35f, page));
+                cleanups.Add(() => owner.Stats.RemoveModifiersFrom(page));
+            }
+            cleanups.Add(() => { owner.AddTimedModifiers("m_overcharge", 0.01f); owner.AddTimedModifiers("m_ambush", 0.01f); owner.AddTimedModifiers("m_counter", 0.01f); owner.AddTimedModifiers("m_tempo", 0.01f); });
         }
 
         // Effects a melee slash sets off grow with Slash Range, the same way the slash itself does.
@@ -220,6 +276,7 @@ namespace TWF
         // Called at the start of every basic attack.
         public static void OnBasicAttack(HeroController h, Vector2 dir, Combatant target)
         {
+            lastAttack = Time.time;
             if (!Has("m_convergence")) return;
             attackCount++;
             if (attackCount % 8 != 0) return;
@@ -238,6 +295,20 @@ namespace TWF
         // A crafted spell was cast from a skill button.
         public static void OnSpellCast(HeroController h, int slot, Vector2 dir, Vector2 point)
         {
+            if (slot != HeroController.WeaponSlot && hero != null)
+            {
+                var caster = h.Combatant;
+                if (Has("m_thoughtstorm")) h.ReduceCooldowns(1f, slot);
+                // Forbidden Page: the spell is paid for in life, never the last of it.
+                if (Has("m_forbiddenpage") && caster.HP > 1f) caster.SetHP(Mathf.Max(1f, caster.HP * 0.95f));
+                // Overcharge: this cast used the charge; it goes once the spell's effects have read it.
+                if (Has("m_overcharge") && overcharged)
+                {
+                    overcharged = false;
+                    overchargeAt = Time.time + 10f;
+                    caster.AddTimedModifiers("m_overcharge", 0.6f, (StatType.AreaSize, ModKind.Flat, 0.6f), (StatType.SkillPower, ModKind.Flat, 0.6f));
+                }
+            }
             if (!Has("m_echo") || slot == HeroController.WeaponSlot) return;
             var c = Crafting.Find(h.CraftIdIn(slot));
             if (c == null || ++echoCount % 4 != 0) return;
@@ -275,6 +346,58 @@ namespace TWF
             }
         }
 
+        // A factor on each hit the hero deals (Cruel Hands, Ambush Stride).
+        static float Outgoing(Combatant owner, Combatant target, DamageInfo info)
+        {
+            float f = 1f;
+            if (Has("m_cruelhands") && target.HasAnyStatus) f *= 1.25f;
+            if (Has("m_ambush") && ambushReady && info.amount > 0f)
+            {
+                ambushReady = false;
+                lastAttack = Time.time;
+                f *= 2f;
+                FloatingText.Spawn(target.transform.position + View.Up * 2.2f, "Ambush!", new Color(0.75f, 0.9f, 0.6f), 0.9f);
+            }
+            return f;
+        }
+
+        // Earthshaker: the end of a dash.
+        public static void OnDashEnd(Combatant caster, Vector2 at)
+        {
+            if (!Has("m_earthshaker") || hero == null || caster != hero.Combatant || Time.time < quakeReady) return;
+            quakeReady = Time.time + 6f;
+            const float r = 2.6f;
+            Fx.Shock(at, r, "physical");
+            CameraFollow.Shake(0.1f);
+            foreach (var c in Combat.HostilesInRadius(Team.Player, at, r).ToArray())
+                Combat.Hit(caster, c, 0.8f, StatusSpec.Stun(0.6f), false, 0.6f);
+        }
+
+        // Resonance: a second, different ailment on the same enemy sets them off.
+        static void Resonance(Combatant owner, Combatant victim, Combatant source, bool hadOther)
+        {
+            if (!hadOther || source != owner || victim == null || victim.IsDead || victim.team == Team.Player || Time.time < resonanceReady) return;
+            resonanceReady = Time.time + 0.8f;
+            Vector2 at = victim.transform.G();
+            const float r = 2.2f;
+            Fx.Blast(at, r, AllElements, new Color(0.8f, 0.55f, 1f));
+            FloatingText.Spawn(at + View.Up.G() * 1.6f, "Resonance", new Color(0.8f, 0.55f, 1f), 0.9f);
+            foreach (var c in Combat.HostilesInRadius(Team.Player, at, r).ToArray())
+                Combat.Hit(owner, c, 1.4f, default, false, 0.3f);
+        }
+
+        static Combatant NearestOther(Vector2 at, float range, Combatant not)
+        {
+            Combatant best = null; float d = range;
+            foreach (var c in Combat.HostilesInRadius(Team.Player, at, range))
+            {
+                if (c == not || c.IsDead) continue;
+                float cd = Vector2.Distance(at, c.transform.G());
+                if (cd < d) { d = cd; best = c; }
+            }
+            return best;
+        }
+
         static void OnDealt(Combatant owner, Combatant target, DamageInfo info)
         {
             if (info.silent || target == null) return;
@@ -282,6 +405,43 @@ namespace TWF
 
             if (info.isBasicAttack && twin.HasValue && !target.IsDead)
                 Fx.HitOn(target, Fx.Name(twin.Value));
+
+            if (info.amount > 0f) lastAttack = Time.time;
+
+            if (Has("m_tempo") && info.isBasicAttack)
+            {
+                tempoStacks = Time.time < tempoUntil ? Mathf.Min(10, tempoStacks + 1) : 1;
+                tempoUntil = Time.time + 3f;
+                owner.AddTimedModifiers("m_tempo", 3f, (StatType.AttackSpeed, ModKind.Percent, 0.03f * tempoStacks));
+            }
+
+            if (Has("m_huntersmark") && info.amount > 0f && (marked == null || marked.IsDead || Time.time >= markUntil) && !target.IsDead)
+            {
+                marked = target;
+                markUntil = Time.time + 6f;
+                target.Expose(0.2f, 6f);
+                VFX.Ring(target.transform.position, new Color(1f, 0.4f, 0.3f), 0.9f, 0.4f);
+            }
+
+            // Counterstrike: the answer to a hit taken is a critical strike, and a second one right behind it.
+            if (Has("m_counterstrike") && info.isBasicAttack && Time.time < counterUntil)
+            {
+                counterUntil = 0f;
+                owner.AddTimedModifiers("m_counter", 0.01f);
+                // The same hit once more (so armor and weaknesses count as they did the first time), as a critical strike.
+                var again = info;
+                again.isBasicAttack = false; again.isCrit = true; again.status = default; again.knockback = Vector2.zero;
+                FloatingText.Spawn(target.transform.position + View.Up * 2.2f, "Counter!", new Color(1f, 0.85f, 0.4f), 0.8f);
+                runner.Later(0.12f, () =>
+                {
+                    if (target == null || target.IsDead) return;
+                    target.TakeDamage(again);
+                    Fx.HitOn(target, "physical");
+                });
+            }
+
+            // Ricochet: remember whom the last shot struck; if it dies of it, the shot goes on (OnKilled).
+            if (Has("m_ricochet") && info.isBasicAttack && hero != null && hero.Weapon.ranged) { lastShot = target; lastShotAt = Time.time; ricochets = 0; }
 
             if (Has("m_worldbreaker") && info.isBasicAttack && (info.isCrit || Weapons.Equipped == WeaponType.Hammer) && Time.time >= fissureReady)
             {
@@ -333,11 +493,53 @@ namespace TWF
             }
             if (Has("m_aegis") && info.source != null && !info.trueDamage)
                 runner.Store(Mathf.Max(0f, info.amount - dealt) + info.amount * 0.25f);
+            if (Has("m_counterstrike") && info.source != null && info.amount > 0f)
+            {
+                counterUntil = Time.time + 2f;
+                owner.AddTimedModifiers("m_counter", 2f, (StatType.CritChance, ModKind.Flat, 1f));
+            }
+            if (Has("m_ripostewall") && info.source != null && !info.source.IsDead && info.source.team != Team.Player
+                && Vector2.Distance(info.source.transform.G(), owner.transform.G()) < 3.2f
+                && (!riposted.TryGetValue(info.source, out float until) || Time.time >= until))
+            {
+                if (riposted.Count > 64) riposted.Clear();
+                riposted[info.source] = Time.time + 5f;
+                info.source.Stun(1f);
+                VFX.Ring(owner.transform.position, new Color(0.75f, 0.85f, 1f), 1.2f, 0.25f);
+            }
         }
 
         static void OnKilled(Combatant owner, Combatant victim)
         {
             if (victim == null || victim.team == Team.Player) return;
+            if (Has("m_cruelhands") && victim.HasAnyStatus)
+            {
+                var spreadTo = NearestOther(victim.transform.G(), 4.5f, victim);
+                if (spreadTo != null)
+                {
+                    victim.SpreadStatusesTo(spreadTo);
+                    VFX.Slash(Ground.On(Vector2.Lerp(victim.transform.G(), spreadTo.transform.G(), 0.5f)), (spreadTo.transform.G() - victim.transform.G()).normalized,
+                        Vector2.Distance(victim.transform.G(), spreadTo.transform.G()) * 0.5f, 6f, new Color(0.7f, 0.9f, 0.4f));
+                }
+            }
+            // Ricochet: the shot that killed goes on to the next enemy, up to three times in a row.
+            if (Has("m_ricochet") && victim == lastShot && Time.time - lastShotAt < 0.1f && ricochets < 3)
+            {
+                var bounceTo = NearestOther(victim.transform.G(), 7f, victim);
+                if (bounceTo != null)
+                {
+                    int bounce = ricochets + 1;
+                    Vector2 from = victim.transform.G(), to = bounceTo.transform.G();
+                    VFX.Slash(Ground.On(Vector2.Lerp(from, to, 0.5f)), (to - from).normalized, Vector2.Distance(from, to) * 0.5f, 5f, Elements.Color(AttackElement));
+                    runner.Later(0.08f, () =>
+                    {
+                        if (bounceTo == null || bounceTo.IsDead) return;
+                        lastShot = bounceTo; lastShotAt = Time.time; ricochets = bounce;
+                        Combat.Hit(owner, bounceTo, 0.8f, default, false, 0.2f, -1f, AttackMask);
+                        Fx.HitOn(bounceTo, Fx.Name(AttackElement));
+                    });
+                }
+            }
             if (Has("m_hunger"))
             {
                 hungerStacks = Time.time < hungerUntil ? Mathf.Min(30, hungerStacks + 1) : 1;
@@ -366,6 +568,27 @@ namespace TWF
                 Combat.Hit(owner, c, 2.5f, StatusSpec.Burn(0.5f, 4f), false, 1.2f, -1f, Elements.Mask(ElementPart.Fire));
             runner.Shield(1.5f);
             return true;
+        }
+
+        // Powers that depend on time passing: Ambush Stride and Overcharge.
+        public static void Tick(HeroController h)
+        {
+            var owner = h.Combatant;
+            if (Has("m_ambush"))
+            {
+                if (!ambushReady && Time.time - lastAttack >= 3f)
+                {
+                    ambushReady = true;
+                    FloatingText.Spawn(h.transform.position + View.Up * 2.2f, "Ambush ready", new Color(0.75f, 0.9f, 0.6f), 0.8f);
+                }
+                if (ambushReady && !owner.HasTimed("m_ambush")) owner.AddTimedModifiers("m_ambush", 0.6f, (StatType.MoveSpeed, ModKind.Percent, 0.25f));
+            }
+            if (Has("m_overcharge") && !overcharged && Time.time >= overchargeAt)
+            {
+                overcharged = true;
+                owner.AddTimedModifiers("m_overcharge", 100000f, (StatType.AreaSize, ModKind.Flat, 0.6f), (StatType.SkillPower, ModKind.Flat, 0.6f));
+                FloatingText.Spawn(h.transform.position + View.Up * 2.2f, "Overcharged", new Color(0.7f, 0.5f, 1f), 0.9f);
+            }
         }
 
         public static float PhoenixCooldownLeft => Mathf.Max(0f, phoenixReady - Time.time);
@@ -432,6 +655,49 @@ namespace TWF
 
         public void TwinStrike() => twinFlash = 0.25f;
 
+        // Orbiting Shards: three motes circling the hero; each strikes what it touches, twice a second.
+        readonly List<Transform> shards = new List<Transform>();
+        float shardAngle, shardTick;
+
+        void Shards(bool on, Vector2 pos, float dt)
+        {
+            if (!on)
+            {
+                if (shards.Count > 0) { foreach (var t in shards) if (t != null) Destroy(t.gameObject); shards.Clear(); }
+                return;
+            }
+            var color = Elements.Color(MythicPowers.AttackElement);
+            while (shards.Count < 3)
+            {
+                var go = new GameObject("Shard");
+                GameAssets.CreateWorldSprite("mote", GameAssets.Diamond, Billboard.Create(go.transform), color, SortOrder.Effects, 0.45f);
+                shards.Add(go.transform);
+            }
+            const float orbit = 2.1f;
+            shardAngle += dt * 2.6f;
+            shardTick -= dt;
+            bool strike = shardTick <= 0f;
+            if (strike) shardTick = 0.5f;
+            for (int i = 0; i < shards.Count; i++)
+            {
+                if (shards[i] == null) continue;
+                float a = shardAngle + i * Mathf.PI * 2f / 3f;
+                Vector2 at = pos + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * orbit;
+                shards[i].position = Ground.On(at, 0.9f);
+                if (!strike) continue;
+                foreach (var c in Combat.HostilesInRadius(Team.Player, at, 0.85f).ToArray())
+                {
+                    Combat.Hit(hero.Combatant, c, 0.45f, default, false, 0f, -1f, MythicPowers.AttackMask);
+                    Fx.HitOn(c, Fx.Name(MythicPowers.AttackElement));
+                }
+            }
+        }
+
+        void OnDestroy()
+        {
+            foreach (var t in shards) if (t != null) Destroy(t.gameObject);
+        }
+
         void Update()
         {
             if (hero == null || hero.Combatant.IsDead) { ShowShadow(false); return; }
@@ -465,6 +731,9 @@ namespace TWF
                 }
             }
             lastPos = pos;
+
+            MythicPowers.Tick(hero);
+            Shards(MythicPowers.Has("m_shards"), pos, dt);
 
             if (aegisStored > 0f && Time.time >= aegisAt)
             {

@@ -168,3 +168,10 @@ MonoBehaviour:
     column: 4
     requiredLevel: 20
     requires: 
+  - id: p_sweep
+    active: {fileID: 0}
+    passive: {fileID: 11400000, guid: 29c3c40c5cd791f4bb88d798922ce486, type: 2}
+    tier: 1
+    column: 4
+    requiredLevel: 3
+    requires: 

@@ -185,6 +185,35 @@ namespace TWF.Tests
             return -1;
         }
 
+        // Waypoints, dungeon gates and challenge chests are put down wherever the seed falls. Half the dungeons once
+        // stood in a river, a pond or lava, a third with it in the stairwell itself.
+        [TwfCheck("WorldGen/Dungeons, waypoints and chests stand on dry ground")]
+        static void LandmarksDry()
+        {
+            Check.EachSeed(seed =>
+            {
+                int landmarks = 0;
+                void Dry(Vector2Int at, int r, string what)
+                {
+                    landmarks++;
+                    for (int dy = -r; dy <= r; dy++)
+                    for (int dx = -r; dx <= r; dx++)
+                    {
+                        var cell = WorldGen.CellAt(at.x + dx, at.y + dy);
+                        Check.That(cell != Cell.Water && cell != Cell.Lava, $"seed {seed}: {cell} at {at.x + dx},{at.y + dy}, inside the yard of the {what} at {at}");
+                    }
+                }
+                for (int cx = -14; cx <= 14; cx++)
+                for (int cy = -14; cy <= 14; cy++)
+                {
+                    if (WorldGen.HasDungeon(cx, cy, out var d)) Dry(d, 6, "dungeon");
+                    if (WorldGen.HasWaypoint(cx, cy, out var w)) Dry(w, 3, "waypoint");
+                    if (WorldGen.HasChest(cx, cy, out var c, out _)) Dry(c, 4, "challenge chest");
+                }
+                Check.AtLeast(landmarks, 20, $"seed {seed}: landmarks found to test");
+            });
+        }
+
         [TwfCheck("WorldGen/Chests and caches can be walked to")]
         static void ChestsReachable()
         {

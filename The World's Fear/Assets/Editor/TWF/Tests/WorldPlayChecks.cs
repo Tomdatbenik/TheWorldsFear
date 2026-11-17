@@ -50,6 +50,74 @@ namespace TWF.Tests
             DayNight.SetTime(timeBefore);
         }
 
+        // Every shop in one place: the market at the south of the citadel, by the spot a hero arrives at.
+        [TwfCheck("World/Town: every shop stands on the market square, on the ground")]
+        static IEnumerator MarketSquare()
+        {
+            yield return Play.Scene("World", 3f);
+            var shops = Object.FindObjectsByType<Merchant>();
+            Check.AtLeast(shops.Length, 5, "shopkeepers in the town");
+            var names = new HashSet<string>();
+            foreach (var m in shops)
+            {
+                names.Add(m.displayName);
+                var p = m.transform.G();
+                Check.That(Mathf.Abs(p.x) < 20f && p.y < -13f && p.y > -21f, $"{m.displayName} stands at {p}, outside the market south of the citadel");
+                Check.AtMost(Vector2.Distance(p, Town.Spawn), 20f, $"distance from where a hero arrives to the {m.displayName}");
+                // On the ground: left at their old scene height they hung eight units up and showed far from their stalls.
+                Check.Near(m.transform.position.y, TerrainHeight.At(p), 0.1f, $"height of the {m.displayName}");
+                Check.That(!Town.Blocked(p), $"{m.displayName} stands inside a wall or building");
+            }
+            foreach (string shop in new[] { "Merchant", "Weaponmaster", "Arcane Forge", "Mystic", "Cartographer" })
+                Check.That(names.Contains(shop), $"No {shop} in the town");
+            // Nobody stands on top of anybody else.
+            for (int i = 0; i < shops.Length; i++)
+                for (int j = i + 1; j < shops.Length; j++)
+                    Check.AtLeast(Vector2.Distance(shops[i].transform.G(), shops[j].transform.G()), 3f, $"distance between the {shops[i].displayName} and the {shops[j].displayName}");
+            Play.MoveHero(Town.Spawn);
+            DayNight.SetTime(0.33f);
+            yield return Play.Wait(2f);
+            yield return new WaitForEndOfFrame();
+            Play.LooksRight(Play.Shoot("world_market"), 0.1f, "The market square at noon");
+        }
+
+        // A knockback can carry a body through the thin wall along a shore. In the water (or lava) that wall then held
+        // it for good: the hero could not move again. It is put back where it stood.
+        [TwfCheck("World/Knocked into water or lava, the hero is put back on the shore")]
+        static IEnumerator KnockedIntoWater()
+        {
+            yield return Play.Scene("World", 3f);
+            int done = 0;
+            foreach (var kind in new[] { Cell.Water, Cell.Lava })
+            {
+                // A shore: open ground with this kind of cell right beside it, searched outward from the town.
+                Vector2Int land = default, wet = default; bool found = false;
+                for (int r = 60; r < 900 && !found; r += 7)
+                    for (int k = 0; k < 48 && !found; k++)
+                    {
+                        int x = Mathf.RoundToInt(Mathf.Cos(k * 0.131f) * r), y = Mathf.RoundToInt(Mathf.Sin(k * 0.131f) * r);
+                        if (WorldGen.CellAt(x, y) != Cell.Ground || WorldGen.CellAt(x - 1, y) != Cell.Ground) continue;
+                        if (WorldGen.CellAt(x + 1, y) != kind || WorldGen.CellAt(x + 2, y) != kind) continue;
+                        if (WorldGen.ElevAt(x, y) != WorldGen.ElevAt(x + 1, y)) continue;
+                        land = new Vector2Int(x, y); wet = new Vector2Int(x + 1, y); found = true;
+                    }
+                if (!found) continue;
+                var shore = new Vector2(land.x + 0.5f, land.y + 0.5f);
+                Play.MoveHero(shore);
+                yield return Play.Wait(4f);
+                Check.Near(Vector2.Distance(Play.HeroAt, shore), 0f, 0.6f, $"distance of the hero from the {kind} shore it was set on at {shore}");
+                // The shove: a little more than a tile, into the water, as a knockback does it.
+                Play.MoveHero(new Vector2(wet.x + 0.9f, wet.y + 0.5f));
+                yield return Play.Wait(0.5f);
+                var after = Play.HeroAt;
+                var cell = WorldGen.CellAt(Mathf.FloorToInt(after.x), Mathf.FloorToInt(after.y));
+                Check.That(cell != Cell.Water && cell != Cell.Lava, $"Pushed into {kind} at {wet}, the hero stayed in it (at {after})");
+                Check.AtMost(Vector2.Distance(after, shore), 1.5f, $"distance from the shore after being pushed into {kind}");
+                done++;
+            }
+            Check.AtLeast(done, 1, "shores of water or lava found to test");
+        }
+
         [TwfCheck("World/Monsters live in the far country")]
         static IEnumerator MonstersFarOut()
         {
@@ -210,7 +278,8 @@ namespace TWF.Tests
             for (int i = 0; i < 24; i++)
             {
                 var p = Play.HeroAt + new Vector2(Mathf.Cos(i * 0.52f), Mathf.Sin(i * 0.52f)) * (6f + i % 3 * 3f);
-                if (!WorldGen.Walkable(WorldGen.CellAt(Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y)))) continue;
+                // On broken ground the ring may hold little room: whatever does not fit goes next to the hero.
+                if (!WorldGen.Walkable(WorldGen.CellAt(Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y)))) p = Play.HeroAt + new Vector2(Mathf.Cos(i * 0.52f), Mathf.Sin(i * 0.52f)) * 1.5f;
                 MonsterSpawner.SpawnPack(WorldGen.RegionAt(p), p, 0.5f, into, rng, 12, 0f, 0f, null, 0f);
             }
             Check.AtLeast(into.Count, 30, "monsters spawned for the fight");
@@ -220,6 +289,82 @@ namespace TWF.Tests
             Check.AtMost(Play.Percentile(frames, 0.5f), 25f, $"median frame time (ms) with {into.Count} monsters");
             Check.AtMost(Play.Percentile(frames, 0.95f), 50f, $"95th percentile frame time (ms) with {into.Count} monsters");
             foreach (var m in into) if (m != null) Object.Destroy(m.gameObject);
+        }
+
+        // The last wave of a 10-wave challenge chest brings 40 monsters, four at a time. Spawned exactly as the chest
+        // does it, with the frame cap off, to see what one frame of spawning costs.
+        [TwfCheck("World/Performance: a 40-monster chest wave does not stall")]
+        static IEnumerator ChestWaveSpike()
+        {
+            yield return Play.Scene("World", 3f);
+            var spot = Play.SpotAtLevel(37, new Vector2(0.8f, 0.6f));
+            Play.MoveHero(spot);
+            yield return Play.Wait(6f);
+            foreach (var m in Object.FindObjectsByType<MonsterBrain>()) Object.Destroy(m.gameObject);
+            int vsync = QualitySettings.vSyncCount, cap = Application.targetFrameRate;
+            QualitySettings.vSyncCount = 0; Application.targetFrameRate = -1;
+            yield return Play.Wait(1f);
+
+            var go = new GameObject("TestChallengeChest");
+            go.transform.position = Ground.On(spot);
+            var chest = go.AddComponent<ChallengeChest>();
+            chest.waves = 10; chest.key = "twf_test_chest";
+            yield return null;
+            var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public;
+            var zone = WorldGen.RegionAt(spot);
+            var poolWatch = System.Diagnostics.Stopwatch.StartNew();
+            var pool = (List<MonsterSpecies>)typeof(ChallengeChest).GetMethod("MonsterPool", flags).Invoke(chest, new object[] { zone });
+            float poolMs = (float)poolWatch.Elapsed.TotalMilliseconds;
+            var pick = typeof(ChallengeChest).GetMethod("Pick", flags);
+            var ranged = typeof(ChallengeChest).GetMethod("Ranged", flags);
+            var point = typeof(ChallengeChest).GetMethod("SpawnPoint", flags);
+
+            var idle = new List<float>();
+            yield return Play.Frames(2f, idle);
+
+            int count = ChallengeChest.WaveSize(10, 10), level = WorldGen.LevelAt(spot) + 1;
+            Check.That(count == 40, $"The last wave of a 10-wave chest is {count} monsters, expected 40");
+            var rng = new System.Random(11);
+            var alive = new List<MonsterBrain>();
+            var spawnMs = new List<float>(); var frames = new List<float>();
+            var watch = new System.Diagnostics.Stopwatch();
+            for (int i = 0; i < count; i++)
+            {
+                var sp = (MonsterSpecies)(i < Mathf.Max(1, count / 5) ? ranged.Invoke(null, new object[] { pool, rng }) : pick.Invoke(null, new object[] { pool, rng }));
+                var rank = i < 3 ? MonsterRank.Rare : rng.NextDouble() < 0.25 ? MonsterRank.Elite : MonsterRank.Normal;
+                watch.Restart();
+                var m = MonsterBrain.Spawn(sp, level, rank, (Vector2)point.Invoke(chest, new object[] { rng }), null, zone);
+                m.leashRange = 100f;
+                m.Aggro();
+                VFX.Burst(m.transform.position, Color.red, 8, 0.8f);
+                spawnMs.Add((float)watch.Elapsed.TotalMilliseconds);
+                alive.Add(m);
+                if (i % 4 == 3)
+                {
+                    float until = Time.time + 0.15f;
+                    while (Time.time < until) { yield return null; frames.Add(Time.unscaledDeltaTime * 1000f); }
+                }
+            }
+            var fight = new List<float>();
+            yield return Play.Frames(5f, fight);
+            // The slowest frames in the order they came (index among the spawning frames).
+            var order = new List<int>(); for (int i = 0; i < frames.Count; i++) order.Add(i);
+            order.Sort((x, y) => frames[y].CompareTo(frames[x]));
+            string top = ""; for (int i = 0; i < 5 && i < order.Count; i++) top += $" #{order[i]}:{frames[order[i]]:0}ms";
+            long gc0 = System.GC.CollectionCount(0);
+            Debug.Log($"[TwfCheck] chest wave slowest spawning frames of {frames.Count}:{top}; gen0 collections so far {gc0}");
+            frames.Sort(); spawnMs.Sort();
+            float spawnTotal = 0f; foreach (float v in spawnMs) spawnTotal += v;
+            Debug.Log($"[TwfCheck] chest wave: pool {poolMs:0} ms; 40 spawns {spawnTotal:0} ms in all, one spawn median {Play.Percentile(spawnMs, 0.5f):0.0} ms, worst {spawnMs[spawnMs.Count - 1]:0.0} ms; " +
+                      $"frames while spawning: median {Play.Percentile(frames, 0.5f):0.0} ms, worst {frames[frames.Count - 1]:0.0} ms, over 50 ms: {frames.FindAll(f => f > 50f).Count} of {frames.Count}; " +
+                      $"idle before: median {Play.Percentile(idle, 0.5f):0.0} ms; fighting 40 after: median {Play.Percentile(fight, 0.5f):0.0} ms, p95 {Play.Percentile(fight, 0.95f):0.0} ms, worst {fight[fight.Count - 1]:0.0} ms");
+            QualitySettings.vSyncCount = vsync; Application.targetFrameRate = cap;
+            foreach (var m in alive) if (m != null) Object.Destroy(m.gameObject);
+            Object.Destroy(go);
+            // Editor on a PC: a phone is several times slower, so the budget is far below what would be felt here.
+            Check.AtMost(frames[frames.Count - 1], 60f, "worst frame (ms) while the 40-monster wave spawns");
+            Check.AtMost(poolMs, 60f, "time (ms) to prepare the chest's monster kinds, spent in one frame when the challenge starts");
+            Check.AtMost(Play.Percentile(fight, 0.95f), 33f, "95th percentile frame (ms) fighting the 40-monster wave");
         }
 
         // Running into new country generates chunks. Counts the frames that stall.
@@ -232,7 +377,11 @@ namespace TWF.Tests
             yield return Play.Wait(6f);
             var frames = new List<float>();
             var dir = new Vector2(-0.8f, -0.6f);
-            float until = Time.realtimeSinceStartup + 20f;
+            // With the frame cap off, so a stall shows as what it is and not rounded up to the next 1/60 s.
+            int vsync = QualitySettings.vSyncCount, cap = Application.targetFrameRate;
+            QualitySettings.vSyncCount = 0; Application.targetFrameRate = -1;
+            ChunkWorld.ResetStreamStats();
+            float until = Time.realtimeSinceStartup + 25f;
             while (Time.realtimeSinceStartup < until)
             {
                 Play.MoveHero(Play.HeroAt + dir * 12f * Time.unscaledDeltaTime);
@@ -242,8 +391,13 @@ namespace TWF.Tests
             frames.Sort();
             int over100 = frames.FindAll(f => f > 100f).Count;
             Debug.Log($"[TwfCheck] streaming: {frames.Count} frames, median {Play.Percentile(frames, 0.5f):0.0} ms, p99 {Play.Percentile(frames, 0.99f):0.0} ms, worst {frames[frames.Count - 1]:0} ms, over 100 ms: {over100}");
-            Check.AtMost(frames[frames.Count - 1], 600f, "worst frame (ms) while running 12 tiles a second into new country");
-            Check.AtMost(over100, 20, "frames over 100 ms in 20 seconds of running into new country");
+            QualitySettings.vSyncCount = vsync; Application.targetFrameRate = cap;
+            Debug.Log($"[TwfCheck] streaming steps, longest each: {ChunkWorld.StreamStats}");
+            // A chunk made in one go took 40 to 150 ms here and two were made per frame: worst frames of 270 ms and a
+            // dozen over 100 ms in this run. Made in slices, the worst is about 50 ms. (A PC: a phone is several times slower.)
+            Check.AtMost(frames[frames.Count - 1], 150f, "worst frame (ms) while running 12 tiles a second into new country");
+            Check.AtMost(over100, 1, "frames over 100 ms in 25 seconds of running into new country");
+            Check.AtMost(Play.Percentile(frames, 0.99f), 40f, "99th percentile frame (ms) while running into new country");
         }
     }
 }

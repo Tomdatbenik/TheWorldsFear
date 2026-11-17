@@ -204,6 +204,32 @@ namespace TWF.Tests
             yield return Play.Wait(1.5f);
         }
 
+        // Every area attack draws a ring and a disc the size of its radius. Each new size used to cost about 60 ms to
+        // build (a stall whenever a monster kind cast its first area), so sizes never seen before are timed here.
+        [TwfCheck("TestRange/Performance: a new size of area effect appears without a stall")]
+        static IEnumerator AreaFirstUse()
+        {
+            yield return Yard();
+            var hero = HeroController.Instance.Combatant;
+            float worst = 0f; float at = 0f; string all = "";
+            var watch = new System.Diagnostics.Stopwatch();
+            // Odd radii no monster uses, small to very large.
+            foreach (float radius in new[] { 0.83f, 1.71f, 2.63f, 3.37f, 4.19f, 5.57f, 7.91f })
+            {
+                watch.Restart();
+                var area = AreaEffect.Spawn(hero, Open + Vector2.left * 6f, new AreaSpec { radius = radius, delay = 0.1f, ticks = 1, damageMult = 0f, color = Color.red, quiet = true });
+                float ms = (float)watch.Elapsed.TotalMilliseconds;
+                if (ms > worst) { worst = ms; at = radius; }
+                all += $" {radius}:{ms:0.0}";
+                Check.That(area != null, $"No area effect of radius {radius}");
+                yield return null;
+            }
+            Debug.Log($"[TwfCheck] area first use: worst {worst:0.0} ms (radius {at}); each:{all}");
+            // Editor on a PC; a phone is several times slower.
+            Check.AtMost(worst, 12f, $"time (ms) to show an area effect of a size not seen before (radius {at})");
+            yield return Play.Wait(0.5f);
+        }
+
         [TwfCheck("TestRange/Hero: every weapon swings and every slotted skill casts")]
         static IEnumerator HeroAttacks()
         {
@@ -227,6 +253,50 @@ namespace TWF.Tests
             }
             Check.AtLeast(cast, 1, "skills the test hero could cast");
             yield return Play.Wait(1f);
+        }
+
+        // Dual Wield: a sword moved to the off hand is the same sword there. It used to lose half its damage.
+        [TwfCheck("TestRange/Dual Wield: a sword keeps its stats in the off hand")]
+        static IEnumerator DualWieldKeepsStats()
+        {
+            yield return Yard();
+            if (!Profile.Data.masteriesOwned.Contains((int)WeaponType.Sword)) Profile.Data.masteriesOwned.Add((int)WeaponType.Sword);
+            ItemInstance Sword(string baseName, float damage) => new ItemInstance
+            {
+                uid = System.Guid.NewGuid().ToString(), slot = ItemSlot.Weapon, weaponType = (int)WeaponType.Sword, rarity = Rarity.Rare, itemLevel = 20,
+                baseName = baseName, name = baseName, implicitStat = StatType.Damage, implicitValue = damage,
+            };
+            var first = Sword("Iron Sword", 40f);
+            var second = Sword("Steel Broadsword", 52f);
+            Profile.Data.inventory.Add(first);
+            Profile.Data.inventory.Add(second);
+            Check.That(Profile.EquipItem(first), "Could not equip a sword in the main hand");
+            Check.That(Profile.CanSwitchHand(second), "With Dual Wield learned, a sword in the bag cannot go to the off hand");
+            Check.That(Profile.EquipInOtherHand(second), "Could not equip the second sword in the off hand");
+            Check.That(second.slot == ItemSlot.OffHand && Profile.Equipped(ItemSlot.OffHand) == second, "The second sword is not in the off hand");
+            Check.Near(second.implicitValue, 52f, 0.001f, "damage of a sword once it is in the off hand");
+            Check.That(Profile.Equipped(ItemSlot.Weapon) == first, "Equipping the off hand took the main-hand sword off");
+            yield return null;
+            Check.That(WeaponMasteries.DualWielding, "Two swords equipped, but the hero is not dual wielding");
+
+            // Back to the bag and into the main hand: still the same sword.
+            Profile.UnequipItem(second);
+            Check.That(Profile.EquipInOtherHand(second), "Could not move the sword back to the main hand");
+            Check.That(second.slot == ItemSlot.Weapon, "The sword did not return to the main hand");
+            Check.Near(second.implicitValue, 52f, 0.001f, "damage of the sword after a round trip through the off hand");
+
+            // A sword that an older version halved is given its damage back when the save loads.
+            var halved = Sword("Iron Sword", 20f);
+            halved.slot = ItemSlot.OffHand; halved.offHandKind = (int)OffHandKind.Sword;
+            Check.That(Profile.RestoreOffHandSword(halved), "An old halved off-hand sword was not restored");
+            Check.Near(halved.implicitValue, Mathf.Round(20f * Weapons.Get(WeaponType.Sword).implicitDamage / Profile.OffHandBladeShare), 0.001f, "restored damage of an old halved sword");
+            Check.That(!Profile.RestoreOffHandSword(halved), "The restore ran twice on the same sword");
+
+            // The small blades that drop as off-hand items are not swords: they stay as they were made.
+            var blade = Sword("Sidesword", 15f);
+            blade.slot = ItemSlot.OffHand; blade.offHandKind = (int)OffHandKind.Sword;
+            Check.That(!Profile.RestoreOffHandSword(blade), "An off-hand blade was treated as a halved sword");
+            Check.Near(blade.implicitValue, 15f, 0.001f, "damage of an off-hand blade after loading");
         }
 
         [TwfCheck("TestRange/Loot: gold, potions and items drop and can be picked up")]

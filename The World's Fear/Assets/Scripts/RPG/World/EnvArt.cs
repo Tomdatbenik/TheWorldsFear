@@ -71,6 +71,7 @@ namespace TWF
         // wall along a plateau's edge; when that happens it is put back where it last stood.
         public static bool KeepLevels = true;
         Vector2 lastGood;
+        bool hasGood;              // lastGood is a real spot it stood on
         int lastLevel = -1;        // the level of land it stands on, -1 on stairs or anywhere else with no rule
 
         static int LevelOf(Vector2 p)
@@ -88,6 +89,15 @@ namespace TWF
             bool leapDown = mobility == Mobility.Leap && level >= 0 && level < lastLevel && lastLevel - level <= WorldGen.LeapDrop;
             // A jump of more than a few tiles in one step is a teleport (a waypoint, a portal), not a knock over an edge.
             bool teleported = (p - lastGood).sqrMagnitude > 9f;
+            // Knocked (or dashed) into a pond, a river or lava: the shore's wall then holds it there for good, so it
+            // is put back on the ground it came from. Shallow water (puddles) and bridges are ground like any other.
+            var here = WorldGen.CellAt(Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y));
+            if ((here == Cell.Water || here == Cell.Lava) && hasGood && !teleported)
+            {
+                if (body != null) { body.position = lastGood; body.linearVelocity = Vector2.zero; }
+                else transform.SetG(lastGood);
+                return;
+            }
             if (level >= 0 && lastLevel >= 0 && level != lastLevel && !leapDown && !teleported)
             {
                 if (body != null) { body.position = lastGood; body.linearVelocity = Vector2.zero; }
@@ -96,7 +106,7 @@ namespace TWF
             }
             // Stairs clear the memory: whoever comes off them may be on either level.
             lastLevel = level;
-            if (level >= 0) lastGood = p;
+            if (level >= 0) { lastGood = p; hasGood = true; }
         }
 
         void LateUpdate()

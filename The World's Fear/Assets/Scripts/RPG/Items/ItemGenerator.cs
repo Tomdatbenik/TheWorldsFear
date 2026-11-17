@@ -84,6 +84,11 @@ namespace TWF
         }
 
         // Off-hands tied to a weapon (parrying dagger, sword, quiver, orb, tome) only drop once that weapon is unlocked.
+        // An off-hand blade as it drops ("Short Sword", "Sidesword"...): half a sword's damage. A real sword keeps
+        // its own name whichever hand holds it.
+        public static bool IsOffHandBlade(ItemInstance item) =>
+            item != null && item.baseName != null && System.Array.IndexOf(offHandNames[OffHandKind.Sword], item.baseName) >= 0;
+
         public static OffHandKind RandomOffHand(System.Random rng)
         {
             var open = new List<OffHandKind> { OffHandKind.Shield };

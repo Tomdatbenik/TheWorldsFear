@@ -254,7 +254,7 @@ namespace TWF
                 if (data.lootByRarity == null || data.lootByRarity.Length < 5) data.lootByRarity = new int[5];
                 // Older legendary / mythic items could have crit chance and other fraction stats rounded to 0.
                 foreach (var list in new[] { data.inventory, data.equipment, data.shopStock })
-                    if (list != null) foreach (var it in list) { ItemGenerator.RepairZeroStats(it); MythicPowers.Upgrade(it); }
+                    if (list != null) foreach (var it in list) { ItemGenerator.RepairZeroStats(it); RestoreOffHandSword(it); MythicPowers.Upgrade(it); }
                 ranks = null;
                 return true;
             }
@@ -476,32 +476,47 @@ namespace TWF
             return true;
         }
 
-        // With Dual Wield learned, a sword can go in either hand: a main-hand sword becomes an off-hand blade (half its
-        // damage, as off-hand swords have) and an off-hand sword becomes a main-hand one. Only from the bag.
+        // With Dual Wield learned, a sword can go in either hand, and it is the same sword there: a main-hand sword
+        // moved to the off hand keeps its damage (that is the point of wielding two), and moves back unchanged.
+        // The small off-hand blades that drop as off-hand items are made at half a sword's damage; moved to the main
+        // hand they are scaled up to a sword's, and back down when they return. Only from the bag.
         public static bool CanSwitchHand(ItemInstance item) =>
             item != null && Data.inventory.Contains(item) && WeaponMasteries.Has(WeaponType.Sword) &&
             ((item.slot == ItemSlot.Weapon && item.weaponType == (int)WeaponType.Sword) || WeaponMasteries.IsOffHandSword(item));
 
+        public const float OffHandBladeShare = 0.5f;
+
         public static bool EquipInOtherHand(ItemInstance item)
         {
             if (!CanSwitchHand(item)) return false;
-            float main = Weapons.Get(WeaponType.Sword).implicitDamage, off = 0.5f;
-            var before = (item.slot, item.weaponType, item.offHandKind, item.implicitValue);
+            float main = Weapons.Get(WeaponType.Sword).implicitDamage;
+            var before = (item.slot, item.weaponType, item.offHandKind, item.implicitValue, item.trueSword);
+            bool blade = ItemGenerator.IsOffHandBlade(item);   // made as an off-hand item, not a sword
             if (item.slot == ItemSlot.Weapon)
             {
                 item.slot = ItemSlot.OffHand;
                 item.offHandKind = (int)OffHandKind.Sword;
-                item.implicitValue = Mathf.Round(item.implicitValue * off / main);
+                if (blade) item.implicitValue = Mathf.Round(item.implicitValue * OffHandBladeShare / main);
+                else item.trueSword = true;
             }
             else
             {
                 item.slot = ItemSlot.Weapon;
                 item.weaponType = (int)WeaponType.Sword;
-                item.implicitValue = Mathf.Round(item.implicitValue * main / off);
+                if (blade) item.implicitValue = Mathf.Round(item.implicitValue * main / OffHandBladeShare);
             }
             if (EquipItem(item)) return true;
-            (item.slot, item.weaponType, item.offHandKind, item.implicitValue) = before;   // bag full: leave it as it was
+            (item.slot, item.weaponType, item.offHandKind, item.implicitValue, item.trueSword) = before;   // bag full: leave it as it was
             return false;
+        }
+
+        // Saves from when a sword moved to the off hand lost half its damage: give it back, once.
+        public static bool RestoreOffHandSword(ItemInstance item)
+        {
+            if (item == null || item.trueSword || !WeaponMasteries.IsOffHandSword(item) || ItemGenerator.IsOffHandBlade(item)) return false;
+            item.implicitValue = Mathf.Round(item.implicitValue * Weapons.Get(WeaponType.Sword).implicitDamage / OffHandBladeShare);
+            item.trueSword = true;
+            return true;
         }
 
         public static void UnequipItem(ItemInstance item)

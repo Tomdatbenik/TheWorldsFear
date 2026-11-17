@@ -230,7 +230,7 @@ namespace TWF
             Vector2 Spot() => at + Random.insideUnitCircle * 2.2f;
 
             // Gear: more pieces and better rarities the longer the challenge.
-            int items = 2 + waves;
+            int items = 2 + waves + MythicPowers.ExtraLoot;
             for (int i = 0; i < items; i++)
             {
                 Rarity rarity;

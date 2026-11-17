@@ -19,6 +19,15 @@ namespace TWF
         public static readonly RectInt HubRect = new RectInt(-48, -48, 96, 96);
         public static readonly Vector2 Spawn = new Vector2(0f, -19.5f);   // where a new hero starts: the plaza at the citadel's feet
         static readonly Vector2 WaypointSpot = new Vector2(-12f, -16.5f);  // the town's portal, west of the citadel's stairs
+        // The market: the plaza south of the citadel, where a hero arrives (Spawn) and the portal stands. Every shop's
+        // stall is in one row along the citadel's wall, open to the south - toward the camera, so nothing stands in
+        // front of them - with the stairs and the portal left clear.
+        const float StallY = -14.9f, KeeperY = -17.6f;
+        static readonly (string shop, string stall, float x)[] Stalls =
+        {
+            ("Mystic", "stall_potions", -17.4f), ("Arcane Forge", "stall_potions", -6.6f),
+            ("Merchant", "stall_produce", 6.6f), ("Weaponmaster", "stall_weapons", 12f), ("Cartographer", "stall_maps", 17.4f),
+        };
 
         // Walls (given for the south side; the other three are the same turned round the centre).
         const float Outer = 40f, Thick = 2f, WallH = 5f;
@@ -97,12 +106,13 @@ namespace TWF
                 EnvArt.PaintGround(t, r, "dirt_tile", (x, y) => 2f - Mathf.Abs(y), "Gate Road", -0.025f);
             // The plaza round the citadel, and the district squares.
             EnvArt.PaintGround(t, new Rect(-21f, -24f, 42f, 45f), "cobble_tile", (x, y) => 18.5f - Mathf.Max(Mathf.Abs(x), Mathf.Abs(y + 1.5f)) + (y < -16f && Mathf.Abs(x) < 6f ? 3f : 0f), "Plaza", -0.04f);
-            Square(new Vector2(25f, 25f), 8.5f, "cobble_tile", "Market");
+            Square(new Vector2(25f, 25f), 8.5f, "cobble_tile", "Well Square");
             Square(new Vector2(-24f, 24f), 7f, "cobble_tile", "Arcane Square");
             Square(new Vector2(24f, -24f), 7f, "dirt_tile", "Inn Yard");
             blocked.Add(new Rect(-3.5f, -48f, 7f, 96f));
             blocked.Add(new Rect(-48f, -3.5f, 96f, 7f));
             blocked.Add(new Rect(-19f, -21f, 38f, 40f));
+            blocked.Add(new Rect(-19f, -25f, 38f, 5f));   // no tree in front of the market's stalls
         }
 
         void Square(Vector2 c, float r, string tile, string name)
@@ -288,15 +298,10 @@ namespace TWF
 
         void Districts()
         {
-            // The market: stalls round the square, a well in the middle.
-            Prop("stall_produce", new Vector2(20.5f, 29.5f), 0f);
-            Prop("stall_weapons", new Vector2(29.5f, 20f), 90f);
-            Prop("stall_potions", new Vector2(24f, 31f), 180f);
+            // The market: every shop's stall in one row along the citadel's south wall.
+            foreach (var st in Stalls) Prop(st.stall, new Vector2(st.x, StallY), 0f);
+            // The old market square keeps its well; the inn keeps its yard.
             EnvMesh.Place("well", transform, new Vector2(25f, 24f));
-            // The arcane quarter.
-            Prop("stall_potions", new Vector2(-21f, 20.5f), 0f);
-            // The inn yard and the mapmaker.
-            Prop("stall_maps", new Vector2(21f, -20.5f), 0f);
             Prop("haystack", new Vector2(31f, -22f), 0f);
             // The green.
             Prop("scarecrow", new Vector2(-33f, -33f), 30f);
@@ -361,20 +366,14 @@ namespace TWF
             return false;
         }
 
-        // The shopkeepers move to their districts.
+        // The shopkeepers stand in front of their stalls on the market square.
         void PlaceShops()
         {
-            var spots = new Dictionary<string, Vector2>
-            {
-                { "Merchant", new Vector2(20.5f, 27.6f) },
-                { "Weaponmaster", new Vector2(27.6f, 20f) },
-                { "Arcane Forge", new Vector2(-21f, 18.6f) },
-                { "Mystic", new Vector2(-29f, 24.6f) },
-                { "Cartographer", new Vector2(21f, -22.4f) },
-            };
+            var spots = new Dictionary<string, Vector2>();
+            foreach (var st in Stalls) spots[st.shop] = new Vector2(st.x, KeeperY);
             foreach (var m in FindObjectsByType<Merchant>())
                 if (spots.TryGetValue(m.displayName, out var p) || spots.TryGetValue(m.name, out p))
-                    m.transform.position = p.W(m.transform.position.y);
+                    m.transform.position = Ground.On(p);   // on the ground: the height they had in the scene left them floating
         }
 
         void PlaceWaypoint()

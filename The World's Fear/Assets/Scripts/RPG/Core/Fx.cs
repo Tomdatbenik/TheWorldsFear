@@ -320,30 +320,39 @@ namespace TWF
 
         // ---------- Crisp telegraph shapes, drawn at the real size so they never turn blocky ----------
 
-        static int PixelsFor(float radius) => Mathf.Clamp(Mathf.CeilToInt(radius * 2f * PPU / 4f) * 4, 8, 640);
+        // Rings and discs are drawn at about their real size so a warning stays crisp, in steps of 48 pixels: a
+        // texture per exact radius meant a new pair of large textures, built pixel by pixel through a callback and
+        // outlined by Unity, for nearly every monster's area attack - 60 ms on a PC the first time each size showed.
+        static int PixelsFor(float radius) => Mathf.Clamp(Mathf.CeilToInt(radius * 2f * PPU / 48f) * 48, 48, 624);
 
-        public static Sprite Ring(float radius)
+        public static Sprite Ring(float radius) => Round(rings, PixelsFor(radius), true);
+        public static Sprite Disc(float radius) => Round(discs, PixelsFor(radius), false);
+
+        static Sprite Round(Dictionary<int, Sprite> made, int n, bool ring)
         {
-            int n = PixelsFor(radius);
-            if (rings.TryGetValue(n, out var s) && s) return s;
-            s = GameAssets.Make("fxring" + n, n, n, (x, y, w, h) =>
+            if (made.TryGetValue(n, out var s) && s) return s;
+            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = (ring ? "fxring" : "fxdisc") + n };
+            // Written straight into the texture's own memory: no managed array of a million bytes for the collector.
+            var px = tex.GetRawTextureData<Color32>();
+            var white = new Color32(255, 255, 255, 255); var faint = new Color32(255, 255, 255, 115); var clear = new Color32(0, 0, 0, 0);
+            float r = n / 2f;
+            // Squared distances from the centre, row by row: no callback, no square roots.
+            float outer = r * r, band = (r - 2.5f) * (r - 2.5f), in0 = (r - 5f) * (r - 5f), in1 = (r - 6f) * (r - 6f);
+            for (int y = 0; y < n; y++)
             {
-                float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(w / 2f, h / 2f));
-                float r = w / 2f;
-                if (d <= r && d > r - 2.5f) return Color.white;
-                if (d <= r - 5f && d > r - 6f) return new Color(1f, 1f, 1f, 0.45f);
-                return Color.clear;
-            }, PPU, FilterMode.Point);
-            return rings[n] = s;
-        }
-
-        public static Sprite Disc(float radius)
-        {
-            int n = PixelsFor(radius);
-            if (discs.TryGetValue(n, out var s) && s) return s;
-            s = GameAssets.Make("fxdisc" + n, n, n, (x, y, w, h) =>
-                Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(w / 2f, h / 2f)) <= w / 2f ? Color.white : Color.clear, PPU, FilterMode.Point);
-            return discs[n] = s;
+                float dy = y + 0.5f - r, dy2 = dy * dy;
+                int row = y * n;
+                for (int x = 0; x < n; x++)
+                {
+                    float dx = x + 0.5f - r, d2 = dx * dx + dy2;
+                    px[row + x] = d2 > outer ? clear : !ring || d2 > band ? white : d2 <= in0 && d2 > in1 ? faint : clear;
+                }
+            }
+            tex.Apply(false, true);
+            // A plain quad: the default tight mesh makes Unity trace the outline of the whole texture.
+            s = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), PPU, 0, SpriteMeshType.FullRect);
+            s.name = tex.name;
+            return made[n] = s;
         }
     }
 }

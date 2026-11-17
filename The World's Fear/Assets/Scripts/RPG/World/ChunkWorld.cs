@@ -13,6 +13,12 @@ namespace TWF
         public static ChunkWorld Instance { get; private set; }
 
         public int loadRadius = 3;
+        // Chunks kept loaded round the hero, each way. Two is plenty: a chunk is 24 tiles, so the nearest unloaded
+        // ground is at least 48 tiles off, and the screen with its shadows shows about 30. Three (49 chunks, up to 81
+        // before the far ones were let go) kept three times the camps, lights and scenery alive that could ever be
+        // seen, and built seven new chunks at every border crossed instead of five.
+        const int MaxLoadRadius = 2;
+        int Radius => Mathf.Min(loadRadius, MaxLoadRadius);
         public RectInt hubRect = new RectInt(-45, -30, 90, 90);
 
         class Chunk
@@ -101,8 +107,8 @@ namespace TWF
         public void LoadAround(Vector2 p)
         {
             var c = WorldGen.ChunkOf(p);
-            for (int dx = -loadRadius; dx <= loadRadius; dx++)
-            for (int dy = -loadRadius; dy <= loadRadius; dy++)
+            for (int dx = -Radius; dx <= Radius; dx++)
+            for (int dy = -Radius; dy <= Radius; dy++)
                 Load(new Vector2Int(c.x + dx, c.y + dy));
             heroChunk = c;
         }
@@ -126,8 +132,8 @@ namespace TWF
                 {
                     heroChunk = c;
                     toLoad.Clear();
-                    for (int dx = -loadRadius; dx <= loadRadius; dx++)
-                    for (int dy = -loadRadius; dy <= loadRadius; dy++)
+                    for (int dx = -Radius; dx <= Radius; dx++)
+                    for (int dy = -Radius; dy <= Radius; dy++)
                     {
                         var k = new Vector2Int(c.x + dx, c.y + dy);
                         if (!chunks.ContainsKey(k)) toLoad.Add(k);
@@ -135,16 +141,138 @@ namespace TWF
                     toLoad.Sort((a, b) => (a - c).sqrMagnitude.CompareTo((b - c).sqrMagnitude));
                     var unload = new List<Vector2Int>();
                     foreach (var k in chunks.Keys)
-                        if (Mathf.Abs(k.x - c.x) > loadRadius + 1 || Mathf.Abs(k.y - c.y) > loadRadius + 1) unload.Add(k);
+                        if (Mathf.Abs(k.x - c.x) > Radius + 1 || Mathf.Abs(k.y - c.y) > Radius + 1) unload.Add(k);
+                    var unloadClock = System.Diagnostics.Stopwatch.StartNew();
                     foreach (var k in unload) Unload(k);
+                    MaxUnloadMs = Mathf.Max(MaxUnloadMs, (float)unloadClock.Elapsed.TotalMilliseconds);
                 }
             }
-            // A couple of chunks per frame keeps it smooth.
-            for (int i = 0; i < (CameraFollow.CinematicActive ? 4 : 2) && toLoad.Count > 0; i++)
+            Stream();
+        }
+
+        // ---------- Streaming ----------
+        // New country is worked out a little each frame. A chunk took 40 to 150 ms to make in one go (most of it the
+        // world generator: cells, levels, river bridges), and two were made per frame: a freeze at every chunk border.
+        // Now the generator's answers for the next chunk are fetched ahead within a few milliseconds a frame (they
+        // are cached, so building then finds them ready), and at most one chunk is built per frame.
+        const float StreamBudgetMs = 4f;
+        static readonly System.Diagnostics.Stopwatch streamClock = new System.Diagnostics.Stopwatch();
+        Vector2Int warming = new Vector2Int(int.MinValue, 0);
+        int warmStep, warmIndex;
+        public static float LastStreamMs { get; private set; }
+        // The longest each kind of streaming work has taken, in ms, since ResetStreamStats: for the performance checks.
+        public static float MaxWarmMs, MaxBuildMs, MaxFurnishMs, MaxUnloadMs;
+        public static void ResetStreamStats() { MaxWarmMs = MaxBuildMs = MaxFurnishMs = MaxUnloadMs = 0f; laps.Clear(); }
+        static readonly Dictionary<string, float> laps = new Dictionary<string, float>();
+        static readonly System.Diagnostics.Stopwatch lapClock = new System.Diagnostics.Stopwatch();
+        static double lapLast;
+        static void Lap(string name)
+        {
+            double now = lapClock.Elapsed.TotalMilliseconds; float ms = (float)(now - lapLast); lapLast = now;
+            if (!laps.TryGetValue(name, out float max) || ms > max) laps[name] = ms;
+        }
+        public static string LapStats { get { var sb = new System.Text.StringBuilder(); foreach (var kv in laps) sb.Append(kv.Key + " " + kv.Value.ToString("0.0") + "; "); return sb.ToString(); } }
+        public static string StreamStats => $"warm {MaxWarmMs:0.0} ms, build {MaxBuildMs:0.0} ms, scenery {MaxFurnishMs:0.0} ms, unload {MaxUnloadMs:0.0} ms";
+
+        void Stream()
+        {
+            LastStreamMs = 0f;
+            if (toLoad.Count == 0 && furnishing.Count == 0) return;
+            streamClock.Restart();
+            float budget = CameraFollow.CinematicActive ? 30f : StreamBudgetMs;
+            if (furnishing.Count > 0)
             {
-                Load(toLoad[0]);
-                toLoad.RemoveAt(0);
+                furnishing.Dequeue()();   // the chunk built last frame gets its scenery
+                MaxFurnishMs = Mathf.Max(MaxFurnishMs, (float)streamClock.Elapsed.TotalMilliseconds);
             }
+            else
+            {
+                var k = toLoad[0];
+                bool ready = Warm(k, budget);
+                float warmed = (float)streamClock.Elapsed.TotalMilliseconds;
+                MaxWarmMs = Mathf.Max(MaxWarmMs, warmed);
+                if (ready)
+                {
+                    deferFurnish = !CameraFollow.CinematicActive;
+                    Load(k);
+                    deferFurnish = false;
+                    toLoad.RemoveAt(0);
+                    MaxBuildMs = Mathf.Max(MaxBuildMs, (float)streamClock.Elapsed.TotalMilliseconds - warmed);
+                }
+            }
+            LastStreamMs = (float)streamClock.Elapsed.TotalMilliseconds;
+        }
+
+        bool OverBudget(float budget) => streamClock.Elapsed.TotalMilliseconds >= budget;
+
+        // Fetches what building chunk c will ask the world generator, a slice at a time. True once it is all cached.
+        bool Warm(Vector2Int c, float budget)
+        {
+            if (c != warming) { warming = c; warmStep = 0; warmIndex = 0; }
+            lapClock.Restart(); lapLast = 0; int stepAtStart = warmStep;
+            try {
+            int S = WorldGen.ChunkSize, x0 = c.x * S, y0 = c.y * S;
+            const int Margin = 20;   // how far round the chunk the land is fetched (stairs and slopes look that far)
+            // River bridges, a few rows of a region at a time. Asked at the four corners of the margin: a question
+            // about any tile works out the regions round that tile, so every tile fetched below must find them done.
+            while (warmStep < 4)
+            {
+                if (!WorldGen.WarmBridges(x0 - Margin + (warmStep % 2) * (S + 2 * Margin), y0 - Margin + (warmStep / 2) * (S + 2 * Margin), () => OverBudget(budget))) return false;
+                warmStep++;
+            }
+            // The land itself for the chunk and a wide margin round it: stairs and slopes are worked out a block at a
+            // time from the land about them, and without this one question about a cell cost a whole block.
+            if (warmStep == 4)
+            {
+                int m = S + 2 * Margin;
+                for (; warmIndex < m * m; warmIndex++)
+                {
+                    if ((warmIndex & 7) == 0 && OverBudget(budget)) return false;
+                    WorldGen.WarmLand(x0 - Margin + warmIndex % m, y0 - Margin + warmIndex / m);
+                }
+                warmStep = 30; warmIndex = 0;
+            }
+            // Staircases, a 16-tile block at a time, for every block the chunk and its border touch.
+            if (warmStep == 30)
+            {
+                const int B = 16;
+                int bx0 = Mathf.FloorToInt((x0 - 2) / (float)B), by0 = Mathf.FloorToInt((y0 - 2) / (float)B);
+                int nb = Mathf.FloorToInt((x0 + S + 1) / (float)B) - bx0 + 1, nby = Mathf.FloorToInt((y0 + S + 1) / (float)B) - by0 + 1;
+                for (; warmIndex < nb * nby; warmIndex++)
+                    if (!WorldGen.WarmStairs((bx0 + warmIndex % nb) * B, (by0 + warmIndex / nb) * B, () => OverBudget(budget))) return false;
+                warmStep = 40; warmIndex = 0;
+            }
+            // Cells and levels, with the border Load reads.
+            int w = S + 2;
+            if (warmStep == 40)
+            {
+                for (; warmIndex < w * w; warmIndex++)
+                {
+                    if (OverBudget(budget)) return false;
+                    int x = x0 - 1 + warmIndex % w, y = y0 - 1 + warmIndex / w;
+                    WorldGen.CellAt(x, y);
+                    WorldGen.ElevAt(x, y);
+                }
+                warmStep = 5; warmIndex = 0;
+            }
+            // The slope surface at every corner (bent ground, slopes, paths over them).
+            if (warmStep == 5)
+            {
+                int n = S + 3;
+                for (; warmIndex < n * n; warmIndex++)
+                {
+                    if (OverBudget(budget)) return false;
+                    WorldGen.SlopeVertexHeight(x0 - 1 + warmIndex % n, y0 - 1 + warmIndex / n);
+                }
+                warmStep = 6; warmIndex = 0;
+            }
+            // What stands in the chunk: each of these searches it.
+            if (warmStep == 6) { if (OverBudget(budget)) return false; WorldGen.HasCache(c.x, c.y, out _); warmStep = 7; }
+            if (warmStep == 7) { if (OverBudget(budget)) return false; WorldGen.HasSummit(c.x, c.y, out _); warmStep = 8; }
+            if (warmStep == 8) { if (OverBudget(budget)) return false; WorldGen.HasDungeon(c.x, c.y, out _); WorldGen.HasChest(c.x, c.y, out _, out _); WorldGen.HasWaypoint(c.x, c.y, out _); warmStep = 9; }
+            // Building is one piece of work: it gets a frame of its own.
+            return !OverBudget(budget * 0.5f);
+            } finally { Lap("warm step " + stepAtStart); }
         }
 
         void LateUpdate() { DrawGrass(); Update2Falls(); }
@@ -169,6 +297,7 @@ namespace TWF
                 elev[x + 1, y + 1] = WorldGen.ElevAt(x0 + x, y0 + y);
             }
 
+            lapClock.Restart(); lapLast = 0;
             var bounds = new BoundsInt(x0, y0, 0, S, S, 1);
             var groundTiles = new TileBase[S * S];
             var detailTiles = new TileBase[S * S];
@@ -189,6 +318,7 @@ namespace TWF
             var edges = new List<Vector2[]>();     // thin walls along plateau edges and stair sides: you stay on your level
             var water = new MeshBuilder();       // clear ponds
             var marshWater = new MeshBuilder();  // the marsh's own dark water
+            var nowhere = new MeshBuilder();     // never drawn: water that would lie over a dungeon's stairwell
             var puddles = new MeshBuilder();
             var lava = new MeshBuilder();
             var planks = new Town.Solid();         // bridge decks and railings
@@ -244,7 +374,7 @@ namespace TWF
                             if (cell == Cell.Water && n == Cell.Bridge) return true;   // the river runs on under a bridge
                             return elev[x + dx + 1, y + dy + 1] == lv && (n == cell || (cell == Cell.Water && n == Cell.Puddle));
                         }
-                        var pool = cell == Cell.Lava ? lava : WorldGen.BiomeAt(new Vector2(wx + 0.5f, wy + 0.5f)) == Biome.Marsh ? marshWater : water;
+                        var pool = WorldGen.InStairwell(wx, wy) ? nowhere : cell == Cell.Lava ? lava : WorldGen.BiomeAt(new Vector2(wx + 0.5f, wy + 0.5f)) == Biome.Marsh ? marshWater : water;
                         pool.Quad(new Vector3(wx, wy, z - 0.012f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1,
                             -1f, RoundCorners(Same), OpenSides(Same));
                         break;
@@ -268,7 +398,7 @@ namespace TWF
                         }
                         if (wet || below == Cell.Lava)
                         {
-                            var river = below == Cell.Lava ? lava : WorldGen.BiomeAt(new Vector2(wx + 0.5f, wy + 0.5f)) == Biome.Marsh ? marshWater : water;
+                            var river = WorldGen.InStairwell(wx, wy) ? nowhere : below == Cell.Lava ? lava : WorldGen.BiomeAt(new Vector2(wx + 0.5f, wy + 0.5f)) == Biome.Marsh ? marshWater : water;
                             river.Quad(new Vector3(wx, wy, -uh - 0.004f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1, -1f, RoundCorners(Wet), OpenSides(Wet));
                         }
                         // ...and the way crosses over it on a plank deck with a railing along each open side: the kit's
@@ -363,7 +493,7 @@ namespace TWF
                             return n == Cell.Puddle || (n == Cell.Water && elev[x + dx + 1, y + dy + 1] == lv);
                         }
                         // A puddle running into a pond is drawn as the pond's own water: one colour, no squares in it.
-                        var into = !pondPuddle[x + 1, y + 1] ? puddles
+                        var into = WorldGen.InStairwell(wx, wy) ? nowhere : !pondPuddle[x + 1, y + 1] ? puddles
                             : WorldGen.BiomeAt(new Vector2(wx + 0.5f, wy + 0.5f)) == Biome.Marsh ? marshWater : water;
                         into.Quad(new Vector3(wx, wy, z - (into == puddles ? 0.012f : 0.013f)), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1,
                             -1f, RoundCorners(Wet), OpenSides(Wet));
@@ -410,11 +540,13 @@ namespace TWF
                 AddFootShadows(cells, x, y, x0 + x, y0 + y, footShadows);
             }
 
+            Lap("cells");
             ground.SetTilesBlock(bounds, groundTiles);
             detail.SetTilesBlock(bounds, detailTiles);
             foreach (var kv in levelTiles) LevelMap(kv.Key).SetTilesBlock(bounds, kv.Value);
             blockers.SetTilesBlock(bounds, blockTiles);
 
+            Lap("tilemaps");
             var cliffTex = art != null && art.Cliff(chunkBiome) != null ? art.Cliff(chunkBiome) : WorldTiles.CliffTexture(chunkBiome);
             var brickTex = art != null && art.brick != null ? art.brick : WorldTiles.BrickTexture();
             MeshObject(chunk.root, "Cliffs", rockFaces, WorldTiles.MeshMaterial("cliff" + chunkBiome, cliffTex), true);
@@ -428,6 +560,7 @@ namespace TWF
             }
             MeshObject(chunk.root, "Rims", rims, WorldTiles.MeshMaterial("rim" + chunkBiome, WorldTiles.RimTexture(chunkBiome)), false);
             MeshObject(chunk.root, "FootShadows", footShadows, WorldTiles.FlatMaterial("footshadow", WorldTiles.FootShadowTexture()), false);
+            Lap("walls");
             if (edges.Count > 0)
             {
                 var eg = new GameObject("LevelEdges");
@@ -435,6 +568,7 @@ namespace TWF
                 eg.layer = LayerMask.NameToLayer("Walls");
                 LevelPass.AddEdges(Phys.Prisms(eg, edges));
             }
+            Lap("colliders");
             // Picked per cell, not per chunk: a pond crossing a chunk border keeps one colour.
             MeshObject(chunk.root, "Water", water, WaterTint("pond", new Color(0.14f, 0.5f, 0.74f), new Color(0.36f, 0.78f, 0.9f)), false);
             MeshObject(chunk.root, "Marsh Water", marshWater, WaterTint("marsh", RenderAssets.Instance.water.GetColor("_Deep"), RenderAssets.Instance.water.GetColor("_Shallow")), false);
@@ -452,13 +586,24 @@ namespace TWF
             if (falls.Count > 0) chunk.root.AddComponent<FallSpray>().Init(cells, elev, x0, y0);
             if (lava.Count > 0) PointLights.Attach(chunk.root.transform, new Color(1f, 0.45f, 0.15f), 10f, 1.4f, LavaCenter(cells, x0, y0).W(1.5f), true);
 
-            chunkElev = elev;
-            PlaceDecor(chunk, cells, x0, y0, decorRng);
-            PlaceGrass(chunk, cells, x0, y0, decorRng);
-            AmbientLife.Build(chunk.root.transform, cells, x0, y0, c);
-            PlaceCamps(chunk, cells, x0, y0);
-            PlacePointsOfInterest(chunk, c);
+            // What stands on the ground (scenery, grass, wildlife, camps, landmarks) is a second piece of work: when the
+            // chunk is streamed in ahead of the hero it gets a frame of its own, after the ground.
+            Lap("meshes");
+            System.Action furnish = () =>
+            {
+                if (!chunks.TryGetValue(c, out var live) || live != chunk || chunk.root == null) return;   // let go of meanwhile
+                chunkElev = elev;
+                PlaceDecor(chunk, cells, x0, y0, decorRng);
+                PlaceGrass(chunk, cells, x0, y0, decorRng);
+                AmbientLife.Build(chunk.root.transform, cells, x0, y0, c);
+                PlaceCamps(chunk, cells, x0, y0);
+                PlacePointsOfInterest(chunk, c);
+            };
+            if (deferFurnish) furnishing.Enqueue(furnish); else furnish();
         }
+
+        bool deferFurnish;
+        readonly Queue<System.Action> furnishing = new Queue<System.Action>();
 
         void Unload(Vector2Int c)
         {

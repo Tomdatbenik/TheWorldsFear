@@ -76,6 +76,13 @@ namespace TWF
         public SkillDefinition SkillIn(int slot) => slotSkills[slot];
         public int RankIn(int slot) => slotRanks[slot];
         public float CooldownLeft(int slot) => cooldowns[slot];
+
+        // Takes time off every running cooldown but one slot's (Thought Storm).
+        public void ReduceCooldowns(float seconds, int exceptSlot)
+        {
+            for (int i = 0; i < SlotCount; i++)
+                if (i != exceptSlot && cooldowns[i] > 0f) cooldowns[i] = Mathf.Max(0f, cooldowns[i] - seconds);
+        }
         public float CooldownFraction(int slot) => cooldownTotals[slot] > 0 ? cooldowns[slot] / cooldownTotals[slot] : 0f;
 
         void Awake()

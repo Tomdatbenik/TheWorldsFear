@@ -117,7 +117,7 @@ namespace TWF
             Vector2 at = transform.G() + Vector2.down * 1.4f;
             Vector2 Spot() => at + UnityEngine.Random.insideUnitCircle * 1.8f;
 
-            int items = vault ? 5 : 2;
+            int items = (vault ? 5 : 2) + MythicPowers.ExtraLoot;
             for (int i = 0; i < items; i++)
             {
                 var rarity = RollRarity(rng, level, vault, i);

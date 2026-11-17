@@ -82,6 +82,8 @@ namespace TWF
         public int secondElement = -1;
         public int weaponType; // WeaponType, for weapons
         public int offHandKind; // OffHandKind, for off-hand items
+        // A real sword carried in the off hand (Dual Wield): it keeps its full damage in either hand.
+        public bool trueSword;
         public int element = (int)ElementPart.Physical;   // weapons: the element of basic attacks
         // Unique armor: a socket that holds one crafted skill, cast from an extra button or automatically.
         public bool socket;
