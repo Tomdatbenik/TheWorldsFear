@@ -51,7 +51,7 @@ namespace TWF
             sunGo.transform.SetParent(transform, false);
             sun = sunGo.AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.shadows = LightShadows.Soft;
+            sun.shadows = RenderAssets.SunShadows == LightShadows.None ? LightShadows.Hard : RenderAssets.SunShadows;
             sun.shadowStrength = 0.75f;
             sun.shadowBias = 0.02f;
             sun.shadowNormalBias = 0.2f;
@@ -188,11 +188,13 @@ namespace TWF
                 case Biome.Forest:
                     return new Mood { sun = new Color(1f, 0.88f, 0.62f), sunIntensity = 0.74f, sunAngles = new Vector2(55, 210), ambient = new Color(0.29f, 0.32f, 0.27f), fog = new Color(0.5f, 0.52f, 0.38f), fogStart = 28, fogEnd = 70 };
                 case Biome.Marsh:
-                    return new Mood { sun = new Color(0.75f, 0.9f, 0.85f), sunIntensity = 0.53f, sunAngles = new Vector2(40, 160), ambient = new Color(0.21f, 0.27f, 0.26f), fog = new Color(0.28f, 0.36f, 0.32f), fogStart = 14, fogEnd = 48 };
+                    return new Mood { sun = new Color(0.75f, 0.9f, 0.85f), sunIntensity = 1.15f, sunAngles = new Vector2(40, 160), ambient = new Color(0.42f, 0.54f, 0.52f), fog = new Color(0.28f, 0.36f, 0.32f), fogStart = 14, fogEnd = 48 };
                 case Biome.Ruins:
                     return new Mood { sun = new Color(0.82f, 0.88f, 1f), sunIntensity = 0.65f, sunAngles = new Vector2(62, 300), ambient = new Color(0.26f, 0.28f, 0.35f), fog = new Color(0.42f, 0.46f, 0.55f), fogStart = 24, fogEnd = 66 };
+                // The ash is dark ground: lit like the other biomes, the filmic curve crushed it to black. It takes about
+                // twice their light to read as dim red country and not as a blank screen.
                 case Biome.Ember:
-                    return new Mood { sun = new Color(1f, 0.55f, 0.35f), sunIntensity = 0.62f, sunAngles = new Vector2(30, 180), ambient = new Color(0.27f, 0.15f, 0.14f), fog = new Color(0.25f, 0.1f, 0.07f), fogStart = 18, fogEnd = 55 };
+                    return new Mood { sun = new Color(1f, 0.62f, 0.42f), sunIntensity = 1.5f, sunAngles = new Vector2(30, 180), ambient = new Color(0.62f, 0.38f, 0.34f), fog = new Color(0.25f, 0.1f, 0.07f), fogStart = 18, fogEnd = 55 };
                 default:
                     return new Mood { sun = Color.white, sunIntensity = 0.62f, sunAngles = new Vector2(50, 220), ambient = new Color(0.30f, 0.30f, 0.34f), fog = Color.gray, fogStart = 30, fogEnd = 80 };
             }

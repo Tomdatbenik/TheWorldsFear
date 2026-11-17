@@ -144,7 +144,9 @@ namespace TWF
             sr.sprite = sprite;
             string n = sprite.name;
             bool sways = n.StartsWith("tree") || n.StartsWith("bush") || n.StartsWith("fern") || n.StartsWith("oak") || n.StartsWith("pine") || n.StartsWith("birch") || n.StartsWith("willow");
-            RenderAssets.MakeLit(sr, true, sways ? RenderAssets.Instance.litWind : null);
+            // The card casts nothing itself: its shadow comes from a low shape at its foot (EnvArt.FootShadow).
+            RenderAssets.MakeLit(sr, false, sways ? RenderAssets.Instance.litWind : null);
+            EnvArt.FootShadow(go.transform, Mathf.Clamp(sprite.bounds.size.x * 0.7f, 0.5f, 3.2f));
             if (solid) Phys.Circle(go, Mathf.Clamp(sprite.bounds.size.x * s * 0.18f, 0.35f, 1.2f));
         }
 

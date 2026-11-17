@@ -327,7 +327,9 @@ namespace TWF
             var sr = bb.gameObject.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
             bool sways = sprite.name.StartsWith("tree") || sprite.name.StartsWith("bush");
-            RenderAssets.MakeLit(sr, true, sways ? RenderAssets.Instance.litWind : null);
+            // The card casts nothing itself: its shadow comes from a low shape at its foot (EnvArt.FootShadow).
+            RenderAssets.MakeLit(sr, false, sways ? RenderAssets.Instance.litWind : null);
+            EnvArt.FootShadow(go.transform, Mathf.Clamp(sprite.bounds.size.x * 0.7f, 0.5f, 3.2f));
             if (solid) Phys.Circle(go, Mathf.Max(0.6f, sprite.bounds.size.x * scale * 0.3f));
         }
 

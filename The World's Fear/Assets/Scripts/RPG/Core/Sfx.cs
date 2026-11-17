@@ -10,20 +10,20 @@ namespace TWF
         static readonly Dictionary<string, AudioClip> cache = new Dictionary<string, AudioClip>();
         static readonly System.Random noise = new System.Random(1234);
 
-        public static AudioClip Swing => Get("swing", 0.16f, (t, d) => Noise() * Env(t, d, 0.01f, 0.12f) * 0.5f * Mathf.Lerp(0.3f, 1f, Mathf.Sin(t / d * Mathf.PI)));
-        public static AudioClip Hit => Get("hit", 0.12f, (t, d) => (Noise() * 0.6f + Square(t, Mathf.Lerp(180f, 70f, t / d)) * 0.5f) * Env(t, d, 0.002f, 0.1f));
-        public static AudioClip MonsterDeath => Get("mdeath", 0.35f, (t, d) => (Square(t, Mathf.Lerp(260f, 60f, t / d)) * 0.5f + Noise() * 0.25f) * Env(t, d, 0.005f, 0.3f));
-        public static AudioClip Dash => Get("dash", 0.22f, (t, d) => Noise() * Env(t, d, 0.03f, 0.18f) * 0.45f);
-        public static AudioClip Pickup => Get("pickup", 0.18f, (t, d) => Sine(t, t < 0.07f ? 880f : 1320f) * Env(t, d, 0.005f, 0.15f) * 0.45f);
-        public static AudioClip Coin => Get("coin", 0.2f, (t, d) => Square(t, t < 0.05f ? 1500f : 2000f) * Env(t, d, 0.002f, 0.18f) * 0.25f);
-        public static AudioClip LevelUp => Get("levelup", 0.7f, (t, d) =>
+        public static AudioClip Swing => Sample("Swing") ?? Get("swing", 0.16f, (t, d) => Noise() * Env(t, d, 0.01f, 0.12f) * 0.5f * Mathf.Lerp(0.3f, 1f, Mathf.Sin(t / d * Mathf.PI)));
+        public static AudioClip Hit => Sample("Hit") ?? Get("hit", 0.12f, (t, d) => (Noise() * 0.6f + Square(t, Mathf.Lerp(180f, 70f, t / d)) * 0.5f) * Env(t, d, 0.002f, 0.1f));
+        public static AudioClip MonsterDeath => Sample("MonsterDeath") ?? Get("mdeath", 0.35f, (t, d) => (Square(t, Mathf.Lerp(260f, 60f, t / d)) * 0.5f + Noise() * 0.25f) * Env(t, d, 0.005f, 0.3f));
+        public static AudioClip Dash => Sample("Dash") ?? Get("dash", 0.22f, (t, d) => Noise() * Env(t, d, 0.03f, 0.18f) * 0.45f);
+        public static AudioClip Pickup => Sample("Pickup") ?? Get("pickup", 0.18f, (t, d) => Sine(t, t < 0.07f ? 880f : 1320f) * Env(t, d, 0.005f, 0.15f) * 0.45f);
+        public static AudioClip Coin => Sample("Coin") ?? Get("coin", 0.2f, (t, d) => Square(t, t < 0.05f ? 1500f : 2000f) * Env(t, d, 0.002f, 0.18f) * 0.25f);
+        public static AudioClip LevelUp => Sample("LevelUp") ?? Get("levelup", 0.7f, (t, d) =>
         {
             float[] notes = { 523f, 659f, 784f, 1047f };
             int i = Mathf.Min(3, (int)(t / 0.12f));
             return (Square(t, notes[i]) * 0.3f + Sine(t, notes[i] * 2f) * 0.2f) * Env(t, d, 0.01f, 0.4f);
         });
-        public static AudioClip Explosion => Get("boom", 0.5f, (t, d) => (Noise() * 0.7f + Sine(t, Mathf.Lerp(90f, 30f, t / d)) * 0.5f) * Env(t, d, 0.002f, 0.45f));
-        public static AudioClip Cast => Get("cast", 0.25f, (t, d) => (Sine(t, Mathf.Lerp(400f, 900f, t / d)) * 0.4f + Noise() * 0.1f) * Env(t, d, 0.02f, 0.2f));
+        public static AudioClip Explosion => Sample("Explosion") ?? Get("boom", 0.5f, (t, d) => (Noise() * 0.7f + Sine(t, Mathf.Lerp(90f, 30f, t / d)) * 0.5f) * Env(t, d, 0.002f, 0.45f));
+        public static AudioClip Cast => Sample("Cast") ?? Get("cast", 0.25f, (t, d) => (Sine(t, Mathf.Lerp(400f, 900f, t / d)) * 0.4f + Noise() * 0.1f) * Env(t, d, 0.02f, 0.2f));
         public static AudioClip Potion => Get("potion", 0.35f, (t, d) => Sine(t, 500f + Mathf.Sin(t * 60f) * 120f) * Env(t, d, 0.02f, 0.3f) * 0.4f);
         public static AudioClip Buy => Get("buy", 0.3f, (t, d) => Square(t, t < 0.1f ? 1200f : 1800f) * Env(t, d, 0.002f, 0.25f) * 0.25f);
 
@@ -33,6 +33,8 @@ namespace TWF
         {
             get
             {
+                var sample = Sample("MetalRoar");
+                if (sample != null) return sample;
                 double ph = 0, ring = 0, clang1 = 0, clang2 = 0;
                 float lp = 0f;
                 const float dt = 1f / Rate;
@@ -62,6 +64,8 @@ namespace TWF
         {
             get
             {
+                var sample = Sample("SpiderScreech");
+                if (sample != null) return sample;
                 double ph = 0;
                 float hp = 0f, prev = 0f;
                 const float dt = 1f / Rate;
@@ -87,6 +91,8 @@ namespace TWF
         {
             get
             {
+                var sample = Sample("BoneWail");
+                if (sample != null) return sample;
                 double ph = 0;
                 const float dt = 1f / Rate;
                 return Get("bonewail", 2.2f, (t, d) =>
@@ -109,6 +115,8 @@ namespace TWF
         {
             get
             {
+                var sample = Sample("ZombieGroan");
+                if (sample != null) return sample;
                 double ph = 0;
                 float lp = 0f;
                 const float dt = 1f / Rate;
@@ -132,6 +140,8 @@ namespace TWF
         {
             get
             {
+                var sample = Sample("SlimeGurgle");
+                if (sample != null) return sample;
                 double ph = 0;
                 const float dt = 1f / Rate;
                 return Get("slimegurgle", 1.9f, (t, d) =>
@@ -150,6 +160,23 @@ namespace TWF
         }
 
         delegate float Synth(float t, float duration);
+
+        static Dictionary<string, AudioClip[]> samples;
+
+        // A random recorded variation of this event, or null when the bank has none.
+        static AudioClip Sample(string key)
+        {
+            if (samples == null)
+            {
+                samples = new Dictionary<string, AudioClip[]>();
+                var bank = Resources.Load<SfxBank>("TWF/SfxBank");
+                if (bank != null)
+                    foreach (var e in bank.entries)
+                        if (e != null && e.clips != null && e.clips.Length > 0) samples[e.key] = e.clips;
+            }
+            if (!samples.TryGetValue(key, out var clips)) return null;
+            return clips[Random.Range(0, clips.Length)];
+        }
 
         static AudioClip Get(string key, float duration, Synth f)
         {

@@ -106,6 +106,8 @@ namespace TWF
             // A leaper drops fast; everyone else rises and falls at their own pace.
             float speed = mobility == Mobility.Leap && target < height ? 16f : riseSpeed;
             height = Mathf.MoveTowards(height, target, speed * Time.deltaTime);
+            // Walking or dashing fast up a slope, a walker never lags far enough below the ground to sink into it.
+            if (mobility == Mobility.Walk && target - height < WorldGen.LevelHeight) height = Mathf.Max(height, target - 0.08f);
             Apply();
             if (cam != null) cam.groundHeight = height;
             if (hero) View.GroundHeight = height;
@@ -448,8 +450,10 @@ namespace TWF
             if (p == null || string.IsNullOrEmpty(p.kind)) return;
             if (p.kind == "tree")
             {
-                Primitive(PrimitiveType.Sphere, parent, new Vector3(0f, 0f, -p.wall), new Vector3(p.w * 1.9f, p.w * 1.9f, p.w * 1.5f));
-                Primitive(PrimitiveType.Cylinder, parent, new Vector3(0f, 0f, -p.wall * 0.5f), new Vector3(p.d * 2.2f, p.wall * 0.5f, p.d * 2.2f), Quaternion.Euler(90f, 0f, 0f));
+                // The crown's shadow is cast from low down, a flattened shape just over the roots: it lies round the
+                // foot of the tree whatever the sun's angle. Cast from the crown's real height, a low sun or the moon
+                // threw it a crown's length away, where it read as a dark patch sitting on top of the tree.
+                Primitive(PrimitiveType.Sphere, parent, new Vector3(0f, 0f, -0.14f), new Vector3(p.w * 1.9f, p.w * 1.9f, 0.22f));
                 return;
             }
             if (p.kind == "well")
@@ -477,6 +481,12 @@ namespace TWF
             r.shadowCastingMode = ShadowCastingMode.ShadowsOnly;
             r.receiveShadows = false;
         }
+
+        // The shadow of an upright sprite (a tree, a rock), cast by a flattened shape just over the ground so it lies
+        // round the thing's foot whatever the sun's angle. Cast by the card itself, the crown's shadow fell a crown's
+        // length away and read as a dark patch sitting on top of the tree.
+        public static void FootShadow(Transform parent, float width) =>
+            Primitive(PrimitiveType.Sphere, parent, new Vector3(0f, 0f, -0.14f), new Vector3(width, width, 0.22f));
 
         static void Primitive(PrimitiveType type, Transform parent, Vector3 pos, Vector3 scale, Quaternion? rot = null)
         {

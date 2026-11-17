@@ -82,7 +82,7 @@ namespace TWF
             var sr = GameAssets.CreateWorldSprite("glyph", IconFactory.Get(SkillParts.Icon(part.kind, part.id), c), bb, Color.white, SortOrder.Pickup + 1, 0.7f);
             RenderAssets.MakeLit(sr, true, RenderAssets.Instance != null ? RenderAssets.Instance.litEmissive : null);
             p.visual = sr.transform;
-            PointLights.Attach(go.transform, c, 2.5f, 1.2f, new Vector3(0, 0.8f, 0), true);
+            PointLights.AttachLoot(go.transform, c, 2.5f, 1.2f, new Vector3(0, 0.8f, 0));
         }
 
         public static void SpawnPotion(Vector2 at)
@@ -120,7 +120,7 @@ namespace TWF
             var bb = Billboard.Create(go.transform);
             var icon = GameAssets.CreateWorldSprite("icon", ItemIcons.Get(item), bb, Color.white, SortOrder.Pickup + 1, 0.8f);
             RenderAssets.MakeLit(icon, true, RenderAssets.Instance != null ? RenderAssets.Instance.litEmissive : null);
-            if (item.rarity >= Rarity.Rare) PointLights.Attach(go.transform, c, 3f, 1.5f, new Vector3(0, 1f, 0), true);
+            if (item.rarity >= Rarity.Rare) PointLights.AttachLoot(go.transform, c, 3f, 1.5f, new Vector3(0, 1f, 0));
             p.visual = icon.transform;
             if (item.rarity >= Rarity.Magic)
             {

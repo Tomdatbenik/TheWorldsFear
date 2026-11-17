@@ -33,21 +33,49 @@ namespace TWF
         [Tooltip("Indexed by Biome; the last entry is the boss arena.")]
         public VolumeProfile[] volumes;
 
-        public static bool HighQuality
+        // Graphics quality: 0 low (no shadows, fewer lights, smaller picture), 1 medium (small hard-edged shadows:
+        // most of the look for a fraction of the cost), 2 high (large soft shadows). Phones start on medium.
+        public const int Low = 0, Medium = 1, High = 2;
+
+        public static int Quality
         {
-            get => PlayerPrefs.GetInt("twf_quality_high", 1) == 1;
+            get
+            {
+                if (PlayerPrefs.HasKey("twf_quality")) return Mathf.Clamp(PlayerPrefs.GetInt("twf_quality"), Low, High);
+                // The old on/off setting: off stays low.
+                if (PlayerPrefs.GetInt("twf_quality_high", 1) == 0) return Low;
+                return Application.isMobilePlatform ? Medium : High;
+            }
             set
             {
-                PlayerPrefs.SetInt("twf_quality_high", value ? 1 : 0);
+                PlayerPrefs.SetInt("twf_quality", Mathf.Clamp(value, Low, High));
                 Apply();
             }
         }
+
+        public static string QualityName => Quality == High ? "High" : Quality == Medium ? "Medium (cheap shadows)" : "Low (fastest)";
+
+        // Anything above low: spell lights and the like are on.
+        public static bool HighQuality
+        {
+            get => Quality > Low;
+            set => Quality = value ? High : Low;
+        }
+
+        // The sun's shadows at this quality: soft only on high.
+        public static LightShadows SunShadows => Quality == High ? LightShadows.Soft : Quality == Medium ? LightShadows.Hard : LightShadows.None;
+        // How many dropped items may carry a light at once (the nearest to the hero keep theirs).
+        public static int LootLights => Quality == High ? 6 : Quality == Medium ? 3 : 0;
 
         public static void Apply()
         {
             var r = Instance;
             if (r == null) return;
-            QualitySettings.renderPipeline = HighQuality ? r.high : r.low;
+            QualitySettings.renderPipeline = Quality > Low ? r.high : r.low;
+            if (r.high is UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset urp)
+                urp.mainLightShadowmapResolution = Quality == High ? 2048 : 1024;
+            foreach (var l in Object.FindObjectsByType<Light>())
+                if (l.type == LightType.Directional && l.shadows != LightShadows.None) l.shadows = SunShadows == LightShadows.None ? LightShadows.Hard : SunShadows;
         }
 
         // Sprites that stand in the world: lit, cast and receive shadows.

@@ -393,6 +393,8 @@ namespace TWF
                 bool snowy = lv >= WorldGen.SnowLevel && pathBiome != Biome.Ember && cell != Cell.Bridge && LevelTiles(lv)[i] != null;
                 if (snowy) { LevelTiles(lv)[i] = SnowTile(h); detailTiles[i] = null; }
                 // Other biomes' ground blended over this one's, where they meet.
+                // Nothing is laid over a dungeon's stairwell: the ground there is cut away.
+                if (WorldGen.InStairwell(wx, wy)) continue;
                 if (groundLike[x + 1, y + 1] && !snowy) AddGroundBlend(x, y, wx, wy, lv, h, baseBiome, blends);
                 // Paths: rounded at their outer corners, swept round the grass at their bends, and up the slopes.
                 if (cell == Cell.Path || cell == Cell.Puddle || WorldGen.Bends(cell) || slopeCell[x + 1, y + 1])
@@ -1340,7 +1342,9 @@ namespace TWF
             sr.sprite = sprite;
             sr.color = art != null ? Color.white : DecorTint(biome, sprite);
             bool sways = sprite.name.StartsWith("tree") || sprite.name.StartsWith("bush") || sprite.name.StartsWith("fern");
-            RenderAssets.MakeLit(sr, true, sways ? RenderAssets.Instance.litWind : null);
+            // The card casts nothing itself: its shadow comes from a low shape at its foot (EnvArt.FootShadow).
+            RenderAssets.MakeLit(sr, false, sways ? RenderAssets.Instance.litWind : null);
+            EnvArt.FootShadow(go.transform, Mathf.Clamp(sprite.bounds.size.x * s * 0.7f, 0.5f, 3.2f));
             if (solid)
             {
                 Phys.Circle(go, Mathf.Clamp(sprite.bounds.size.x * s * 0.18f, 0.3f, 1.4f));
@@ -1422,7 +1426,7 @@ namespace TWF
         void PlaceCamps(Chunk chunk, Cell[,] cells, int x0, int y0)
         {
             int S = WorldGen.ChunkSize;
-            for (int k = 0; k < 2; k++)
+            for (int k = 0; k < WorldGen.CampSlots(x0 + S / 2, y0 + S / 2); k++)
             {
                 uint h = WorldGen.Hash(x0 * 31 + k, y0 * 17 - k);
                 if ((h & 3) == 0) continue; // ~75% of slots used
@@ -1435,6 +1439,15 @@ namespace TWF
                         || cells[x + dx + 1, y + dy + 1] == Cell.CastleFloor || Lv(chunkElev, x + dx, y + dy) != campLv) open = false;   // castles place their own
                 // Packs live up on the high ground too, with room so none of them spawns over the edge.
                 if (!open) open = OpenGround(cells, x, y, x0, y0, 3);
+                // Broken country (terraces, canyons, mountainsides) has few such spots: the camp looks round its chunk
+                // for a level patch instead of being dropped, or the hills would stand empty.
+                for (int tries = 1; !open && tries <= 16; tries++)
+                {
+                    uint h2 = WorldGen.Hash(x0 * 31 + k + tries * 977, y0 * 17 - k + tries * 131);
+                    int ax = 3 + (int)((h2 >> 4) % (uint)(S - 6)), ay = 3 + (int)((h2 >> 12) % (uint)(S - 6));
+                    if (!OpenGround(cells, ax, ay, x0, y0, 2)) continue;
+                    x = ax; y = ay; campLv = Lv(chunkElev, x, y); open = true;
+                }
                 if (!open) continue;
                 var pos = new Vector2(x0 + x + 0.5f, y0 + y + 0.5f);
                 if (pos.magnitude < WorldGen.SafeRadius) continue;
@@ -1542,7 +1555,7 @@ namespace TWF
             }
             if (WorldGen.HasDungeon(c.x, c.y, out var dungeonCell))
             {
-                ClearAround(chunk, dungeonCell, 6);
+                ClearAround(chunk, dungeonCell, 6, WorldGen.Stairwell(dungeonCell));
                 CarveStairwell(chunk, dungeonCell);
                 var go = new GameObject("DungeonGate");
                 go.transform.SetParent(chunk.root.transform, false);
@@ -1603,8 +1616,7 @@ namespace TWF
         // Opens the ground for a stairwell and clears anything that was placed on the spot.
         void CarveStairwell(Chunk chunk, Vector2Int cell)
         {
-            int halfW = DungeonGate.HalfWidth, halfL = DungeonGate.HalfLength;
-            var hole = new BoundsInt(cell.x - halfW, cell.y - halfL, 0, 2 * halfW + 1, 2 * halfL + 1, 1);
+            var hole = WorldGen.Stairwell(cell);
             var none = new TileBase[hole.size.x * hole.size.y];
             ground.SetTilesBlock(hole, none);
             detail.SetTilesBlock(hole, none);
@@ -1617,7 +1629,7 @@ namespace TWF
         }
 
         // Make sure points of interest aren't buried in walls or water.
-        void ClearAround(Chunk chunk, Vector2Int center, int r)
+        void ClearAround(Chunk chunk, Vector2Int center, int r, BoundsInt? hole = null)
         {
             var empty = new TileBase[(2 * r + 1) * (2 * r + 1)];
             var b = new BoundsInt(center.x - r, center.y - r, 0, 2 * r + 1, 2 * r + 1, 1);
@@ -1635,6 +1647,8 @@ namespace TWF
                 int x = center.x - r + i % (2 * r + 1), y = center.y - r + i / (2 * r + 1);
                 uint h = WorldGen.Hash(x, y);
                 fill[i] = EnvArt.GroundTile(biome, x, y) ?? GroundTile(biome, h);
+                // No path over a hole in the ground (a dungeon's stairwell): it would lie over the stairs like a lid.
+                if (hole.HasValue && hole.Value.Contains(new Vector3Int(x, y, 0))) continue;
                 var sprite = ((EnvArt.PathTile(biome, x, y) ?? PathTile(biome, h)) as Tile)?.sprite;
                 if (sprite == null) continue;
                 var wear = new Vector4(Wear(x, y), Wear(x + 1, y), Wear(x + 1, y + 1), Wear(x, y + 1));

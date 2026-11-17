@@ -450,6 +450,14 @@ namespace TWF
             return true;
         }
 
+        // Camp slots per chunk (about three in four are used): two near the town, more the further out you go, so the
+        // long walks of the far country are fights and not just walks.
+        public static int CampSlots(int x, int y)
+        {
+            int level = LevelAt(new Vector2(x, y));
+            return level < 8 ? 2 : level < 20 ? 3 : level < 35 ? 4 : 5;
+        }
+
         // Challenge chests: scattered about one per 4x4 chunks, never near the village.
         // Waves 3-10, with long challenges rarer; further out they tend to be longer.
         public const int ChestGrid = 4;
@@ -475,7 +483,7 @@ namespace TWF
             return true;
         }
 
-        // Hidden caches: a small chest off the beaten track, so that leaving the road pays. About one chunk in three is
+        // Hidden caches: a small chest off the beaten track, so that leaving the road pays. About one chunk in twelve is
         // searched for its most out-of-the-way spot: up on high ground, or tucked into a nook shut in by cliffs and
         // water, well away from any path. Open flat country has no such spot and gets none. The spot can always be
         // walked to from the land round it.
@@ -496,7 +504,7 @@ namespace TWF
 
         static Vector2Int? FindCache(int cx, int cy)
         {
-            if (Hash(cx * 19 + 7, cy * 23 + 1) % 3 != 0) return null;
+            if (Hash(cx * 19 + 7, cy * 23 + 1) % 12 != 0) return null;
             if (HasWaypoint(cx, cy, out _) || HasBossGate(cx, cy, out _) || HasChestRaw(cx, cy, out _, out _) || HasDungeon(cx, cy, out _)) return null;
             int x0 = cx * ChunkSize, y0 = cy * ChunkSize;
             if (new Vector2(x0 + ChunkSize / 2, y0 + ChunkSize / 2).magnitude < HubRadius + 60f) return null;
@@ -639,6 +647,19 @@ namespace TWF
         // Dungeons: one per patch of the map, at a random chunk and spot inside it, kept clear of other landmarks.
         public const int DungeonGrid = 6;
         const int DungeonEdge = 7;   // tiles from the chunk border, so the stairwell never crosses into the next chunk
+
+        // The hole a dungeon's stairs go down through, round the gate's cell: the ground is cut away there.
+        public static BoundsInt Stairwell(Vector2Int gate) =>
+            new BoundsInt(gate.x - DungeonGate.HalfWidth, gate.y - DungeonGate.HalfLength, 0, 2 * DungeonGate.HalfWidth + 1, 2 * DungeonGate.HalfLength + 1, 1);
+
+        public static bool InStairwell(int x, int y)
+        {
+            int cx = Mathf.FloorToInt(x / (float)ChunkSize), cy = Mathf.FloorToInt(y / (float)ChunkSize);
+            for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+                if (HasDungeon(cx + dx, cy + dy, out var gate) && Stairwell(gate).Contains(new Vector3Int(x, y, 0))) return true;
+            return false;
+        }
 
         public static bool HasDungeon(int cx, int cy, out Vector2Int cell)
         {
@@ -916,7 +937,10 @@ namespace TWF
             if (SurfaceAt(x, y, out float h00, out float h10, out float h11, out float h01))
             {
                 float fx = p.x - x, fy = p.y - y;
-                return Mathf.Lerp(Mathf.Lerp(h00, h10, fx), Mathf.Lerp(h01, h11, fx), fy);
+                // The tile is drawn as two triangles split along the corner (1,0)-(0,1) (Town.Solid.Quad): the height
+                // is read off the same two triangles, so nobody sinks into a twisted tile or floats over it.
+                return fx + fy <= 1f ? h00 + (h10 - h00) * fx + (h01 - h00) * fy
+                                     : h11 + (h01 - h11) * (1f - fx) + (h10 - h11) * (1f - fy);
             }
             var c = CellAt(x, y);
             if (c != Cell.Stairs || !StairAt(x, y, out var st, out _)) return ElevAt(x, y) * LevelHeight;

@@ -1,0 +1,183 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5af7e6154aa23d14d8d01a503d1bb0dc, type: 3}
+  m_Name: SfxBank
+  m_EditorClassIdentifier: Assembly-CSharp::TWF.SfxBank
+  entries:
+  - key: BoneWail
+    clips:
+    - {fileID: 8300000, guid: d86629b56047305408a2377e2e8c5012, type: 3}
+    - {fileID: 8300000, guid: 55e63821e1c5c17459080b5f74f36430, type: 3}
+    - {fileID: 8300000, guid: 5b3cb673093aae74eb6693cecdb14770, type: 3}
+    - {fileID: 8300000, guid: 34726b94af68a6b4daab87abd508f259, type: 3}
+    - {fileID: 8300000, guid: 1d04b2f6d76f8f5438e5bf2f25e3dbdd, type: 3}
+    - {fileID: 8300000, guid: 5b449f414d852884bb3a63e21e11d837, type: 3}
+    - {fileID: 8300000, guid: 9054ad0c25eefbb4494a2c27fdba2d74, type: 3}
+    - {fileID: 8300000, guid: 29d6611abf8cd874297b122db1c39a17, type: 3}
+    - {fileID: 8300000, guid: d8f674e4e14361146b744baa1a33cc3d, type: 3}
+    - {fileID: 8300000, guid: bf7de4d9b38b2694098a522c9ab2358d, type: 3}
+  - key: Cast
+    clips:
+    - {fileID: 8300000, guid: 3a2bb4b30f637754aa120eeeafa7b371, type: 3}
+    - {fileID: 8300000, guid: 380d391a3219eb14b8103a49c1d7cf64, type: 3}
+    - {fileID: 8300000, guid: d993c7d4702541d44ac45768d1ecf34f, type: 3}
+    - {fileID: 8300000, guid: 29c275b061cf58f4ebf896f1dd5fbd41, type: 3}
+    - {fileID: 8300000, guid: 379eb2f1830fb0047919af34240cf45d, type: 3}
+    - {fileID: 8300000, guid: 576e40b69ef45114c95321453c123003, type: 3}
+    - {fileID: 8300000, guid: 8168ae6b80152dd49a1c68ecafe4fe4f, type: 3}
+    - {fileID: 8300000, guid: 285c6cfaabc640948b7f421cb1645bd0, type: 3}
+    - {fileID: 8300000, guid: e694d59892ab83547aef414bed29fa29, type: 3}
+    - {fileID: 8300000, guid: 2ebdbacb568078d4ba5478a31c22e05a, type: 3}
+  - key: Coin
+    clips:
+    - {fileID: 8300000, guid: 217e5ff19b2dc66459dc48f455a174dc, type: 3}
+    - {fileID: 8300000, guid: ae43a959e5f2c9249a3b4706275afa0f, type: 3}
+    - {fileID: 8300000, guid: a421dae52a12c7f45b025dbdbec87c8c, type: 3}
+    - {fileID: 8300000, guid: 19830edfb0587984781a0a5ae35676c4, type: 3}
+    - {fileID: 8300000, guid: a3ff04c5590e98b4e9c8df483f866822, type: 3}
+    - {fileID: 8300000, guid: d76388b59c1f891498254d31e484f548, type: 3}
+    - {fileID: 8300000, guid: 1fb60b8685261674c86e1a091c4ed11c, type: 3}
+    - {fileID: 8300000, guid: c6d6d0c6f7363ce49bf504e999e0f960, type: 3}
+    - {fileID: 8300000, guid: 78695b6af6a06ac44816a1aaf7674b20, type: 3}
+    - {fileID: 8300000, guid: 29b08d477d811ec489814e613e732de4, type: 3}
+  - key: Dash
+    clips:
+    - {fileID: 8300000, guid: da92e682d4f543e4c90a1fa79f69cde0, type: 3}
+    - {fileID: 8300000, guid: 1f56da70549c65b44a9f93af6e522648, type: 3}
+    - {fileID: 8300000, guid: c7577ccc9073c48429a8140cdb3115d7, type: 3}
+    - {fileID: 8300000, guid: 9bc767fbfe4b0904ba97538c505caab8, type: 3}
+    - {fileID: 8300000, guid: 67bef3d5aefd631409ca143be7c189b1, type: 3}
+    - {fileID: 8300000, guid: aa0c2ec7c1b0f3c4c9ac6d24f69460d1, type: 3}
+    - {fileID: 8300000, guid: ed80f0c25bbc4b8499cd2df45c84c12d, type: 3}
+    - {fileID: 8300000, guid: a6f244d3609b6384d878cca24e656302, type: 3}
+    - {fileID: 8300000, guid: 57c0f4e08f26bf74f9b39aefbd2bfce4, type: 3}
+    - {fileID: 8300000, guid: a7051d6147271ec4c8d5e33fcae8555a, type: 3}
+  - key: Explosion
+    clips:
+    - {fileID: 8300000, guid: beea15eb8755e3649a6f9789da8a225e, type: 3}
+    - {fileID: 8300000, guid: 2a2494192c838b04eaa7b8007697f57d, type: 3}
+    - {fileID: 8300000, guid: ff9068bf527eb044a95b8bf88c3756a7, type: 3}
+    - {fileID: 8300000, guid: aae0daf05fe6c9f4ebd9c2b1a90bac15, type: 3}
+    - {fileID: 8300000, guid: af8aba719df1c084ca689e72c4bb789f, type: 3}
+    - {fileID: 8300000, guid: d6ad0c5366cd831448ecb667eae54567, type: 3}
+    - {fileID: 8300000, guid: 53e774b596b9e5f499bc2b2b70bfd687, type: 3}
+    - {fileID: 8300000, guid: a9a1d0e36520d834dad7d7d3d5d26603, type: 3}
+    - {fileID: 8300000, guid: 17de07691f35f004587a6b3079dd41d3, type: 3}
+    - {fileID: 8300000, guid: 0a0ee0721fccafc41a73ed18ffc0d386, type: 3}
+  - key: Hit
+    clips:
+    - {fileID: 8300000, guid: f096ae3537be9f54ca178d82f827929e, type: 3}
+    - {fileID: 8300000, guid: db430049ce17a924e8d7e6a9f0f6d6b3, type: 3}
+    - {fileID: 8300000, guid: fe8ff430dd4a058468426f59d9857a74, type: 3}
+    - {fileID: 8300000, guid: f9114d16345252c4f8a2a27018792f27, type: 3}
+    - {fileID: 8300000, guid: 23909c7c06ed2b54fa4fe0bd2702268b, type: 3}
+    - {fileID: 8300000, guid: 8e6134aa272db6c4187543ec63053ce7, type: 3}
+    - {fileID: 8300000, guid: 344f08602724d4249aed3165d5cdcf13, type: 3}
+    - {fileID: 8300000, guid: 904beb4016f82b74599b2dc7bdc05876, type: 3}
+    - {fileID: 8300000, guid: efb8eab8ed2da094b9fe13b69c7adf81, type: 3}
+    - {fileID: 8300000, guid: fa4ef422a70178441aef712fabe36278, type: 3}
+  - key: LevelUp
+    clips:
+    - {fileID: 8300000, guid: 24addc9acd593ff4d9c054456f9c8bd6, type: 3}
+    - {fileID: 8300000, guid: 896b3903951f4704fac5c0e352320fa1, type: 3}
+    - {fileID: 8300000, guid: f91afabffe3ed3f4e9c9f0ce62355d30, type: 3}
+    - {fileID: 8300000, guid: 1a5a028dec93aab4fbe88791d07991e7, type: 3}
+    - {fileID: 8300000, guid: eb049661ef3db684893fc0f360bced79, type: 3}
+    - {fileID: 8300000, guid: 990e8eac187c0cc4c998f10deba279fc, type: 3}
+    - {fileID: 8300000, guid: 10ed64b5818612540ab3d569d53e5277, type: 3}
+    - {fileID: 8300000, guid: d455785d4ff5a4448b8d6137216c731a, type: 3}
+    - {fileID: 8300000, guid: 1b49961eb945c144db00eb8be604f89a, type: 3}
+    - {fileID: 8300000, guid: 3180616cfce112d4399cad1243e714f1, type: 3}
+  - key: MetalRoar
+    clips:
+    - {fileID: 8300000, guid: 768deea23c59ee14f9a6f28f643e675e, type: 3}
+    - {fileID: 8300000, guid: 7d8e31229572205439b19f9c3e287a95, type: 3}
+    - {fileID: 8300000, guid: cd67ea853eb93644c9e9ea2ed1b5d865, type: 3}
+    - {fileID: 8300000, guid: e643967369e401543b8efe7f51c7f494, type: 3}
+    - {fileID: 8300000, guid: 77723611be927e44d8a631539f6f5748, type: 3}
+    - {fileID: 8300000, guid: 1624d13c124bfa74ca33332e57cda181, type: 3}
+    - {fileID: 8300000, guid: fa538a1f2efa68b46932c9a5c3eaf530, type: 3}
+    - {fileID: 8300000, guid: d5a812b1bc7456f45a9d83242eeefeae, type: 3}
+    - {fileID: 8300000, guid: 1fab1b585ff3a434d98d1e9f5d577588, type: 3}
+    - {fileID: 8300000, guid: 2356462f91148bf4e9e5f617d00d1d3c, type: 3}
+  - key: MonsterDeath
+    clips:
+    - {fileID: 8300000, guid: f7e4f4ef6d4713847ac9b9e3f1285dde, type: 3}
+    - {fileID: 8300000, guid: e8cbca3f22dcf824c9e1b3833e8589b6, type: 3}
+    - {fileID: 8300000, guid: 36f9c9184f7968f4a9e0b8a215bf3be1, type: 3}
+    - {fileID: 8300000, guid: 296b36ec77c9f124dbb4de32fd998ac0, type: 3}
+    - {fileID: 8300000, guid: a2a344184e921dc418a21e5543718f43, type: 3}
+    - {fileID: 8300000, guid: 4456f8cc350299442a985f5675fb1f6a, type: 3}
+    - {fileID: 8300000, guid: 2605b3d8f043c524e9be7c3c1da10523, type: 3}
+    - {fileID: 8300000, guid: d00aa81c318c9be4a95159e66f4901d7, type: 3}
+    - {fileID: 8300000, guid: 475cb9683cef3004ba769aedc37a6c66, type: 3}
+    - {fileID: 8300000, guid: b571012286bd04c439eed3dded864a9c, type: 3}
+  - key: Pickup
+    clips:
+    - {fileID: 8300000, guid: 7f414381e6cc6c04bb7cdf19f1df381a, type: 3}
+    - {fileID: 8300000, guid: 8cdfeb8b433248d4cbadef5e5711afd7, type: 3}
+    - {fileID: 8300000, guid: 0aea6fff3e5a08b48b2435442bce2355, type: 3}
+    - {fileID: 8300000, guid: eb9b962b045fa7546a1eaf2e6bb90bee, type: 3}
+    - {fileID: 8300000, guid: b112ab4082b123c4eb8c360721c15b71, type: 3}
+    - {fileID: 8300000, guid: e33e3008506034b448eebb548b8b6fcc, type: 3}
+    - {fileID: 8300000, guid: 6524ad5c50d73fd45ae2cb205abe7802, type: 3}
+    - {fileID: 8300000, guid: d240638aa87122b48acb2f06a8f51199, type: 3}
+    - {fileID: 8300000, guid: 18bb6d282ffdaed47966d91c6f390763, type: 3}
+    - {fileID: 8300000, guid: 87397126955527d429b94027d0638620, type: 3}
+  - key: SlimeGurgle
+    clips:
+    - {fileID: 8300000, guid: a4aae9a08d013e940924cc2f37e20f7c, type: 3}
+    - {fileID: 8300000, guid: eada7c9765e0ef74880989fcd3c40313, type: 3}
+    - {fileID: 8300000, guid: ff2308c55de2a2e48855056199ceaf1a, type: 3}
+    - {fileID: 8300000, guid: e87b28ba895fd654abd4f3653dccbe6a, type: 3}
+    - {fileID: 8300000, guid: 7eff73b0d5f1e2d409ea292a44a18051, type: 3}
+    - {fileID: 8300000, guid: e11e154aad0bfe44c915e9d73bb2b4be, type: 3}
+    - {fileID: 8300000, guid: 9233825467cb5fd44838247b95cb568d, type: 3}
+    - {fileID: 8300000, guid: 21b7b0cec9d734f4cb06b4a9954b44f6, type: 3}
+    - {fileID: 8300000, guid: fc6945fb5197ca44b87eb7c9b93d3341, type: 3}
+    - {fileID: 8300000, guid: 5e3a6ead1bf6c6f4a97b2c9107a1d020, type: 3}
+  - key: SpiderScreech
+    clips:
+    - {fileID: 8300000, guid: 44d353d465f1148489ab512f16bbc9a1, type: 3}
+    - {fileID: 8300000, guid: e92ca6e4755c35a4d9432b9cac52676c, type: 3}
+    - {fileID: 8300000, guid: b92e2e5834ea2fb4183be35fa4ea4f7c, type: 3}
+    - {fileID: 8300000, guid: 914449ceda9332c4b8872b7bc68e5d3d, type: 3}
+    - {fileID: 8300000, guid: 06d4fea68533c61469b982fe84c542e5, type: 3}
+    - {fileID: 8300000, guid: 01df09cf90c7ec943b63d9fc6f7f02a9, type: 3}
+    - {fileID: 8300000, guid: 364502ad2031d9e46b2aa21be288a7df, type: 3}
+    - {fileID: 8300000, guid: dec68c45aa436a342934d611289e2c03, type: 3}
+    - {fileID: 8300000, guid: bdd3583a9f071c34f9dea80f6114cba9, type: 3}
+    - {fileID: 8300000, guid: de920caf2f9beab40a7b144b0f2036e1, type: 3}
+  - key: Swing
+    clips:
+    - {fileID: 8300000, guid: 21e593c94b70b9c44935a2a8a38fea30, type: 3}
+    - {fileID: 8300000, guid: b074e0dd14c1d0343bd1710331c7feb2, type: 3}
+    - {fileID: 8300000, guid: 69c0b932ab1d6ff4395b6313522c140d, type: 3}
+    - {fileID: 8300000, guid: 1e3414a16c5667146b6c03c60213f652, type: 3}
+    - {fileID: 8300000, guid: 7cdd2def6de7e44479b0a231be0b125d, type: 3}
+    - {fileID: 8300000, guid: 1d99de688cad20446aa3ea2e40d0d7ce, type: 3}
+    - {fileID: 8300000, guid: 58ae780008bd3494c9ac957899e7a0a1, type: 3}
+    - {fileID: 8300000, guid: 6db5fcec23fef5a4d96e641b1fb56d4b, type: 3}
+    - {fileID: 8300000, guid: 88770d9132bf2b842942171d63bd67de, type: 3}
+    - {fileID: 8300000, guid: b2246abd31ee1114284c0868fc51a7cc, type: 3}
+  - key: ZombieGroan
+    clips:
+    - {fileID: 8300000, guid: aabe2a3a24f641c4280cea67b0857c68, type: 3}
+    - {fileID: 8300000, guid: c33f24d4491066b4898f2510de6c3821, type: 3}
+    - {fileID: 8300000, guid: 02dba92132571c348b520316049171f7, type: 3}
+    - {fileID: 8300000, guid: a3f58f31e774cbe43b567515cc95b8c4, type: 3}
+    - {fileID: 8300000, guid: 6c704a9b40d128f41851c946294d9f96, type: 3}
+    - {fileID: 8300000, guid: dd612643820b8a243bcd3f26fd2dd7a4, type: 3}
+    - {fileID: 8300000, guid: 3b68e5384e2e3564fa64df44edfce07a, type: 3}
+    - {fileID: 8300000, guid: 7654ea64c894c0649af8f967bd816a3e, type: 3}
+    - {fileID: 8300000, guid: 4ed155a13cda2064fb40b5a99fe7277b, type: 3}
+    - {fileID: 8300000, guid: a7d1850699fcae54dba35471076f2f04, type: 3}

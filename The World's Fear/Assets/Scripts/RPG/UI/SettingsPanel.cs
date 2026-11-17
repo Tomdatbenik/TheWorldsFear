@@ -26,7 +26,7 @@ namespace TWF
             v.childForceExpandHeight = v.childForceExpandWidth = true;
             playTimeText = UIFactory.Text("PlayTime", col, "", 30, Palette.Gold);
             UIFactory.Button("Resume", col, "Resume", () => Panels.CloseAll(), new Color(0.2f, 0.4f, 0.15f, 1f), 36);
-            qualityButton = UIFactory.Button("Quality", col, "", () => { RenderAssets.HighQuality = !RenderAssets.HighQuality; Refresh(); }, null, 32);
+            qualityButton = UIFactory.Button("Quality", col, "", () => { RenderAssets.Quality = (RenderAssets.Quality + 2) % 3; Refresh(); }, null, 32);
             autoCastButton = UIFactory.Button("AutoCast", col, "", () => { HeroController.AutoCastSetting = !HeroController.AutoCastSetting; Refresh(); }, null, 32);
             if (MobaInput.Desktop) uiSizeButton = UIFactory.Button("UiSize", col, "", () => { UIFactory.CycleUiScale(); Refresh(); }, null, 32);
             if (MobaInput.Desktop) UIFactory.Button("KeyBinds", col, "Key bindings", () => Panels.Toggle(PanelKind.KeyBinds), null, 32);
@@ -64,7 +64,7 @@ namespace TWF
 
         public override void Refresh()
         {
-            qualityButton.GetComponentInChildren<TextMeshProUGUI>().text = $"Graphics: {(RenderAssets.HighQuality ? "High" : "Low (faster)")}";
+            qualityButton.GetComponentInChildren<TextMeshProUGUI>().text = $"Graphics: {RenderAssets.QualityName}";
             autoCastButton.GetComponentInChildren<TextMeshProUGUI>().text =
                 $"Auto-cast skills: {(HeroController.AutoCastSetting ? "On" : "Off")}<size=60%>\n{(HeroController.AutoCastSetting ? "normal skills fire by themselves" : "you cast every skill yourself")}</size>";
             if (uiSizeButton != null)
