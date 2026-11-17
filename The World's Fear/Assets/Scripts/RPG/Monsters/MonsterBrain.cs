@@ -85,6 +85,17 @@ namespace TWF
 
         // ---------- Spawning ----------
 
+        static Material frostMaterial;
+        static Material FrostMaterial()
+        {
+            if (frostMaterial == null && RenderAssets.Instance != null)
+            {
+                frostMaterial = new Material(RenderAssets.Instance.litSprite);
+                frostMaterial.SetFloat("_Frost", 0.8f);
+            }
+            return frostMaterial;
+        }
+
         public static MonsterBrain Spawn(MonsterSpecies species, int level, MonsterRank rank, Vector2 position, IList<MonsterAffix> affixes = null, ZoneDefinition zone = null)
         {
             var go = new GameObject(species.name);
@@ -103,8 +114,9 @@ namespace TWF
             visualGo.transform.SetParent(go.transform, false);
             var sr = visualGo.AddComponent<SpriteRenderer>();
             sr.sprite = species.look.frames[0];
+            sr.color = species.bodyTint;
             sr.sortingOrder = SortOrder.Units;
-            RenderAssets.MakeLit(sr);
+            RenderAssets.MakeLit(sr, true, species.frost ? FrostMaterial() : null);
             visualGo.transform.localScale = Vector3.one * scale;
             visualGo.AddComponent<Billboard>();
 
@@ -336,7 +348,7 @@ namespace TWF
             while (t < 0.5f)
             {
                 t += Time.deltaTime;
-                sr.color = new Color(1f, 1f, 1f, 1f - t / 0.5f);
+                { var fade = Species.bodyTint; fade.a = 1f - t / 0.5f; sr.color = fade; }
                 yield return null;
             }
             Destroy(gameObject);
@@ -731,12 +743,12 @@ namespace TWF
                 t += Time.deltaTime;
                 float k = t / duration;
                 if (Species.mob == null) visual.localScale = new Vector3(baseScale.x * (1f + k * 0.15f), baseScale.y * (1f - k * 0.15f), 1f);
-                sr.color = Color.Lerp(Color.white, tint, k * 0.6f);
+                sr.color = Color.Lerp(Species.bodyTint, tint, k * 0.6f);
                 yield return null;
                 if (Combatant.IsDead || Combatant.IsStunned) break;
             }
             visual.localScale = baseScale;
-            sr.color = Color.white;
+            sr.color = Species.bodyTint;
         }
 
         IEnumerator MeleeAttack(Combatant hero)

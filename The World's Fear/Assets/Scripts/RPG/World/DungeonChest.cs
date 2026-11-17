@@ -13,6 +13,7 @@ namespace TWF
         public string key;
         public int level;
         public bool vault;
+        public string title;          // what its label calls it ("Chest" or "Vault" when unset)
         public Func<bool> roomClear;
         public Action opened;
 
@@ -56,7 +57,7 @@ namespace TWF
         void RefreshLabel()
         {
             label.color = isOpen ? new Color(0.7f, 0.7f, 0.7f) : ChallengeChest.TierColor(Tier);
-            string name = vault ? "Vault" : "Chest";
+            string name = !string.IsNullOrEmpty(title) ? title : vault ? "Vault" : "Chest";
             label.text = isOpen ? $"Opened {name.ToLower()}" : roomClear() ? name : $"{name}\n<size=70%>Clear the room</size>";
             lockedLast = !roomClear();
         }

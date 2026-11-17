@@ -704,6 +704,17 @@ namespace TWF
                 else t.AddRange(new[] { i, i + 3, i + 1, i + 1, i + 3, i + 2 });
             }
 
+            // The same, with a normal at each corner (smooth shading across a surface built of many quads).
+            public void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 na, Vector3 nb, Vector3 nc, Vector3 nd, Vector2 ua, Vector2 ub, Vector2 uc, Vector2 ud)
+            {
+                int i = v.Count;
+                v.Add(a); v.Add(b); v.Add(c); v.Add(d);
+                n.Add(na); n.Add(nb); n.Add(nc); n.Add(nd);
+                uv.Add(ua); uv.Add(ub); uv.Add(uc); uv.Add(ud);
+                if (Vector3.Dot(Vector3.Cross(b - a, d - a), na + nb + nc + nd) > 0f) t.AddRange(new[] { i, i + 1, i + 3, i + 1, i + 2, i + 3 });
+                else t.AddRange(new[] { i, i + 3, i + 1, i + 1, i + 3, i + 2 });
+            }
+
             public void Tri(Vector3 a, Vector3 b, Vector3 c, Vector3 normal, Vector2 ua, Vector2 ub, Vector2 uc)
             {
                 int i = v.Count;

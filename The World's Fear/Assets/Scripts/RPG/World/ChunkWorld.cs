@@ -197,6 +197,7 @@ namespace TWF
             Biome chunkBiome = WorldGen.BiomeAt(new Vector2(x0 + S / 2f, y0 + S / 2f));
             chunk.grassBiome = chunkBiome;
             var blends = new Dictionary<Texture2D, PathMesh>();  // another biome's ground laid over the seam, blended
+            pathBlends = new Dictionary<Texture2D, PathMesh>();
             PrepareGround(cells, elev, x0, y0);
 
             for (int y = 0; y < S; y++)
@@ -250,18 +251,33 @@ namespace TWF
                     }
                     case Cell.Bridge:
                     {
-                        // The river runs on underneath, on its bed at the low level...
-                        groundTiles[i] = EnvArt.PathTile(pathBiome, wx, wy) ?? PathTile(pathBiome, h);
-                        bool Wet(int dx, int dy) { var n = cells[x + dx + 1, y + dy + 1]; return n == Cell.Water || n == Cell.Bridge; }
-                        var river = WorldGen.BiomeAt(new Vector2(wx + 0.5f, wy + 0.5f)) == Biome.Marsh ? marshWater : water;
-                        river.Quad(new Vector3(wx, wy, -0.004f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1, -1f, RoundCorners(Wet), OpenSides(Wet));
-                        // ...and the path crosses a level up, on a plank deck with a railing along each open side: the
-                        // kit's bridge pieces (BridgeArt), or plain plank boxes without them.
-                        float deck = WorldGen.BridgeLevel * WorldGen.LevelHeight;
+                        // What it crosses lies underneath on its own level: a river on its bed, or the floor of a gap
+                        // between two stretches of high ground (WorldGen.SpanLevel)...
+                        int under = WorldGen.BaseElevAt(wx, wy);
+                        var below = WorldGen.LandCell(wx, wy);
+                        float uh = under * WorldGen.LevelHeight;
+                        bool wet = below == Cell.Water || below == Cell.Bridge || below == Cell.Puddle;
+                        var floor = wet || below == Cell.Lava ? EnvArt.PathTile(pathBiome, wx, wy) ?? PathTile(pathBiome, h)
+                            : EnvArt.GroundTile(groundBiome, wx, wy) ?? GroundTile(groundBiome, h);
+                        if (under > 0) LevelTiles(under)[i] = floor; else groundTiles[i] = floor;
+                        bool Wet(int dx, int dy)
+                        {
+                            var n = cells[x + dx + 1, y + dy + 1];
+                            if (n == Cell.Bridge) { var nb = WorldGen.LandCell(wx + dx, wy + dy); return nb == Cell.Water || nb == Cell.Bridge || nb == Cell.Puddle || nb == Cell.Lava; }
+                            return n == Cell.Water || n == Cell.Lava;
+                        }
+                        if (wet || below == Cell.Lava)
+                        {
+                            var river = below == Cell.Lava ? lava : WorldGen.BiomeAt(new Vector2(wx + 0.5f, wy + 0.5f)) == Biome.Marsh ? marshWater : water;
+                            river.Quad(new Vector3(wx, wy, -uh - 0.004f), new Vector3(1, 0, 0), new Vector3(0, 1, 0), Vector3.back, 1, 1, -1f, RoundCorners(Wet), OpenSides(Wet));
+                        }
+                        // ...and the way crosses over it on a plank deck with a railing along each open side: the kit's
+                        // bridge pieces (BridgeArt), or plain plank boxes without them.
+                        float deck = lv * WorldGen.LevelHeight + 0.03f;
                         bool Open(int dx, int dy)
                         {
                             var n = cells[x + dx + 1, y + dy + 1];
-                            return n != Cell.Bridge && (n == Cell.Water || elev[x + dx + 1, y + dy + 1] != WorldGen.BridgeLevel);
+                            return n != Cell.Bridge && (n == Cell.Water || n == Cell.Lava || elev[x + dx + 1, y + dy + 1] != lv);
                         }
                         bool kit = BridgeArt.PlaceTile(chunk.root.transform, new Vector2(wx, wy), deck, Open(0, 1), Open(1, 0), Open(0, -1), Open(-1, 0));
                         if (!kit) Town.Box(planks, planks, new Rect(wx, wy, 1, 1), deck - 0.22f, deck);
@@ -269,10 +285,21 @@ namespace TWF
                         {
                             if (!Open(s.dx, s.dy)) continue;
                             var o = new Vector2(wx, wy) + s.o;
-                            if (!kit)
+                            Rect Along(float from, float to, float thick)
                             {
-                                var far = o + s.u + s.inward * 0.12f;
-                                Town.Box(planks, planks, Rect.MinMaxRect(Mathf.Min(o.x, far.x), Mathf.Min(o.y, far.y), Mathf.Max(o.x, far.x), Mathf.Max(o.y, far.y)), deck, deck + 0.55f);
+                                Vector2 p = o + s.u * from, q = o + s.u * to + s.inward * thick;
+                                return Rect.MinMaxRect(Mathf.Min(p.x, q.x), Mathf.Min(p.y, q.y), Mathf.Max(p.x, q.x), Mathf.Max(p.y, q.y));
+                            }
+                            if (!kit) Town.Box(planks, planks, Along(0f, 1f, 0.12f), deck, deck + 0.55f);
+                            // A high bridge stands on a trestle down to the floor of the gap: a post at each end of the
+                            // tile and rails between them, so it shows that there is no way through underneath.
+                            if (lv > under)
+                            {
+                                float trestleTop = deck - 0.2f;
+                                Town.Box(planks, planks, Along(0f, 0.14f, 0.14f), uh, trestleTop);
+                                Town.Box(planks, planks, Along(0.86f, 1f, 0.14f), uh, trestleTop);
+                                for (float t = uh + 0.75f; t < trestleTop - 0.3f; t += 0.9f)
+                                    Town.Box(planks, planks, Along(0.14f, 0.86f, 0.08f), t, t + 0.14f);
                             }
                             EdgeWall(o, s.u, edges);
                         }
@@ -325,7 +352,10 @@ namespace TWF
                         break;
                     case Cell.Puddle:
                         // Shallow water just over the ground: walked through, not round.
-                        groundTiles[i] = EnvArt.GroundTile(baseBiome, wx, wy) ?? GroundTile(baseBiome, h);
+                    {
+                        var under = EnvArt.GroundTile(baseBiome, wx, wy) ?? GroundTile(baseBiome, h);
+                        if (lv > 0) LevelTiles(lv)[i] = under; else groundTiles[i] = under;
+                    }
                     {
                         bool Wet(int dx, int dy)
                         {
@@ -340,17 +370,33 @@ namespace TWF
                     }
                         break;
                     default:
-                        groundTiles[i] = EnvArt.GroundTile(baseBiome, wx, wy) ?? GroundTile(baseBiome, h);
-                        if ((h & 0xFF) < 14) detailTiles[i] = DetailTile(biome, h);
+                    {
+                        // On its own level's map: open ground up on a hill would otherwise be a hole in it.
+                        var tile = EnvArt.GroundTile(baseBiome, wx, wy) ?? GroundTile(baseBiome, h);
+                        if (lv > 0) LevelTiles(lv)[i] = tile;
+                        else
+                        {
+                            groundTiles[i] = tile;
+                            if ((h & 0xFF) < 14) detailTiles[i] = DetailTile(biome, h);
+                        }
+                    }
                         break;
                 }
-                // Ground next to a grassy slope bends up to meet it.
-                if (WorldGen.Bends(cell)) AddBentGround(wx, wy, lv > 0 ? LevelTiles(lv)[i] : groundTiles[i], slopes);
+                // Ground next to a grassy slope bends to meet it. Where it bends down, its flat tile would cover the
+                // dip, so the bent ground is all that is drawn there.
+                if (WorldGen.Bends(cell) && AddBentGround(wx, wy, lv > 0 ? LevelTiles(lv)[i] : groundTiles[i], slopes))
+                {
+                    if (lv > 0) LevelTiles(lv)[i] = null; else groundTiles[i] = null;
+                    detailTiles[i] = null;
+                }
+                // Snow lies on the high ground of the mountains (not in the ash wastes).
+                bool snowy = lv >= WorldGen.SnowLevel && pathBiome != Biome.Ember && cell != Cell.Bridge && LevelTiles(lv)[i] != null;
+                if (snowy) { LevelTiles(lv)[i] = SnowTile(h); detailTiles[i] = null; }
                 // Other biomes' ground blended over this one's, where they meet.
-                if (groundLike[x + 1, y + 1]) AddGroundBlend(x, y, wx, wy, lv, h, baseBiome, blends);
+                if (groundLike[x + 1, y + 1] && !snowy) AddGroundBlend(x, y, wx, wy, lv, h, baseBiome, blends);
                 // Paths: rounded at their outer corners, swept round the grass at their bends, and up the slopes.
                 if (cell == Cell.Path || cell == Cell.Puddle || WorldGen.Bends(cell) || slopeCell[x + 1, y + 1])
-                    AddPathOverlay(cells, elev, x, y, wx, wy, lv, cell, EnvArt.PathTile(pathBiome, wx, wy) ?? PathTile(pathBiome, h), paths);
+                    AddPathOverlay(cells, elev, x, y, wx, wy, lv, cell, h, paths);
             }
 
             for (int y = 0; y < S; y++)
@@ -395,6 +441,7 @@ namespace TWF
             planks.Build(chunk.root.transform, "Bridges", Town.Mat("bridge", Town.PlankTexture()), true);
             foreach (var kv in blends) kv.Value.Build(chunk.root.transform, PathMaterial(kv.Key, 2f));
             foreach (var kv in paths) kv.Value.Build(chunk.root.transform, PathMaterial(kv.Key, 1f));
+            foreach (var kv in pathBlends) kv.Value.Build(chunk.root.transform, PathMaterial(kv.Key, 2f));
             foreach (var kv in slopes) kv.Value.Build(chunk.root.transform, "Slopes", SlopeMaterial(kv.Key), false);
             slopeSides.Build(chunk.root.transform, "Slope Sides", WorldTiles.MeshMaterial("cliff" + chunkBiome, cliffTex), true);
             MeshObject(chunk.root, "Waterfalls", falls, WaterfallMaterial(), false);
@@ -454,8 +501,17 @@ namespace TWF
             foreach (var s in Sides)
             {
                 int nl = Lv(elev, x + s.dx, y + s.dy);
-                if (nl >= lv) continue;
                 var n = cells[x + s.dx + 1, y + s.dy + 1];
+                // A high bridge leaving from this edge: the rock face under its end still stands, down to the floor of
+                // the gap; the edge itself is open, the bridge's own deck.
+                if (n == Cell.Bridge && nl == lv)
+                {
+                    int gapFloor = WorldGen.BaseElevAt(wx + s.dx, wy + s.dy);
+                    if (gapFloor < lv && self != Cell.Water && self != Cell.Lava)
+                        RockColumns(new Vector3(wx + s.so.x, wy + s.so.y, -gapFloor * H), s.su, s.outward, wx, wy, s.dx, s.dy, (lv - gapFloor) * H, -lv * H, rock, rims);
+                    continue;
+                }
+                if (nl >= lv) continue;
                 float zLow = -nl * H, zTop = -lv * H, height = (lv - nl) * H;
                 // A slope or stair arriving here: open ground, no cliff.
                 WorldGen.Stair st = default; int row = 0;
@@ -527,7 +583,10 @@ namespace TWF
                 float nz = -WorldGen.ElevAt(nx, ny) * WorldGen.LevelHeight;
                 if (mb != null && (z0 < nz - 0.01f || z1 < nz - 0.01f))
                 {
-                    var o = -s.inward;
+                    // Down at the slope's own edge, leaning out only a little: a full tile out, a small drop would lie
+                    // almost flat, a flap of ground over the water beside the slope.
+                    float drop = nz - Mathf.Min(z0, z1);
+                    var o = -s.inward * Mathf.Min(0.2f, drop * 0.25f);
                     var a0 = new Vector3(p0.x, p0.y, Mathf.Min(z0, nz)); var a1 = new Vector3(p1.x, p1.y, Mathf.Min(z1, nz));
                     var b1 = new Vector3(p1.x + o.x, p1.y + o.y, nz); var b0 = new Vector3(p0.x + o.x, p0.y + o.y, nz);
                     var sn = Vector3.Cross(a1 - a0, b0 - a0).normalized;
@@ -552,18 +611,45 @@ namespace TWF
             uv = Uv;
             var a = new Vector3(wx, wy, z00); var b = new Vector3(wx + 1, wy, z10);
             var c = new Vector3(wx + 1, wy + 1, z11); var d = new Vector3(wx, wy + 1, z01);
-            var nrm = Vector3.Cross(b - a, d - a).normalized;
-            if (nrm.z > 0f) nrm = -nrm;
-            mb.Quad(a, b, c, d, nrm, Uv(0, 0), Uv(1, 0), Uv(1, 1), Uv(0, 1));
+            // Each corner's normal from the lie of the land round it, so the shading runs smoothly over the tiles.
+            float own = WorldGen.ElevAt(wx, wy) * WorldGen.LevelHeight;
+            mb.Quad(a, b, c, d, CornerNormal(wx, wy, own), CornerNormal(wx + 1, wy, own), CornerNormal(wx + 1, wy + 1, own), CornerNormal(wx, wy + 1, own),
+                Uv(0, 0), Uv(1, 0), Uv(1, 1), Uv(0, 1));
             return mb;
         }
 
-        // Flat ground a slope touches bends up to meet it (WorldGen.SurfaceAt): a triangle at an outside corner, a gentle
-        // side along a slope. Drawn over the flat tile, which stays underneath.
-        static void AddBentGround(int wx, int wy, TileBase tile, Dictionary<Texture2D, Town.Solid> slopes)
+        // The ground's normal at a grid corner (old convention: up = -Z), from the heights of the corners either side
+        // of it: the surface round slopes where a slope touches them, else the level of the ground there - this tile's
+        // own where it reaches that corner (the far side of a cliff is not this ground), else the highest round it.
+        // The same for every tile sharing the corner, so the shading runs on over the seams between tiles.
+        static Vector3 CornerNormal(int cx, int cy, float own)
         {
-            if (tile == null || !WorldGen.SurfaceAt(wx, wy, out float h00, out float h10, out float h11, out float h01)) return;
-            SurfaceQuad(wx, wy, tile, -h00 - 0.004f, -h10 - 0.004f, -h11 - 0.004f, -h01 - 0.004f, slopes, out _);
+            float H(int x, int y)
+            {
+                float v = WorldGen.SlopeVertexHeight(x, y);
+                if (!float.IsNaN(v)) return v;
+                int ownLv = Mathf.RoundToInt(own / WorldGen.LevelHeight), top = int.MinValue;
+                for (int k = 0; k < 4; k++)
+                {
+                    int l = WorldGen.ElevAt(x - 1 + (k & 1), y - 1 + (k >> 1));
+                    if (l == ownLv) return own;
+                    top = Mathf.Max(top, l);
+                }
+                return top * WorldGen.LevelHeight;
+            }
+            float gx = (H(cx + 1, cy) - H(cx - 1, cy)) * 0.5f, gy = (H(cx, cy + 1) - H(cx, cy - 1)) * 0.5f;
+            return new Vector3(-gx, -gy, -1f).normalized;
+        }
+
+        // Flat ground a slope touches bends to meet it (WorldGen.SurfaceAt): a triangle at an outside corner, a gentle
+        // side along a slope. Drawn over the flat tile, which stays underneath where the ground only rises. True when
+        // it dips below its level somewhere: then the flat tile would hide the dip and has to go.
+        static bool AddBentGround(int wx, int wy, TileBase tile, Dictionary<Texture2D, Town.Solid> slopes)
+        {
+            if (tile == null || !WorldGen.SurfaceAt(wx, wy, out float h00, out float h10, out float h11, out float h01)) return false;
+            if (SurfaceQuad(wx, wy, tile, -h00 - 0.004f, -h10 - 0.004f, -h11 - 0.004f, -h01 - 0.004f, slopes, out _) == null) return false;
+            float own = WorldGen.ElevAt(wx, wy) * WorldGen.LevelHeight - 0.01f;
+            return h00 < own || h10 < own || h11 < own || h01 < own;
         }
 
         // ---------- Rounded paths ----------
@@ -574,14 +660,14 @@ namespace TWF
         // count as joined to it, so a shore runs right up to the water without rounding off there.
         // Per chunk being built (with its 1-cell border): the biome each cell's ground is drawn in, whether it is open
         // ground that blends with its neighbours, and whether it is a grassy slope.
-        Biome[,] groundBiomes;
+        Biome[,] groundBiomes, pathBiomes;
         bool[,] groundLike, slopeCell, pondPuddle;
         int[,] blendElev;
 
         void PrepareGround(Cell[,] cells, int[,] elev, int x0, int y0)
         {
             int n = cells.GetLength(0);
-            groundBiomes = new Biome[n, n]; groundLike = new bool[n, n]; slopeCell = new bool[n, n]; blendElev = elev;
+            groundBiomes = new Biome[n, n]; pathBiomes = new Biome[n, n]; groundLike = new bool[n, n]; slopeCell = new bool[n, n]; blendElev = elev;
             for (int y = 0; y < n; y++)
             for (int x = 0; x < n; x++)
             {
@@ -595,6 +681,7 @@ namespace TWF
                 // as drawn: open ground and puddles in their biome's grass, the rest bare rock high on a mountain
                 bool rocky = c != Cell.Ground && c != Cell.Puddle && elev[x, y] >= WorldGen.RockLevel && b != Biome.Ember;
                 groundBiomes[x, y] = rocky ? Biome.Ruins : b;
+                pathBiomes[x, y] = WorldGen.LookBiomeAt(new Vector2(wx + 0.5f, wy + 0.5f), false);
             }
             // Puddles joined to a pond on their level (through other puddles too): they are drawn as the pond's water.
             pondPuddle = new bool[n, n];
@@ -672,8 +759,9 @@ namespace TWF
             float flat = lv * WorldGen.LevelHeight;
             if (!WorldGen.SurfaceAt(wx, wy, out float h00, out float h10, out float h11, out float h01)) h00 = h10 = h11 = h01 = flat;
             if (!meshes.TryGetValue(sprite.texture, out var pm)) meshes[sprite.texture] = pm = new PathMesh();
+            float own = WorldGen.ElevAt(wx, wy) * WorldGen.LevelHeight;
             pm.Quad(new Vector3(wx, wy, -h00 - lift), new Vector3(wx + 1, wy, -h10 - lift), new Vector3(wx + 1, wy + 1, -h11 - lift), new Vector3(wx, wy + 1, -h01 - lift),
-                sprite, wear);
+                CornerNormal(wx, wy, own), CornerNormal(wx + 1, wy, own), CornerNormal(wx + 1, wy + 1, own), CornerNormal(wx, wy + 1, own), sprite, wear);
         }
 
         // x, y: the cell asked about; ox, oy: the cell whose overlay is being built.
@@ -686,25 +774,47 @@ namespace TWF
             return c == Cell.Path || (WorldGen.Bends(c) && Shore(cells, elev, x, y));
         }
 
-        void AddPathOverlay(Cell[,] cells, int[,] elev, int x, int y, int wx, int wy, int lv, Cell cell, TileBase tile, Dictionary<Texture2D, PathMesh> paths)
+        void AddPathOverlay(Cell[,] cells, int[,] elev, int x, int y, int wx, int wy, int lv, Cell cell, uint h, Dictionary<Texture2D, PathMesh> paths)
         {
             // How much of the ground round each corner is worn (0, 1/4 ... 1): the shader draws the path where the
             // blend of the four is over a half, with a wobble - an organic patch of dirt, round at its ends and corners.
             bool worn = cell == Cell.Path || cell == Cell.Puddle || (WorldGen.Bends(cell) && Shore(cells, elev, x, y)) || (slopeCell[x + 1, y + 1] && WorldGen.OnPath(wx, wy));
-            float CornerWear(int cx, int cy)   // cx, cy: -1 or +1, the corner's direction
+            // Where a path runs from one biome into another its dirt changes too: the lowest biome's dirt round here is
+            // laid first, and each other biome's over it where the path round a corner is that biome or one above it,
+            // so the seam between the two dirts is as soft as the path's own edge, not a staircase along the tiles.
+            Biome floor = pathBiomes[x + 1, y + 1], top = floor;
+            for (int dx = -1; dx <= 1; dx++)
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                var q = pathBiomes[x + dx + 1, y + dy + 1];
+                if (q < floor) floor = q;
+                if (q > top) top = q;
+            }
+            float CornerWear(int cx, int cy, Biome b)   // cx, cy: -1 or +1, the corner's direction
             {
                 int n = 0;
                 for (int ox = 0; ox <= 1; ox++)
                 for (int oy = 0; oy <= 1; oy++)
                 {
                     int qx = ox == 0 ? 0 : cx, qy = oy == 0 ? 0 : cy;
+                    if (pathBiomes[x + qx + 1, y + qy + 1] < b) continue;
                     if (qx == 0 && qy == 0 ? worn : Pathish(cells, elev, x + qx, y + qy, x, y, wx + qx, wy + qy)) n++;
                 }
                 return n / 4f;
             }
-            // Above the bent ground (0.004) and the biome blends (0.005 - 0.007).
-            OverlayQuad(wx, wy, lv, tile, new Vector4(CornerWear(-1, -1), CornerWear(1, -1), CornerWear(1, 1), CornerWear(-1, 1)), 0.009f, paths);
+            for (var b = floor; b <= top; b++)
+            {
+                var tile = EnvArt.PathTile(b, wx, wy) ?? PathTile(b, h);
+                var wear = new Vector4(CornerWear(-1, -1, b), CornerWear(1, -1, b), CornerWear(1, 1, b), CornerWear(-1, 1, b));
+                // The lowest dirt edged with trodden grass (0.009, above the bent ground and the biome blends); the
+                // others plain, just over it.
+                if (b == floor) OverlayQuad(wx, wy, lv, tile, wear, 0.009f, paths);
+                else OverlayQuad(wx, wy, lv, tile, wear, 0.0095f + 0.0003f * (int)b, pathBlends);
+            }
         }
+
+        // Another biome's dirt laid over a path's (AddPathOverlay), per chunk being built.
+        Dictionary<Texture2D, PathMesh> pathBlends;
 
         static readonly Dictionary<(Texture2D, float), Material> pathMats = new Dictionary<(Texture2D, float), Material>();
 
@@ -714,6 +824,7 @@ namespace TWF
             if (pathMats.TryGetValue((tex, kind), out var m) && m != null) return m;
             m = new Material(RenderAssets.Instance.litGround) { name = (kind > 1.5f ? "Blend " : "Path ") + tex.name, mainTexture = tex };
             m.SetFloat("_PathMask", kind);
+            m.SetFloat("_Terrain", 1f);         // on a slope it leans with it, and is shaded like it
             pathMats[(tex, kind)] = m;
             return m;
         }
@@ -725,9 +836,10 @@ namespace TWF
             readonly List<Vector4> masks = new List<Vector4>();
             readonly List<Vector2> locals = new List<Vector2>();
             readonly List<int> tris = new List<int>();
+            readonly List<Vector3> normals = new List<Vector3>();
 
             // a, b, c, d: the corners (x, y), (x+1, y), (x+1, y+1), (x, y+1), built with up = -Z.
-            public void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Sprite sprite, Vector4 wear)
+            public void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector3 na, Vector3 nb, Vector3 nc, Vector3 nd, Sprite sprite, Vector4 wear)
             {
                 var r = sprite.textureRect; var tex = sprite.texture;
                 Vector2 Uv(float fx, float fy) => new Vector2((r.x + fx * r.width) / tex.width, (r.y + fy * r.height) / tex.height);
@@ -735,6 +847,8 @@ namespace TWF
                 verts.Add(a); verts.Add(b); verts.Add(c); verts.Add(d);
                 uvs.Add(Uv(0, 0)); uvs.Add(Uv(1, 0)); uvs.Add(Uv(1, 1)); uvs.Add(Uv(0, 1));
                 for (int k = 0; k < 4; k++) masks.Add(wear);
+                // The ground's own normals (up = -Z here), so a patch on a slope is shaded like the slope under it.
+                normals.Add(na); normals.Add(nb); normals.Add(nc); normals.Add(nd);
                 locals.Add(new Vector2(0, 0)); locals.Add(new Vector2(1, 0)); locals.Add(new Vector2(1, 1)); locals.Add(new Vector2(0, 1));
                 tris.AddRange(new[] { i, i + 3, i + 1, i + 1, i + 3, i + 2 });
             }
@@ -747,10 +861,9 @@ namespace TWF
                 m.SetUVs(0, uvs);
                 m.SetUVs(1, masks);
                 m.SetUVs(2, locals);
-                var normals = new Vector3[verts.Count];
                 var colors = new Color[verts.Count];
-                for (int k = 0; k < normals.Length; k++) { normals[k] = Vector3.back; colors[k] = Color.white; }
-                m.normals = normals;
+                for (int k = 0; k < colors.Length; k++) colors[k] = Color.white;
+                m.SetNormals(normals);
                 m.colors = colors;
                 m.SetTriangles(tris, 0);
                 Ground.ToY(m);
@@ -770,6 +883,7 @@ namespace TWF
         {
             if (slopeMats.TryGetValue(tex, out var m) && m != null) return m;
             m = new Material(RenderAssets.Instance.litGround) { name = "Slope " + tex.name, mainTexture = tex };
+            m.SetFloat("_Terrain", 1f);         // each face shaded by the way it leans: the height reads at a glance
             slopeMats[tex] = m;
             return m;
         }
@@ -1010,6 +1124,38 @@ namespace TWF
         // ---------- Tile choice ----------
 
         TileBase Pick(TileBase[] arr, uint h) => arr[h % (uint)arr.Length];
+
+        // Snow: drawn here, a few tiles of soft white with blue hollows and a glint or two, on the art's pixel grid.
+        static Tile[] snowTiles;
+
+        static TileBase SnowTile(uint h)
+        {
+            if (snowTiles == null || snowTiles[0] == null)
+            {
+                snowTiles = new Tile[6];
+                for (int v = 0; v < snowTiles.Length; v++)
+                {
+                    const int N = 18, P = 4;
+                    var tex = new Texture2D(N * P, N * P, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                    var rng = new System.Random(911 + v * 37);
+                    var px = new Color32[N * P * N * P];
+                    for (int y = 0; y < N; y++)
+                    for (int x = 0; x < N; x++)
+                    {
+                        double r = rng.NextDouble();
+                        float drift = Mathf.PerlinNoise((x + v * 31) * 0.22f, (y + v * 17) * 0.22f);
+                        Color c = drift < 0.3f ? new Color(0.72f, 0.82f, 0.97f) : drift < 0.5f ? new Color(0.84f, 0.91f, 1f) : new Color(0.93f, 0.97f, 1f);
+                        if (r < 0.03) c = Color.white; else if (r < 0.07) c = new Color(0.64f, 0.76f, 0.95f);
+                        for (int j = 0; j < P; j++) for (int k = 0; k < P; k++) px[(y * P + j) * N * P + x * P + k] = c;
+                    }
+                    tex.SetPixels32(px); tex.Apply();
+                    var tile = ScriptableObject.CreateInstance<Tile>();
+                    tile.sprite = Sprite.Create(tex, new Rect(0, 0, N * P, N * P), new Vector2(0.5f, 0.5f), N * P, 0, SpriteMeshType.FullRect);
+                    snowTiles[v] = tile;
+                }
+            }
+            return snowTiles[h % (uint)snowTiles.Length];
+        }
 
         TileBase GroundTile(Biome b, uint h)
         {
@@ -1363,6 +1509,30 @@ namespace TWF
                 chest.waves = waves;
                 chest.key = $"{chestCell.x}_{chestCell.y}";
             }
+            // A hidden cache in the chunk's most out-of-the-way spot (WorldGen.HasCache): its glow shows from afar.
+            if (WorldGen.HasCache(c.x, c.y, out var cacheCell))
+            {
+                var go = new GameObject("HiddenCache");
+                go.transform.SetParent(chunk.root.transform, false);
+                go.transform.position = Ground.On((Vector2)cacheCell + Vector2.one * 0.5f);
+                var cache = go.AddComponent<DungeonChest>();
+                cache.key = $"cache_{cacheCell.x}_{cacheCell.y}";
+                cache.level = WorldGen.LevelAt(cacheCell) + 1;
+                cache.title = "Hidden cache";
+                cache.roomClear = () => true;
+            }
+            // A chest on the top of every peak that can be climbed (WorldGen.HasSummit): a better one than a cache.
+            if (WorldGen.HasSummit(c.x, c.y, out var summitCell))
+            {
+                var go = new GameObject("SummitChest");
+                go.transform.SetParent(chunk.root.transform, false);
+                go.transform.position = Ground.On((Vector2)summitCell + Vector2.one * 0.5f);
+                var summit = go.AddComponent<DungeonChest>();
+                summit.key = $"summit_{summitCell.x}_{summitCell.y}";
+                summit.level = WorldGen.LevelAt(summitCell) + 3;
+                summit.title = "Summit chest";
+                summit.roomClear = () => true;
+            }
             if (WorldGen.HasBossGate(c.x, c.y, out var bossCell) && WorldGen.FortressAt(bossCell.x, bossCell.y, out var fort))
             {
                 var go = new GameObject("BossFortress");
@@ -1471,7 +1641,7 @@ namespace TWF
                 if (wear.x + wear.y + wear.z + wear.w < 0.01f) continue;
                 if (!patch.TryGetValue(sprite.texture, out var pm)) patch[sprite.texture] = pm = new PathMesh();
                 const float z = -0.009f;
-                pm.Quad(new Vector3(x, y, z), new Vector3(x + 1, y, z), new Vector3(x + 1, y + 1, z), new Vector3(x, y + 1, z), sprite, wear);
+                pm.Quad(new Vector3(x, y, z), new Vector3(x + 1, y, z), new Vector3(x + 1, y + 1, z), new Vector3(x, y + 1, z), Vector3.back, Vector3.back, Vector3.back, Vector3.back, sprite, wear);
             }
             ground.SetTilesBlock(b, fill);
             foreach (var kv in patch) kv.Value.Build(chunk.root.transform, PathMaterial(kv.Key, 1f));

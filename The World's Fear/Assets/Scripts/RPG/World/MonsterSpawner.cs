@@ -35,6 +35,9 @@ namespace TWF
             // High in the mountain ranges, where cliffs keep walkers out, only flyers live.
             bool mountain = roster == null && !farm && WorldGen.ElevAt(Mathf.FloorToInt(center.x), Mathf.FloorToInt(center.y)) >= WorldGen.MountainLevel;
             if (mountain && MonsterGenerator.FlyerRoster(zone.biome).Count > 0) species = MonsterGenerator.FlyerRoster(zone.biome);
+            // Above the snow line (the ash wastes have none): the frost kinds, now that the peaks can be climbed.
+            if (mountain && zone.biome != Biome.Ember && WorldGen.ElevAt(Mathf.FloorToInt(center.x), Mathf.FloorToInt(center.y)) >= WorldGen.SnowLevel
+                && MonsterGenerator.FrostRoster(zone).Count > 0) species = MonsterGenerator.FrostRoster(zone);
             if (species.Count == 0) return;
             int level = fixedLevel > 0
                 ? Mathf.Max(1, fixedLevel + rng.Next(-1, 2))

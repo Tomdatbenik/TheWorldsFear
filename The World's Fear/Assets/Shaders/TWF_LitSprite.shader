@@ -20,6 +20,8 @@ Shader "TWF/LitSprite"
         _ShadowTint ("Shadow Tint", Color) = (0.42,0.36,0.62,1)
         _Relief ("Relief (height from the texture's own light and dark)", Range(0,4)) = 0
         _PathMask ("Rounded path edges (TEXCOORD1: tile uv, cut corners, filled corners)", Float) = 0
+        _Frost ("Frost (a creature of the snow line: drawn in ice blues)", Range(0,1)) = 0
+        _Terrain ("Terrain (slopes and what lies on them: shaded by the way each face leans)", Float) = 0
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
     }
 
@@ -56,8 +58,10 @@ Shader "TWF/LitSprite"
             half _Bands;
             half4 _ShadowTint;
             half _Relief;
+            half _Frost;
             float4 _MainTex_TexelSize;
             half _PathMask;
+            half _Terrain;
         CBUFFER_END
 
         // Rounded path edges, like the ponds: m.xy is the spot in its tile (0..1), m.z the corners cut to a quarter
@@ -200,6 +204,11 @@ Shader "TWF/LitSprite"
             {
                 half4 tex = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv) * i.color;
                 clip(tex.a - _Cutoff);
+                if (_Frost > 0)
+                {
+                    half lum = dot(tex.rgb, half3(0.3, 0.59, 0.11));
+                    tex.rgb = lerp(tex.rgb, saturate(half3(0.50, 0.74, 1.0) * (lum * 1.15 + 0.06)), _Frost);
+                }
 
                 if (_PathMask > 0.5)
                 {
@@ -253,6 +262,25 @@ Shader "TWF/LitSprite"
                 }
 
                 half ndl = saturate(dot(n, mainLight.direction) * 0.5 + 0.5);
+                half terrainShade = 1;
+                if (_Terrain > 0.5)
+                {
+                    // Slopes read as height: each face is lit by the way it leans, against how flat ground is lit,
+                    // in a few hard steps like hand-shaded pixel art. The light leans a little from the north-west
+                    // even at noon (as on a map's hill shading), so a slope never washes out to the flat ground's tone.
+                    float3 fn = normalize(i.normalWS);
+                    if (fn.y < 0) fn = -fn;
+                    float3 L = normalize(mainLight.direction + float3(-0.45, 0, 0.45) * saturate(mainLight.direction.y));
+                    half flatK = saturate(dot(up, L)) + 0.3;
+                    half k = clamp((saturate(dot(fn, L)) + 0.3) / flatK, 0.62, 1.22);
+                    // Steep faces see less of the sky, too.
+                    k *= lerp(0.86, 1.0, fn.y * fn.y);
+                    // Nearly level ground stays as it is: only a real lean is shaded, so gentle swells don't stripe.
+                    k = lerp(1, k, smoothstep(0.02, 0.12, 1 - fn.y));
+                    terrainShade = floor(k * 10 + 0.5) / 10;
+                    n = up;
+                    ndl = saturate(dot(n, mainLight.direction) * 0.5 + 0.5);
+                }
                 // Relief: each texel lit by the slope of its own heightmap, against the flat surface's light,
                 // in a few steps like hand-shaded pixel art.
                 if (_Relief * (1 + _TWF_ReliefBoost) > 0.001)
@@ -264,6 +292,8 @@ Shader "TWF/LitSprite"
                 half3 light = mainLight.color * ndl * mainLight.shadowAttenuation;
 
                 half3 ambient = _TWF_Ambient.rgb * _Ambient;
+                light *= terrainShade;
+                ambient *= lerp(1, terrainShade, 0.75);
 
                 #if defined(_ADDITIONAL_LIGHTS)
                 uint count = GetAdditionalLightsCount();

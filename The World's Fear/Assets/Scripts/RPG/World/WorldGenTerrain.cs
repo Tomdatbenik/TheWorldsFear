@@ -43,7 +43,13 @@ namespace TWF
 
         // ---------- Per-chunk cache: cells and levels are asked for again and again (stairs, routes, rendering) ----------
 
-        class TerrainCache { public readonly byte[] cell = new byte[ChunkSize * ChunkSize]; public readonly sbyte[] elev = new sbyte[ChunkSize * ChunkSize]; }
+        class TerrainCache
+        {
+            public readonly byte[] cell = new byte[ChunkSize * ChunkSize];
+            public readonly sbyte[] elev = new sbyte[ChunkSize * ChunkSize];
+            public readonly sbyte[] land = new sbyte[ChunkSize * ChunkSize];   // the land's own level, under any high bridge
+            public readonly byte[] span = new byte[ChunkSize * ChunkSize];     // 255 not worked out, 0 no high bridge, else its level
+        }
         static readonly Dictionary<long, TerrainCache> terrainCache = new Dictionary<long, TerrainCache>();
 
         static TerrainCache CacheFor(int x, int y, out int index)
@@ -54,7 +60,7 @@ namespace TWF
             if (terrainCache.TryGetValue(key, out var c)) return c;
             if (terrainCache.Count > 6000) terrainCache.Clear();
             c = new TerrainCache();
-            for (int i = 0; i < c.cell.Length; i++) { c.cell[i] = 255; c.elev[i] = -1; }
+            for (int i = 0; i < c.cell.Length; i++) { c.cell[i] = 255; c.elev[i] = -1; c.land[i] = -1; c.span[i] = 255; }
             terrainCache[key] = c;
             return c;
         }
@@ -62,16 +68,103 @@ namespace TWF
         static void ClearTerrainCache()
         {
             terrainCache.Clear();
+            caches.Clear(); summits.Clear(); chunkTops.Clear(); bridgeRuns.Clear();
             landmarks.Clear();
             farms = null;
         }
 
-        // The level of the land a cell stands on.
+        // The level a cell is walked on: the land's, or the deck of a high bridge over it.
         public static int ElevAt(int x, int y)
         {
             var c = CacheFor(x, y, out int i);
-            if (c.elev[i] < 0) c.elev[i] = (sbyte)ElevAtRaw(x, y);
+            if (c.elev[i] < 0) { int span = SpanLevel(x, y); c.elev[i] = (sbyte)(span > 0 ? span : BaseElevAt(x, y)); }
             return c.elev[i];
+        }
+
+        // The level of the land itself (under a high bridge, the ground it crosses).
+        public static int BaseElevAt(int x, int y)
+        {
+            var c = CacheFor(x, y, out int i);
+            if (c.land[i] < 0) c.land[i] = (sbyte)ElevAtRaw(x, y);
+            return c.land[i];
+        }
+
+        // ---------- High bridges ----------
+        // Where two stretches of high ground on one level face each other across a gap of a few tiles, at least two
+        // levels deep, a plank bridge spans it from edge to edge: the high ground runs on instead of ending at every
+        // cleft. Bridges lie on lanes two tiles wide (every 17th pair of rows, every 19th pair of columns), so a long
+        // canyon is crossed here and there, not roofed over. The ground under a bridge cannot be walked through; a
+        // road down there is never bridged over, so no road is cut.
+        const int MaxSkySpan = 10;
+
+        // The level of the high bridge over this cell, or 0.
+        public static int SpanLevel(int x, int y)
+        {
+            var c = CacheFor(x, y, out int i);
+            if (c.span[i] == 255) c.span[i] = (byte)SpanLevelRaw(x, y);
+            return c.span[i];
+        }
+
+        static int SpanLevelRaw(int x, int y)
+        {
+            if (new Vector2(x + 0.5f, y + 0.5f).magnitude < FlatRadius) return 0;
+            if (OnPath(x, y) && CanyonAt(x, y)) return ElevUncut(x, y);   // a road over a canyon: its own bridge
+            if (Mod(y, 17) < 2) { int l = SpanAlong(x, y, 1, 0); if (l > 0) return l; }
+            if (Mod(x, 19) < 2) { int l = SpanAlong(x, y, 0, 1); if (l > 0) return l; }
+            return 0;
+        }
+
+        static int SpanAlong(int x, int y, int dx, int dy)
+        {
+            int own = BaseElevAt(x, y);
+            // Back to the edge the bridge starts from: the first tile at least two levels over this one.
+            int back = 0, hi = 0;
+            for (int k = 1; k <= MaxSkySpan && back == 0; k++)
+            {
+                int e = BaseElevAt(x - dx * k, y - dy * k);
+                if (e >= own + 2) { back = k; hi = e; }
+            }
+            if (back == 0 || hi >= MountainLevel) return 0;
+            // On to the far edge: the first tile that is not two levels under the deck has to be the same high ground.
+            int on = 0;
+            for (int k = 1; k <= MaxSkySpan + 1 - back && on == 0; k++)
+            {
+                int e = BaseElevAt(x + dx * k, y + dy * k);
+                if (e > hi - 2) { if (e != hi) return 0; on = k; }
+            }
+            if (on == 0 || back + on - 1 < 3) return 0;
+            int ax = x - dx * back, ay = y - dy * back, bx = x + dx * on, by = y + dy * on;
+            // The gap's floor is about level (one bridge for the whole gap, the same from every tile of it)...
+            int lo = int.MaxValue, top = int.MinValue;
+            for (int k = 1; k < back + on; k++)
+            {
+                int e = BaseElevAt(ax + dx * k, ay + dy * k);
+                lo = Mathf.Min(lo, e); top = Mathf.Max(top, e);
+            }
+            if (top - lo > 1 || hi - top < 2) return 0;
+            // ...solid high ground at both ends, two tiles of it, so the bridge leads somewhere...
+            for (int k = 0; k <= 1; k++)
+            {
+                if (!Floor(LandCell(ax - dx * k, ay - dy * k)) || BaseElevAt(ax - dx * k, ay - dy * k) != hi) return 0;
+                if (!Floor(LandCell(bx + dx * k, by + dy * k)) || BaseElevAt(bx + dx * k, by + dy * k) != hi) return 0;
+            }
+            // ...a cleft that runs on a good way to both sides, so the bridge saves a real walk round (over a notch in
+            // the edge, or by the end of a gap, it would be a bridge beside the way you would walk anyway)...
+            for (int side = -1; side <= 1; side += 2)
+                for (int j = 1; j <= 3; j++)
+                {
+                    bool gap = false;
+                    for (int k = 1; k < back + on && !gap; k++)
+                        gap = BaseElevAt(ax + dx * k + dy * j * side, ay + dy * k + dx * j * side) <= hi - 2;
+                    if (!gap) return 0;
+                }
+            // ...and under it open country, water or lava: nothing built, and no road to cut.
+            for (int k = 1; k < back + on; k++)
+            {
+                var g = LandCell(ax + dx * k, ay + dy * k);
+                if (g != Cell.Ground && g != Cell.Plateau && g != Cell.Water && g != Cell.Puddle && g != Cell.Lava) return 0;
+            }
+            return hi;
         }
 
         static int ElevAtRaw(int x, int y)
@@ -84,7 +177,7 @@ namespace TWF
                 if (CastleAt(x, y, out _)) return 0;
             }
             if (InFarmland(x, y)) return 0;
-            if (BridgeZone(x, y)) return BridgeLevel;   // a bridge and the raised ends it stands on
+            if (BridgeZone(x, y)) return BridgeLevel;   // a bridge and the path out from its ends: level with the river
             // The median of the 3x3 round the cell: lone bumps, one-tile notches and thin slivers of a level are
             // smoothed away, so each tier is a solid stretch of ground you can walk about on.
             int n = 0;
@@ -98,8 +191,38 @@ namespace TWF
         [System.ThreadStatic] static int[] medianBufTS;
         static int[] medianBuf => medianBufTS ??= new int[9];
 
-        // The level from the noise alone (callers handle the hub, fortresses and castles).
-        static int ElevRaw(int x, int y)
+        // The level from the noise alone (callers handle the hub, fortresses and castles): the land as it rose, with
+        // the canyons cut down through it.
+        static int ElevRaw(int x, int y) => CanyonCut(x, y) ? 0 : ElevUncut(x, y);
+
+        // ---------- Canyons ----------
+        // Winding gorges a few tiles wide cut the high ground (mesas, ash plateaus, tablelands) right down to the
+        // lowest level, with water on the floor, lava in the ash wastes. They split the high ground into parts joined
+        // by the high bridges (SpanLevel). A road that meets a canyon crosses it on a bridge of its own, as wide as
+        // the road. The peaks are left alone.
+        static float CanyonLine(int x, int y)
+        {
+            float wx = (Noise(x, y, 0.009f, 93) - 0.5f) * 60f, wy = (Noise(x, y, 0.009f, 94) - 0.5f) * 60f;
+            return Mathf.Abs(Noise(x + wx, y + wy, 0.0052f, 91) - 0.5f);
+        }
+
+        static bool CanyonCut(int x, int y)
+        {
+            if (CanyonLine(x, y) > 0.0105f) return false;
+            int lv = ElevUncut(x, y);
+            return lv >= 2 && lv < MountainLevel;
+        }
+
+        // The floor of a canyon: the cut itself, and the odd tile beside it that the smoothing lowered with it.
+        public static bool CanyonAt(int x, int y)
+        {
+            if (new Vector2(x + 0.5f, y + 0.5f).magnitude < FlatRadius) return false;
+            if (CanyonCut(x, y)) return true;
+            if (CanyonLine(x, y) > 0.03f || BaseElevAt(x, y) != 0 || ElevUncut(x, y) < 2) return false;
+            return CanyonCut(x + 1, y) || CanyonCut(x - 1, y) || CanyonCut(x, y + 1) || CanyonCut(x, y - 1);
+        }
+
+        static int ElevUncut(int x, int y)
         {
             var p = new Vector2(x + 0.5f, y + 0.5f);
             float d = p.magnitude;
@@ -123,8 +246,9 @@ namespace TWF
                     { float n = Noise(x, y, 0.03f, 72); e = n > 0.64f ? 1.2f + (n - 0.64f) * 6f : 0f; }
                     break;
                 case Biome.Ruins:
-                    // Mesas with two flat tiers.
-                    { float n = Noise(x, y, 0.011f, 73); e = n > 0.67f ? 6.5f : n > 0.56f ? 3.5f : 0f; }
+                    // Mesas with two flat tiers, each two levels over the last: a step a bank can climb, so the mesas
+                    // can be walked over from side to side, not only up onto and back down again.
+                    { float n = Noise(x, y, 0.011f, 73); e = n > 0.67f ? 4.5f : n > 0.56f ? 2.5f : 0f; }
                     break;
                 case Biome.Ember:
                     // Ash plateaus, and now and then a volcano.
@@ -141,8 +265,8 @@ namespace TWF
             float m = Smooth(Mathf.InverseLerp(0.42f, 1f, ridge)) * where;
             if (m > 0.08f) e = Mathf.Max(e, m < 0.3f ? 2.5f : m < 0.55f ? 4.5f : 6.5f);
             // ...and here and there a peak climbs out of them, up to the highest level.
-            float pk = Smooth(Mathf.InverseLerp(0.68f, 0.93f, Noise(x, y, 0.0055f, 78)));
-            if (m > 0.35f && pk > 0f) e = Mathf.Max(e, 6.5f + pk * Mathf.Min(1f, m * 1.6f) * 13.5f + (Noise(x, y, 0.05f, 77) - 0.5f) * 1.2f * pk);
+            float pk = Smooth(Mathf.InverseLerp(0.60f, 0.9f, Noise(x, y, 0.0055f, 78)));
+            if (m > 0.3f && pk > 0f) e = Mathf.Max(e, 6.5f + pk * Mathf.Min(1f, m * 1.6f) * 13.5f + (Noise(x, y, 0.05f, 77) - 0.5f) * 1.2f * pk);
 
             e *= ramp * clear * RiverValley(x, y);
             int lv = Mathf.Clamp(Mathf.FloorToInt(e), 0, MaxLevel);
@@ -157,8 +281,9 @@ namespace TWF
         // ---------- Rivers ----------
         // A river is a long winding line of noise (pushed about by more noise so it never runs straight), a few tiles
         // wide, swelling now and then into a lake. The land falls away to the lowest level along it, so it runs in a
-        // shallow valley. Where a path meets it, the path rises a level onto raised ends and crosses on a bridge.
-        public const int BridgeLevel = 1;
+        // shallow valley. Where a path meets it, it crosses on a low plank bridge level with the banks: no raised ends,
+        // so a path meeting the river at a slant never climbs a stair of one-tile ledges with cliffs round them.
+        public const int BridgeLevel = 0;
         const float RiverStart = 150f;           // beyond the farms and the town's four roads
 
         static float RiverNoise(int x, int y)
@@ -181,40 +306,83 @@ namespace TWF
         // 0 in and right by the river, rising to 1 over the valley's sides.
         static float RiverValley(int x, int y)
         {
-            if (!RiverLand(x, y)) return 1f;
+            var p = new Vector2(x + 0.5f, y + 0.5f);
+            if (p.magnitude <= RiverStart) return 1f;
             float half = RiverHalf(x, y);
-            return Smooth(Mathf.InverseLerp(half + 0.002f, half + 0.02f, RiverNoise(x, y)));
+            float v = Smooth(Mathf.InverseLerp(half + 0.002f, half + 0.02f, RiverNoise(x, y)));
+            if (v >= 1f || BiomeAt(p) != Biome.Ember) return v;
+            // The ash wastes hold no river, but where one runs up to their edge its valley carries on into them a
+            // little way, fading out: the ash comes down to the water, not standing over it as a wall of cliffs.
+            for (int r = 3; r <= 12; r += 3)
+                for (int k = 0; k < 8; k++)
+                {
+                    float a = k * Mathf.PI / 4f;
+                    if (BiomeAt(p + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * r) != Biome.Ember)
+                        return Mathf.Lerp(v, 1f, Smooth((r - 3) / 12f));
+                }
+            return 1f;
         }
 
-        const int MaxSpan = 8;        // the longest bridge, in tiles
+
         const int Abutment = 2;       // how far the raised path runs out from each end of a bridge
 
-        // A path tile in the river is a bridge only where the path crosses it: along one axis, the river ends on both
-        // sides within MaxSpan and the path is there on each bank. (A path running along a river just stops at it.)
-        public static bool BridgeCrosses(int x, int y)
+        // A path tile in the river is a bridge where the path crosses it, at whatever slant: the stretch of path lying
+        // in the water (all its tiles, taken together) reaches the path on both banks. The river is the line where its
+        // noise crosses the middle, so the two banks are the two signs of it. A path that only dips into the water and
+        // comes out on the same bank, or runs along in the river for a long way, just stops at it.
+        const int MaxBridgeTiles = 800;
+        static readonly Dictionary<long, bool> bridgeRuns = new Dictionary<long, bool>();
+        static readonly Queue<Vector2Int> bridgeQueue = new Queue<Vector2Int>();
+        static readonly List<long> bridgeRun = new List<long>();
+
+        static float RiverSide(int x, int y)
         {
-            for (int axis = 0; axis < 2; axis++)
-            {
-                int dx = axis == 0 ? 1 : 0, dy = 1 - dx;
-                bool Bank(int sign)
-                {
-                    for (int k = 1; k <= MaxSpan; k++)
-                    {
-                        int qx = x + dx * k * sign, qy = y + dy * k * sign;
-                        if (!RiverAt(qx, qy)) return OnPath(qx, qy);
-                    }
-                    return false;
-                }
-                if (Bank(1) && Bank(-1)) return true;
-            }
-            return false;
+            float wx = (Noise(x, y, 0.006f, 63) - 0.5f) * 70f, wy = (Noise(x, y, 0.006f, 64) - 0.5f) * 70f;
+            return Noise(x + wx, y + wy, 0.0026f, 61) - 0.5f;
         }
 
-        // A bridge, and the path on the banks for Abutment tiles out from it: raised to BridgeLevel.
+        public static bool BridgeCrosses(int x, int y)
+        {
+            if (!OnPath(x, y) || !RiverAt(x, y)) return false;
+            long Key(int qx, int qy) => ((long)qx << 32) ^ (uint)qy;
+            if (bridgeRuns.TryGetValue(Key(x, y), out bool known)) return known;
+            bridgeQueue.Clear(); bridgeRun.Clear();
+            var seen = new HashSet<long> { Key(x, y) };
+            bridgeQueue.Enqueue(new Vector2Int(x, y));
+            bool plus = false, minus = false, built = false, tooLong = false;
+            while (bridgeQueue.Count > 0)
+            {
+                var q = bridgeQueue.Dequeue();
+                bridgeRun.Add(Key(q.x, q.y));
+                if (bridgeRun.Count > MaxBridgeTiles) { tooLong = true; break; }
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = q.x + (k == 0 ? 1 : k == 1 ? -1 : 0), ny = q.y + (k == 2 ? 1 : k == 3 ? -1 : 0);
+                    if (FortressCell(nx, ny, out _) || CastleCell(nx, ny, out _)) { built = true; continue; }   // a fort in a lake is a bank of its own
+                    if (!OnPath(nx, ny)) continue;
+                    if (!RiverAt(nx, ny)) { if (RiverSide(nx, ny) > 0f) plus = true; else minus = true; continue; }
+                    if (seen.Add(Key(nx, ny))) bridgeQueue.Enqueue(new Vector2Int(nx, ny));
+                }
+            }
+            bool crosses = (plus ? 1 : 0) + (minus ? 1 : 0) + (built ? 1 : 0) >= 2 && !tooLong;
+            if (tooLong) { bridgeRuns[Key(x, y)] = false; return false; }
+            foreach (long key in bridgeRun) bridgeRuns[key] = crosses;
+            return crosses;
+        }
+
+        // A river tile just off the path's ragged edge, with the bridge's deck or the path on the bank on both sides of
+        // it along one axis: decked over too, or it is a square of open water in the end of the bridge.
+        public static bool BridgeGap(int x, int y)
+        {
+            bool Deck(int qx, int qy) => OnPath(qx, qy) && (!RiverAt(qx, qy) || BridgeCrosses(qx, qy));
+            return (Deck(x - 1, y) && Deck(x + 1, y)) || (Deck(x, y - 1) && Deck(x, y + 1));
+        }
+
+        // A bridge, and the path on the banks for Abutment tiles out from it: kept at BridgeLevel, flat to the water.
         static bool BridgeZone(int x, int y)
         {
-            // (The banks may lie outside river land, at the edge of the ash wastes: an end is raised wherever a bridge
-            // needs one.)
+            // (The banks may lie outside river land, at the edge of the ash wastes: an end is flattened wherever a
+            // bridge needs one.)
             if (!OnPath(x, y)) return false;
             if (RiverAt(x, y)) return BridgeCrosses(x, y);
             if (RiverNoise(x, y) > RiverHalf(x, y) + 0.03f) return false;

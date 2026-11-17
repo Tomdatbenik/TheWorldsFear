@@ -28,6 +28,9 @@ namespace TWF
         public StatusSpec onHitStatus;
         public ElementPart element = ElementPart.Physical;
         public int seed;              // to redraw it in the codex
+        public Color bodyTint = Color.white;   // drawn through this colour (the frost kinds of the snow line)
+        public bool frost;            // a frost kind: drawn in ice blues (the sprite shader _Frost)
+        public MonsterSpecies Clone() => (MonsterSpecies)MemberwiseClone();
     }
 
     public static class MonsterGenerator
@@ -150,6 +153,28 @@ namespace TWF
                 foreach (var d in MobCatalog.All)
                     if (d.body == "flyer" && !d.warbandOnly) list.Add(CreateMob(d));
             flyerRosters[biome] = list;
+            return list;
+        }
+
+        // Above the snow line the land's own creatures live on as frost kinds: pale blue, hardier, striking with
+        // frost and slowing what they hit.
+        static readonly Dictionary<string, List<MonsterSpecies>> frostRosters = new Dictionary<string, List<MonsterSpecies>>();
+        public static List<MonsterSpecies> FrostRoster(ZoneDefinition zone)
+        {
+            if (frostRosters.TryGetValue(zone.id, out var list)) return list;
+            list = new List<MonsterSpecies>();
+            foreach (var sp in SpeciesFor(zone))
+            {
+                var f = sp.Clone();
+                f.name = (sp.mob != null && sp.mob.body == "flyer" ? "Snow " : "Frost ") + sp.name;
+                f.element = ElementPart.Frost;
+                f.onHitStatus = StatusSpec.Slow(0.35f, 2f);
+                f.frost = true;
+                f.projectileColor = new Color(0.7f, 0.9f, 1f);
+                f.hpMult *= 1.25f; f.armorMult *= 1.2f;
+                list.Add(f);
+            }
+            frostRosters[zone.id] = list;
             return list;
         }
 

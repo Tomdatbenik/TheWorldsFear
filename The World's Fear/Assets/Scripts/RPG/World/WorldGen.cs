@@ -119,8 +119,9 @@ namespace TWF
         public static Cell CellAt(int x, int y)
         {
             var c = BaseCell(x, y);
-            // The ground round a grassy slope bends up to meet it, and a puddle can't: there it is plain ground.
-            if (c == Cell.Puddle && NextToSlope(x, y)) return Cell.Ground;
+            // The ground round a grassy slope bends up to meet it, and a puddle can't: there it is plain ground (high
+            // ground up on a hill, like the rest of it).
+            if (c == Cell.Puddle && NextToSlope(x, y)) return ElevAt(x, y) > 0 ? Cell.Plateau : Cell.Ground;
             return (c == Cell.Ground || c == Cell.Path || c == Cell.Plateau) && StairAt(x, y, out _, out _) ? Cell.Stairs : c;
         }
 
@@ -143,7 +144,10 @@ namespace TWF
             return (Cell)c.cell[i];
         }
 
-        static Cell BaseCellRaw(int x, int y)
+        static Cell BaseCellRaw(int x, int y) => SpanLevel(x, y) > 0 ? Cell.Bridge : LandCell(x, y);
+
+        // What the land itself holds (under a high bridge, what it crosses).
+        public static Cell LandCell(int x, int y)
         {
             var p = new Vector2(x + 0.5f, y + 0.5f);
             float d = p.magnitude;
@@ -159,8 +163,11 @@ namespace TWF
             // Four roads leave the village so you never start lost.
             if (d < 140f && (Mathf.Abs(x) < 2 || Mathf.Abs(y) < 2)) path = true;
 
-            // Rivers on the low ground, swelling into lakes; a path crosses on a bridge, a level up.
-            if (RiverAt(x, y)) return path && BridgeCrosses(x, y) ? Cell.Bridge : Cell.Water;
+            // Rivers on the low ground, swelling into lakes; a path crosses on a bridge.
+            if (RiverAt(x, y)) return (path && BridgeCrosses(x, y)) || BridgeGap(x, y) ? Cell.Bridge : Cell.Water;
+
+            // Canyons through the high ground: water on the floor, lava in the ash wastes.
+            if (CanyonAt(x, y)) return BiomeAt(p) == Biome.Ember ? Cell.Lava : Cell.Water;
 
             // Raised land: hills, mesas, volcanoes and mountain ranges (see WorldGenTerrain).
             int elev = ElevRaw(x, y);
@@ -183,11 +190,20 @@ namespace TWF
                 case Biome.Marsh: if (blob > 0.64f) return Cell.Water; break;
                 case Biome.Ember: if (blob > 0.68f) return Cell.Lava; break;
                 case Biome.Ruins:
-                    // Broken straight walls on a coarse grid.
-                    if ((x % 13 == 0 || y % 11 == 0) && Noise(x, y, 0.2f, 33) > 0.55f) return Cell.Wall;
+                    // Broken straight walls on a coarse grid: stretches of at least three tiles (a lone tile of wall
+                    // is a square block standing about, not a ruin).
+                    if ((x % 13 == 0 && WallRun(x, y, 0, 1)) || (y % 11 == 0 && WallRun(x, y, 1, 0))) return Cell.Wall;
                     break;
             }
             return Cell.Ground;
+        }
+
+        // Is this tile part of three or more wall tiles in a row along (dx, dy)?
+        static bool WallRun(int x, int y, int dx, int dy)
+        {
+            bool W(int k) => Noise(x + dx * k, y + dy * k, 0.2f, 33) > 0.55f;
+            if (!W(0)) return false;
+            return (W(-1) && W(1)) || (W(-1) && W(-2)) || (W(1) && W(2));
         }
 
         public static bool Walkable(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Hub || c == Cell.CastleFloor || c == Cell.Puddle || c == Cell.Bridge;
@@ -458,6 +474,167 @@ namespace TWF
             return true;
         }
 
+        // Hidden caches: a small chest off the beaten track, so that leaving the road pays. About one chunk in three is
+        // searched for its most out-of-the-way spot: up on high ground, or tucked into a nook shut in by cliffs and
+        // water, well away from any path. Open flat country has no such spot and gets none. The spot can always be
+        // walked to from the land round it.
+        static readonly Dictionary<long, Vector2Int?> caches = new Dictionary<long, Vector2Int?>();
+
+        public static bool HasCache(int cx, int cy, out Vector2Int cell)
+        {
+            long key = ((long)cx << 32) ^ (uint)cy;
+            if (!caches.TryGetValue(key, out var found))
+            {
+                found = FindCache(cx, cy);
+                if (caches.Count > 4000) caches.Clear();
+                caches[key] = found;
+            }
+            cell = found ?? default;
+            return found.HasValue;
+        }
+
+        static Vector2Int? FindCache(int cx, int cy)
+        {
+            if (Hash(cx * 19 + 7, cy * 23 + 1) % 3 != 0) return null;
+            if (HasWaypoint(cx, cy, out _) || HasBossGate(cx, cy, out _) || HasChestRaw(cx, cy, out _, out _) || HasDungeon(cx, cy, out _)) return null;
+            int x0 = cx * ChunkSize, y0 = cy * ChunkSize;
+            if (new Vector2(x0 + ChunkSize / 2, y0 + ChunkSize / 2).magnitude < HubRadius + 60f) return null;
+            int low = int.MaxValue;
+            for (int y = 0; y < ChunkSize; y += 2)
+            for (int x = 0; x < ChunkSize; x += 2)
+                low = Mathf.Min(low, ElevAt(x0 + x, y0 + y));
+            var best = new List<(int score, Vector2Int at)>();
+            for (int y = 3; y < ChunkSize - 3; y++)
+            for (int x = 3; x < ChunkSize - 3; x++)
+            {
+                int wx = x0 + x, wy = y0 + y, lv = ElevAt(wx, wy);
+                if (lv >= MountainLevel || InFarmland(wx, wy) || CastleAt(wx, wy, out _) || FortressAt(wx, wy, out _)) continue;
+                // How shut in the spot is: the tiles within three of it that are not open ground on its own level.
+                int shut = 0; bool room = true, road = false;
+                for (int dy = -3; dy <= 3; dy++)
+                for (int dx = -3; dx <= 3; dx++)
+                {
+                    var c = CellAt(wx + dx, wy + dy);
+                    bool open = (c == Cell.Ground || c == Cell.Plateau || c == Cell.Path) && ElevAt(wx + dx, wy + dy) == lv;
+                    if (!open) { shut++; if (Mathf.Abs(dx) <= 1 && Mathf.Abs(dy) <= 1) room = false; }
+                    if (c == Cell.Path || c == Cell.Bridge) road = true;
+                }
+                if (!room || road) continue;
+                int up = lv - low;
+                if (shut < 20 && up < 3) continue;
+                best.Add((shut + up * 8 + (int)(Hash(wx, wy) & 3), new Vector2Int(wx, wy)));
+            }
+            best.Sort((p, q) => q.score.CompareTo(p.score));
+            for (int i = 0; i < best.Count && i < 4; i++)
+                if (WalksOut(best[i].at)) return best[i].at;
+            return null;
+        }
+
+        // ---------- Summit chests ----------
+        // The top of every peak that can be climbed holds a chest: the highest ground of its chunk, higher than
+        // anything in the chunks round it, with a way down on foot (the flights that climb a mountain terrace by terrace).
+        public const int SummitLevel = MountainLevel + 2;
+        public const int SnowLevel = 10;         // snow lies from here up, outside the ash wastes
+        static readonly Dictionary<long, Vector2Int?> summits = new Dictionary<long, Vector2Int?>();
+        static readonly Dictionary<long, int> chunkTops = new Dictionary<long, int>();
+
+        static int ChunkTop(int cx, int cy)
+        {
+            long key = ((long)cx << 32) ^ (uint)cy;
+            if (chunkTops.TryGetValue(key, out int top)) return top;
+            for (int y = 0; y < ChunkSize; y++)
+            for (int x = 0; x < ChunkSize; x++)
+                top = Mathf.Max(top, ElevAt(cx * ChunkSize + x, cy * ChunkSize + y));
+            if (chunkTops.Count > 8000) chunkTops.Clear();
+            return chunkTops[key] = top;
+        }
+
+        public static bool HasSummit(int cx, int cy, out Vector2Int cell)
+        {
+            long key = ((long)cx << 32) ^ (uint)cy;
+            if (!summits.TryGetValue(key, out var found))
+            {
+                found = FindSummit(cx, cy);
+                if (summits.Count > 4000) summits.Clear();
+                summits[key] = found;
+            }
+            cell = found ?? default;
+            return found.HasValue;
+        }
+
+        static Vector2Int? FindSummit(int cx, int cy)
+        {
+            int top = ChunkTop(cx, cy);
+            if (top < SummitLevel) return null;
+            for (int dy = -1; dy <= 1; dy++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dy == 0) continue;
+                int other = ChunkTop(cx + dx, cy + dy);
+                if (other > top || (other == top && (dy < 0 || (dy == 0 && dx < 0)))) return null;
+            }
+            // The middle of the top terrace, on open ground with room round it.
+            var tops = new List<Vector2Int>(); Vector2 mid = Vector2.zero;
+            for (int y = 0; y < ChunkSize; y++)
+            for (int x = 0; x < ChunkSize; x++)
+            {
+                int wx = cx * ChunkSize + x, wy = cy * ChunkSize + y;
+                if (ElevAt(wx, wy) != top || !Floor(CellAt(wx, wy)) || CellAt(wx, wy) == Cell.Path) continue;
+                tops.Add(new Vector2Int(wx, wy)); mid += new Vector2(wx, wy);
+            }
+            if (tops.Count == 0) return null;
+            mid /= tops.Count;
+            tops.Sort((p, q) => ((Vector2)p - mid).sqrMagnitude.CompareTo(((Vector2)q - mid).sqrMagnitude));
+            for (int i = 0; i < tops.Count && i < 3; i++)
+                if (WalksDown(tops[i])) return tops[i];
+            return null;
+        }
+
+        // Can a walker get from here down off the mountain?
+        static bool WalksDown(Vector2Int from)
+        {
+            const int R = 72, W = 2 * R + 1;
+            var seen = new bool[W * W];
+            var open = new Queue<Vector2Int>();
+            open.Enqueue(from); seen[R * W + R] = true;
+            while (open.Count > 0)
+            {
+                var p = open.Dequeue();
+                if (ElevAt(p.x, p.y) < MountainLevel && CellAt(p.x, p.y) != Cell.Stairs) return true;
+                if (Mathf.Abs(p.x - from.x) >= R - 1 || Mathf.Abs(p.y - from.y) >= R - 1) continue;
+                foreach (var d in StairDirs)
+                {
+                    var q = p + d;
+                    int i = (q.y - from.y + R) * W + (q.x - from.x + R);
+                    if (seen[i] || !CanStep(p.x, p.y, q.x, q.y)) continue;
+                    seen[i] = true; open.Enqueue(q);
+                }
+            }
+            return false;
+        }
+
+        // Can a walker get from here out into the land round it (not an island, not a ledge with no way up)?
+        static bool WalksOut(Vector2Int from)
+        {
+            const int R = 28, W = 2 * R + 1;
+            var seen = new bool[W * W];
+            var open = new Queue<Vector2Int>();
+            open.Enqueue(from); seen[R * W + R] = true;
+            while (open.Count > 0)
+            {
+                var p = open.Dequeue();
+                if (Mathf.Abs(p.x - from.x) >= R - 1 || Mathf.Abs(p.y - from.y) >= R - 1) return true;
+                foreach (var d in StairDirs)
+                {
+                    var q = p + d;
+                    int i = (q.y - from.y + R) * W + (q.x - from.x + R);
+                    if (seen[i] || !CanStep(p.x, p.y, q.x, q.y)) continue;
+                    seen[i] = true; open.Enqueue(q);
+                }
+            }
+            return false;
+        }
+
         // Dungeons: one per patch of the map, at a random chunk and spot inside it, kept clear of other landmarks.
         public const int DungeonGrid = 6;
         const int DungeonEdge = 7;   // tiles from the chunk border, so the stairwell never crosses into the next chunk
@@ -523,8 +700,11 @@ namespace TWF
                 var top = a + d * len;
                 if (!Floor(BaseCell(top.x, top.y))) continue;
                 int lo = ElevAt(a.x, a.y), hi = ElevAt(top.x, top.y);
-                if (hi - lo < 1 || hi - lo > 2 || hi >= MountainLevel) continue;
+                if (hi - lo < 1 || hi - lo > 2) continue;
                 bool onPath = CrossesPath(a, d, r, 1, len);
+                // In the ruins a flight is a stone stair, and it stands where it is needed: on a road, or up a cliff.
+                // Cut into an edge that is a walkable bank anyway it is a stair to nowhere, boxed in by its own walls.
+                if (!onPath && BiomeAt(new Vector2(a.x, a.y)) == Biome.Ruins && BankAllowed(a.x, a.y, hi)) continue;
                 // Short flights: for paths that would otherwise run into a cliff, and for a single level up.
                 if (len < StairLength && !onPath && hi - lo > 1) continue;
                 // As wide as the ground allows, up to MaxWidth: a broad grassy slope rather than a narrow stair.
@@ -624,8 +804,8 @@ namespace TWF
 
         // ---------- Banks: rises you can walk up anywhere ----------
         // In the gentle lands (forest, marsh, round the town) every rise of one or two levels is a grassy bank, one
-        // tile per level, so the hills roll instead of walling you in. In the ruins and the ember wastes about half of
-        // the edges are banks, in long stretches, and the rest stay cliffs. Mountains above BankTopRugged keep their
+        // tile per level, so the hills roll instead of walling you in. In the ruins most of the edges are banks and in
+        // the ember wastes about half, in long stretches, and the rest stay cliffs. Mountains above BankTopRugged keep their
         // cliffs: the high ranges are for climbers and flyers.
         const int BankTopRugged = 6;
 
@@ -634,7 +814,9 @@ namespace TWF
             if (hi >= MountainLevel) return false;   // the high ranges are for flyers and climbers
             var b = BiomeAt(new Vector2(x + 0.5f, y + 0.5f));
             if (b == Biome.Forest || b == Biome.Marsh || b == Biome.Village) return true;
-            return hi <= BankTopRugged && Noise(x, y, 0.06f, 91) > 0.48f;
+            // The ruins' mesas are broad and lie across every way through: most of their edges are banks, so you
+            // cross them where you meet them. The ash wastes keep more of their cliffs.
+            return hi <= BankTopRugged && Noise(x, y, 0.06f, 91) > (b == Biome.Ruins ? 0.3f : 0.48f);
         }
 
         static bool BankAt(int x, int y, out Stair stair, out int row)
@@ -708,7 +890,7 @@ namespace TWF
             stair = default;
             var top = a + d * len;
             int lo = ElevAt(a.x, a.y), hi = ElevAt(top.x, top.y);
-            if (hi - lo < 1 || hi - lo > 2 || hi >= MountainLevel) return false;
+            if (hi - lo < 1 || hi - lo > 2) return false;
             if (!OnPath(top.x, top.y) || !Floor(BaseCell(top.x, top.y))) return false;
             // The ramp's own tiles: path at the low level, not already part of a flight; the tile before it too.
             for (int k = len > 1 ? -1 : 0; k < len; k++)
@@ -743,10 +925,13 @@ namespace TWF
 
         // ---------- The bent ground round grassy slopes ----------
         // A grid corner touched by a grassy slope (a natural flight, a bank, a path ramp) gets one height, the same for
-        // every tile that shares it: the highest of each slope's own height there and the flat ground beside it (up to
-        // the top of the highest slope). Slope tiles take their four corners from it; so does flat ground touching a
-        // slope, which bends up to meet it - a triangle at an outside corner, a gentle side - so no step or notch is
-        // left anywhere round a slope. NaN where no slope touches the corner.
+        // every tile that shares it. Slope tiles take their four corners from it; so does flat ground touching a slope,
+        // which bends to meet it, so no step or notch is left anywhere round a slope.
+        // The height is the mean of what the tiles round the corner say: a slope its own height there, flat ground its
+        // level. Where an edge is a staircase of slopes (a rise running at a slant), the slopes disagree at the corners
+        // between their rows; the mean lays one smooth slanting bank over them instead of a row of teeth. Where a cliff
+        // ends at the corner, its top has to stay put, so the corner keeps the highest height round it.
+        // NaN where no slope touches the corner.
         static readonly Dictionary<long, float> vertexHeights = new Dictionary<long, float>();
 
         public static float SlopeVertexHeight(int cx, int cy)
@@ -755,34 +940,63 @@ namespace TWF
             if (vertexHeights.TryGetValue(key, out float h)) return h;
             h = float.NaN;
             int top = int.MinValue;
-            for (int ox = -1; ox <= 0; ox++)
-            for (int oy = -1; oy <= 0; oy++)
+            // The four tiles round the corner: 0 = (-1,-1), 1 = (0,-1), 2 = (-1,0), 3 = (0,0).
+            var said = new float[4]; var has = new bool[4]; var lvl = new int[4]; var slope = new Stair?[4];
+            float max = float.MinValue;
+            for (int k = 0; k < 4; k++)
             {
-                int qx = cx + ox, qy = cy + oy;
-                if (CellAt(qx, qy) != Cell.Stairs || !StairAt(qx, qy, out var st, out _) || !st.natural) continue;
-                float along = (cx - st.a.x) * st.d.x + (cy - st.a.y) * st.d.y + (st.d.x + st.d.y < 0 ? 1f : 0f);
-                float sh = (st.lo + (st.hi - st.lo) * Mathf.Clamp01(along / st.len)) * LevelHeight;
-                h = float.IsNaN(h) ? sh : Mathf.Max(h, sh);
-                top = Mathf.Max(top, st.hi);
-            }
-            if (top != int.MinValue)
-                for (int ox = -1; ox <= 0; ox++)
-                for (int oy = -1; oy <= 0; oy++)
+                int qx = cx - 1 + (k & 1), qy = cy - 1 + (k >> 1);
+                lvl[k] = ElevAt(qx, qy);
+                var c = CellAt(qx, qy);
+                if (c == Cell.Stairs && StairAt(qx, qy, out var st, out _) && st.natural)
                 {
-                    int qx = cx + ox, qy = cy + oy;
-                    if (!Bends(CellAt(qx, qy))) continue;
-                    int l = ElevAt(qx, qy);
-                    if (l <= top) h = Mathf.Max(h, l * LevelHeight);
+                    float along = (cx - st.a.x) * st.d.x + (cy - st.a.y) * st.d.y + (st.d.x + st.d.y < 0 ? 1f : 0f);
+                    said[k] = (st.lo + (st.hi - st.lo) * Mathf.Clamp01(along / st.len)) * LevelHeight;
+                    has[k] = true; slope[k] = st;
+                    top = Mathf.Max(top, st.hi);
+                    max = Mathf.Max(max, said[k]);
                 }
+            }
+            if (top == int.MinValue) { Remember(key, h); return h; }
+            for (int k = 0; k < 4; k++)
+            {
+                if (has[k]) continue;
+                int qx = cx - 1 + (k & 1), qy = cy - 1 + (k >> 1);
+                if (!Bends(CellAt(qx, qy)) || lvl[k] > top) continue;
+                said[k] = lvl[k] * LevelHeight; has[k] = true;
+                max = Mathf.Max(max, said[k]);
+            }
+            // A cliff along one of the four edges meeting here (between two of the tiles round it): the higher tile
+            // stands over the lower one, unless the lower one is a slope reaching up to it.
+            bool Cliff(int a, int b)
+            {
+                if (lvl[a] == lvl[b]) return false;
+                int hi = lvl[a] > lvl[b] ? a : b, lo = hi == a ? b : a;
+                return !(slope[lo] is Stair ls && lvl[hi] <= ls.hi);
+            }
+            bool cliff = Cliff(0, 1) || Cliff(2, 3) || Cliff(0, 2) || Cliff(1, 3);
+            if (cliff) h = max;
+            else
+            {
+                float sum = 0f; int n = 0;
+                for (int k = 0; k < 4; k++) if (has[k]) { sum += said[k]; n++; }
+                h = sum / n;
+            }
+            Remember(key, h);
+            return h;
+        }
+
+        static void Remember(long key, float h)
+        {
             if (vertexHeights.Count > 200000) vertexHeights.Clear();
             vertexHeights[key] = h;
-            return h;
         }
 
         // Flat ground that bends to meet a slope (puddles and anything built stay flat).
         public static bool Bends(Cell c) => c == Cell.Ground || c == Cell.Path || c == Cell.Plateau;
 
-        // The four corner heights of a grassy slope tile, or of flat ground bent by one; false for anything else.
+        // The four corner heights of a grassy slope tile, or of flat ground bent by one (up or down); false for
+        // anything else.
         public static bool SurfaceAt(int x, int y, out float h00, out float h10, out float h11, out float h01)
         {
             h00 = h10 = h11 = h01 = 0f;
@@ -790,10 +1004,10 @@ namespace TWF
             bool slope = c == Cell.Stairs && StairAt(x, y, out var st, out _) && st.natural;
             if (!slope && !Bends(c)) return false;
             float own = ElevAt(x, y) * LevelHeight;
-            float V(int cx, int cy) { float v = SlopeVertexHeight(cx, cy); return float.IsNaN(v) ? own : Mathf.Max(v, slope ? 0f : own); }
+            float V(int cx, int cy) { float v = SlopeVertexHeight(cx, cy); return float.IsNaN(v) ? own : v; }
             h00 = V(x, y); h10 = V(x + 1, y); h11 = V(x + 1, y + 1); h01 = V(x, y + 1);
             if (slope) return true;
-            return h00 > own + 0.01f || h10 > own + 0.01f || h11 > own + 0.01f || h01 > own + 0.01f;
+            return Mathf.Abs(h00 - own) > 0.01f || Mathf.Abs(h10 - own) > 0.01f || Mathf.Abs(h11 - own) > 0.01f || Mathf.Abs(h01 - own) > 0.01f;
         }
 
         // Can a walker go from one cell to the one next to it (not diagonal)? Different levels only meet on stairs,
