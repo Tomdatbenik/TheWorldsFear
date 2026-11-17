@@ -68,7 +68,7 @@ namespace TWF
         static void ClearTerrainCache()
         {
             terrainCache.Clear();
-            caches.Clear(); summits.Clear(); chunkTops.Clear(); bridgeRuns.Clear();
+            caches.Clear(); summits.Clear(); chunkTops.Clear(); bridgeTiles.Clear(); bridgeApproach.Clear(); bridgeSeen.Clear(); bridgeRegions.Clear();
             landmarks.Clear();
             farms = null;
         }
@@ -326,14 +326,18 @@ namespace TWF
 
         const int Abutment = 2;       // how far the raised path runs out from each end of a bridge
 
-        // A path tile in the river is a bridge where the path crosses it, at whatever slant: the stretch of path lying
-        // in the water (all its tiles, taken together) reaches the path on both banks. The river is the line where its
-        // noise crosses the middle, so the two banks are the two signs of it. A path that only dips into the water and
-        // comes out on the same bank, or runs along in the river for a long way, just stops at it.
-        const int MaxBridgeTiles = 800;
-        static readonly Dictionary<long, bool> bridgeRuns = new Dictionary<long, bool>();
-        static readonly Queue<Vector2Int> bridgeQueue = new Queue<Vector2Int>();
-        static readonly List<long> bridgeRun = new List<long>();
+        // Where a path runs into the river and comes out on the other bank, the water wins (a path never lies in the
+        // river) and one straight plank bridge, two tiles wide, crosses it: along x or y, on the lane where the
+        // crossing is shortest and its ends come out nearest the path. Where an end does not come out on the path, the
+        // path is led to it along the bank. The river is the line where its noise crosses the middle, so the two banks
+        // are the two signs of it; a path that dips into the water and comes out on the same bank gets no bridge.
+        // Worked out a region at a time (every stretch of path in the water there), and kept.
+        const int BridgeRegion = 64;
+        const int MaxSpan = 56;             // the longest bridge, in tiles (under BridgeRegion: a bridge reaches no further than the next region)
+        const int MaxRiverRun = 3000;       // a stretch of path in the water bigger than this is left alone
+        static readonly HashSet<long> bridgeTiles = new HashSet<long>(), bridgeApproach = new HashSet<long>(), bridgeSeen = new HashSet<long>(), bridgeRegions = new HashSet<long>();
+
+        static long TileKey(int x, int y) => ((long)x << 32) ^ (uint)y;
 
         static float RiverSide(int x, int y)
         {
@@ -341,59 +345,185 @@ namespace TWF
             return Noise(x + wx, y + wy, 0.0026f, 61) - 0.5f;
         }
 
-        public static bool BridgeCrosses(int x, int y)
+        static bool NearRiver(int x, int y) => RiverNoise(x, y) <= RiverHalf(x, y) + 0.03f;
+        static bool Built(int x, int y) => FortressCell(x, y, out _) || CastleCell(x, y, out _);
+
+        static void EnsureBridges(int x, int y)
         {
-            if (!OnPath(x, y) || !RiverAt(x, y)) return false;
-            long Key(int qx, int qy) => ((long)qx << 32) ^ (uint)qy;
-            if (bridgeRuns.TryGetValue(Key(x, y), out bool known)) return known;
-            bridgeQueue.Clear(); bridgeRun.Clear();
-            var seen = new HashSet<long> { Key(x, y) };
-            bridgeQueue.Enqueue(new Vector2Int(x, y));
-            bool plus = false, minus = false, built = false, tooLong = false;
-            while (bridgeQueue.Count > 0)
+            int rx = Mathf.FloorToInt((float)x / BridgeRegion), ry = Mathf.FloorToInt((float)y / BridgeRegion);
+            for (int j = -1; j <= 1; j++)
+                for (int i = -1; i <= 1; i++)
+                    if (bridgeRegions.Add(TileKey(rx + i, ry + j))) BridgeRegionWork((rx + i) * BridgeRegion, (ry + j) * BridgeRegion);
+        }
+
+        static void BridgeRegionWork(int x0, int y0)
+        {
+            for (int y = y0; y < y0 + BridgeRegion; y++)
+                for (int x = x0; x < x0 + BridgeRegion; x++)
+                    if (OnPath(x, y) && RiverAt(x, y) && !Built(x, y) && !bridgeSeen.Contains(TileKey(x, y))) BridgeRun(x, y);
+        }
+
+        // One stretch of path lying in the water: all of it, the places it meets the path on the banks, and its bridge.
+        static void BridgeRun(int x, int y)
+        {
+            var run = new List<Vector2Int>();
+            var contacts = new List<Vector2Int>();
+            var queue = new Queue<Vector2Int>();
+            bridgeSeen.Add(TileKey(x, y)); queue.Enqueue(new Vector2Int(x, y));
+            bool plus = false, minus = false, built = false;
+            while (queue.Count > 0)
             {
-                var q = bridgeQueue.Dequeue();
-                bridgeRun.Add(Key(q.x, q.y));
-                if (bridgeRun.Count > MaxBridgeTiles) { tooLong = true; break; }
+                var q = queue.Dequeue();
+                run.Add(q);
+                if (run.Count > MaxRiverRun) return;
                 for (int k = 0; k < 4; k++)
                 {
                     int nx = q.x + (k == 0 ? 1 : k == 1 ? -1 : 0), ny = q.y + (k == 2 ? 1 : k == 3 ? -1 : 0);
-                    if (FortressCell(nx, ny, out _) || CastleCell(nx, ny, out _)) { built = true; continue; }   // a fort in a lake is a bank of its own
+                    if (Built(nx, ny)) { built = true; contacts.Add(new Vector2Int(nx, ny)); continue; }   // a fort in a lake is a bank of its own
                     if (!OnPath(nx, ny)) continue;
-                    if (!RiverAt(nx, ny)) { if (RiverSide(nx, ny) > 0f) plus = true; else minus = true; continue; }
-                    if (seen.Add(Key(nx, ny))) bridgeQueue.Enqueue(new Vector2Int(nx, ny));
+                    if (!RiverAt(nx, ny)) { if (RiverSide(nx, ny) > 0f) plus = true; else minus = true; contacts.Add(new Vector2Int(nx, ny)); continue; }
+                    if (bridgeSeen.Add(TileKey(nx, ny))) queue.Enqueue(new Vector2Int(nx, ny));
                 }
             }
-            bool crosses = (plus ? 1 : 0) + (minus ? 1 : 0) + (built ? 1 : 0) >= 2 && !tooLong;
-            if (tooLong) { bridgeRuns[Key(x, y)] = false; return false; }
-            foreach (long key in bridgeRun) bridgeRuns[key] = crosses;
-            return crosses;
+            if ((plus ? 1 : 0) + (minus ? 1 : 0) + (built ? 1 : 0) < 2) return;
+            float s0 = LayBridge(run, contacts, 0, 0f), s1 = LayBridge(run, contacts, 1, 0f);   // scored, not laid
+            // Roads meeting in the middle of a lake get a bridge each way; any other crossing, the better one.
+            bool both = run.Count > 250;
+            if (both || s0 <= s1) LayBridge(run, contacts, 0, float.MaxValue);
+            if (both || s1 < s0) LayBridge(run, contacts, 1, float.MaxValue);
         }
 
-        // A river tile just off the path's ragged edge, with the bridge's deck or the path on the bank on both sides of
-        // it along one axis: decked over too, or it is a square of open water in the end of the bridge.
-        public static bool BridgeGap(int x, int y)
+        static int ContactDistance(List<Vector2Int> contacts, Vector2Int p)
         {
-            bool Deck(int qx, int qy) => OnPath(qx, qy) && (!RiverAt(qx, qy) || BridgeCrosses(qx, qy));
-            return (Deck(x - 1, y) && Deck(x + 1, y)) || (Deck(x, y - 1) && Deck(x, y + 1));
+            int best = 999;
+            foreach (var c in contacts) best = Mathf.Min(best, Mathf.Abs(c.x - p.x) + Mathf.Abs(c.y - p.y));
+            return best;
         }
 
-        // A bridge, and the path on the banks for Abutment tiles out from it: kept at BridgeLevel, flat to the water.
+        // The best lane for a bridge along one axis (0: along x, 1: along y), laid if it scores under `beat`. Returns
+        // its score (lower is better), or float.MaxValue when there is none.
+        static readonly List<Vector2Int[]> bridgePending = new List<Vector2Int[]>();
+        static float LayBridge(List<Vector2Int> run, List<Vector2Int> contacts, int axis, float beat)
+        {
+            int dx = axis == 0 ? 1 : 0, dy = 1 - dx;
+            float cx = 0, cy = 0;
+            foreach (var t in run) { cx += t.x; cy += t.y; }
+            cx /= run.Count; cy /= run.Count;
+            // One tile of the run on each lane: the nearest to the middle of the run.
+            var lanes = new Dictionary<int, Vector2Int>();
+            foreach (var t in run)
+            {
+                int lane = axis == 0 ? t.y : t.x;
+                float d = Mathf.Abs(axis == 0 ? t.x - cx : t.y - cy);
+                if (!lanes.TryGetValue(lane, out var cur) || d < Mathf.Abs(axis == 0 ? cur.x - cx : cur.y - cy)) lanes[lane] = t;
+            }
+            float best = float.MaxValue; Vector2Int bestA = default, bestB = default;
+            foreach (var kv in lanes)
+            {
+                var t = kv.Value;
+                var side = new Vector2Int(t.x + dy, t.y + dx);   // the second lane, beside it
+                if (!RiverAt(side.x, side.y) || Built(side.x, side.y)) continue;
+                int back = 0, on = 0;
+                while (back <= MaxSpan && RiverAt(t.x - dx * (back + 1), t.y - dy * (back + 1)) && !Built(t.x - dx * (back + 1), t.y - dy * (back + 1))) back++;
+                while (on <= MaxSpan && RiverAt(t.x + dx * (on + 1), t.y + dy * (on + 1)) && !Built(t.x + dx * (on + 1), t.y + dy * (on + 1))) on++;
+                if (back + on + 1 > MaxSpan) continue;
+                var a = new Vector2Int(t.x - dx * (back + 1), t.y - dy * (back + 1));
+                var b = new Vector2Int(t.x + dx * (on + 1), t.y + dy * (on + 1));
+                bool builtA = Built(a.x, a.y), builtB = Built(b.x, b.y);
+                if (!builtA && !builtB && (RiverSide(a.x, a.y) > 0f) == (RiverSide(b.x, b.y) > 0f)) continue;   // both ends on one bank
+                float score = (back + on + 1) + 3f * (ContactDistance(contacts, a) + ContactDistance(contacts, b))
+                    + 0.01f * Mathf.Abs(axis == 0 ? t.y - cy : t.x - cx);
+                if (score < best) { best = score; bestA = a; bestB = b; }
+            }
+            if (best >= beat) return best;
+            // Lay it: both lanes, each from bank to bank, and the path along the bank to each end.
+            for (int lane = 0; lane <= 1; lane++)
+            {
+                var from = new Vector2Int(bestA.x + dx + dy * lane, bestA.y + dy + dx * lane);
+                for (int k = 0; k <= MaxSpan; k++)
+                {
+                    var q = new Vector2Int(from.x + dx * k, from.y + dy * k);
+                    if (!RiverAt(q.x, q.y) || Built(q.x, q.y)) break;
+                    bridgeTiles.Add(TileKey(q.x, q.y));
+                }
+                // (The second lane may start a tile or two further back, where the bank is ragged.)
+                for (int k = 1; k <= 3; k++)
+                {
+                    var q = new Vector2Int(from.x - dx * k, from.y - dy * k);
+                    if (!RiverAt(q.x, q.y) || Built(q.x, q.y)) break;
+                    bridgeTiles.Add(TileKey(q.x, q.y));
+                }
+            }
+            Approach(bestA, contacts); Approach(bestB, contacts);
+            return best;
+        }
+
+        // From a bridge's end along the bank to the nearest place the path stands on dry land: the shortest way over
+        // ground by the river, two tiles wide.
+        static void Approach(Vector2Int end, List<Vector2Int> contacts)
+        {
+            if (Built(end.x, end.y) || OnPath(end.x, end.y)) return;
+            var prev = new Dictionary<long, Vector2Int> { { TileKey(end.x, end.y), end } };
+            var queue = new Queue<Vector2Int>();
+            queue.Enqueue(end);
+            while (queue.Count > 0 && prev.Count < 2500)
+            {
+                var q = queue.Dequeue();
+                if (OnPath(q.x, q.y))
+                {
+                    for (var t = q; t != end; t = prev[TileKey(t.x, t.y)])
+                        for (int j = 0; j <= 1; j++)
+                            for (int i = 0; i <= 1; i++)
+                                if (!RiverAt(t.x + i, t.y + j) && !Built(t.x + i, t.y + j)) bridgeApproach.Add(TileKey(t.x + i, t.y + j));
+                    for (int j = 0; j <= 1; j++)
+                        for (int i = 0; i <= 1; i++)
+                            if (!RiverAt(end.x + i, end.y + j) && !Built(end.x + i, end.y + j)) bridgeApproach.Add(TileKey(end.x + i, end.y + j));
+                    return;
+                }
+                for (int k = 0; k < 4; k++)
+                {
+                    int nx = q.x + (k == 0 ? 1 : k == 1 ? -1 : 0), ny = q.y + (k == 2 ? 1 : k == 3 ? -1 : 0);
+                    if (prev.ContainsKey(TileKey(nx, ny)) || RiverAt(nx, ny) || Built(nx, ny) || !NearRiver(nx, ny)) continue;
+                    prev[TileKey(nx, ny)] = q; queue.Enqueue(new Vector2Int(nx, ny));
+                }
+            }
+            bridgeApproach.Add(TileKey(end.x, end.y));
+        }
+
+        // A plank bridge lies over this river tile.
+        public static bool BridgeCrosses(int x, int y)
+        {
+            if (!RiverAt(x, y)) return false;
+            EnsureBridges(x, y);
+            return bridgeTiles.Contains(TileKey(x, y));
+        }
+
+        // Dry land the path is led over to reach a bridge's end.
+        public static bool BridgeApproach(int x, int y)
+        {
+            if (!NearRiver(x, y) || RiverAt(x, y)) return false;
+            EnsureBridges(x, y);
+            return bridgeApproach.Contains(TileKey(x, y));
+        }
+
+        // A bridge, the path led to it, and the bank for Abutment tiles out from its ends: kept at BridgeLevel, flat to
+        // the water. (The banks may lie outside river land, at the edge of the ash wastes.)
         static bool BridgeZone(int x, int y)
         {
-            // (The banks may lie outside river land, at the edge of the ash wastes: an end is flattened wherever a
-            // bridge needs one.)
-            if (!OnPath(x, y)) return false;
             if (RiverAt(x, y)) return BridgeCrosses(x, y);
-            if (RiverNoise(x, y) > RiverHalf(x, y) + 0.03f) return false;
-            foreach (var d in new[] { new Vector2Int(1, 0), new Vector2Int(-1, 0), new Vector2Int(0, 1), new Vector2Int(0, -1) })
+            if (!NearRiver(x, y)) return false;
+            if (BridgeApproach(x, y)) return true;
+            for (int dir = 0; dir < 4; dir++)
+            {
+                int ddx = dir == 0 ? 1 : dir == 1 ? -1 : 0, ddy = dir == 2 ? 1 : dir == 3 ? -1 : 0;
                 for (int k = 1; k <= Abutment; k++)
                 {
-                    int qx = x + d.x * k, qy = y + d.y * k;
-                    if (!RiverAt(qx, qy)) { if (!OnPath(qx, qy)) break; continue; }
-                    if (OnPath(qx, qy) && BridgeCrosses(qx, qy)) return true;
+                    int qx = x + ddx * k, qy = y + ddy * k;
+                    if (!RiverAt(qx, qy)) continue;
+                    if (BridgeCrosses(qx, qy)) return true;
                     break;
                 }
+            }
             return false;
         }
 

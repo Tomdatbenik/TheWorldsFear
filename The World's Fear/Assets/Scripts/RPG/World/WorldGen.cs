@@ -163,8 +163,9 @@ namespace TWF
             // Four roads leave the village so you never start lost.
             if (d < 140f && (Mathf.Abs(x) < 2 || Mathf.Abs(y) < 2)) path = true;
 
+            if (BridgeApproach(x, y)) path = true;   // the path led along the bank to a bridge's end
             // Rivers on the low ground, swelling into lakes; a path crosses on a bridge.
-            if (RiverAt(x, y)) return (path && BridgeCrosses(x, y)) || BridgeGap(x, y) ? Cell.Bridge : Cell.Water;
+            if (RiverAt(x, y)) return BridgeCrosses(x, y) ? Cell.Bridge : Cell.Water;
 
             // Canyons through the high ground: water on the floor, lava in the ash wastes.
             if (CanyonAt(x, y)) return BiomeAt(p) == Biome.Ember ? Cell.Lava : Cell.Water;
