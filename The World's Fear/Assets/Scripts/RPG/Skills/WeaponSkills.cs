@@ -223,8 +223,9 @@ namespace TWF
                     break;
                 case WeaponSkillId.Vault:
                     Dash(s, 7f, 7f);
-                    fx.Add(new DashEffect { distance = 7f, duration = 0.35f, invulnerable = true, color = col });
-                    fx.Add(new CraftedArea { atCaster = true, radius = 2.4f, delay = 0.35f, damageMult = 2f, hit = new HitExtras { color = col, knockback = 2.5f } });
+                    // The crash lands where the hero comes down, not where the vault started.
+                    fx.Add(new DashEffect { distance = 7f, duration = 0.35f, invulnerable = true, color = col, onLand = new List<SkillEffect> {
+                        new CraftedArea { atCaster = true, radius = 2.4f, delay = 0.05f, damageMult = 2f, hit = new HitExtras { color = col, knockback = 2.5f } } } });
                     break;
                 case WeaponSkillId.Barrage:
                     Shot(s, 10f, 7f);

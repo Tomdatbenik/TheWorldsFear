@@ -50,6 +50,10 @@ namespace TWF
             rng = new System.Random(WorldManager.PendingDungeonSeed);
             variant = DungeonVariant.For(biome, WorldManager.PendingDungeonSeed);
             art = ArtSet.Instance;
+            // A dungeon's floor is flat: no heights left over from the scene before it (the town's wall tops and
+            // stairs, the open world's plateaus), or they show up here as slopes that carry the hero over the walls.
+            TerrainHeight.Clear();
+            TerrainHeight.World = null;
 
             layout = DungeonLayout.Generate(variant, level, WorldManager.PendingDungeonSeed);
             floor = layout.floor;

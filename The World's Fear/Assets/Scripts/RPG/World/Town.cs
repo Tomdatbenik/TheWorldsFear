@@ -59,9 +59,15 @@ namespace TWF
             return (ax > Outer - Thick - 0.5f && ax < Outer + 0.5f && ay > GateHalf) || (ay > Outer - Thick - 0.5f && ay < Outer + 0.5f && ax > GateHalf);
         }
 
+        // The town's wall tops and stairs live in TerrainHeight's static list: left there, they rose out of the
+        // floor of the next scene (a dungeon is laid out on the same coordinates) as slopes the hero walked up.
+        int heights = -1;
+        void OnDestroy() => TerrainHeight.ClearIfStill(heights);
+
         void Make()
         {
             TerrainHeight.Clear();
+            heights = TerrainHeight.Version;
             stone = new Solid { topAnchoredHeight = CappedWallHeight }; keepStone = new Solid(); top = new Solid(); roof = new Solid(); purpleRoof = new Solid();
             wood = new Solid(); dark = new Solid(); cloth = new Solid(); glass = new Solid();
 

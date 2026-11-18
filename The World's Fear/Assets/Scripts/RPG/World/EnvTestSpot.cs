@@ -31,9 +31,13 @@ namespace TWF
 
         Tilemap ground, detail;
 
+        int heights = -1;
+        void OnDestroy() => TerrainHeight.ClearIfStill(heights);
+
         void Start()
         {
             TerrainHeight.Clear();
+            heights = TerrainHeight.Version;
             ClearOldDecor();
             FindGround();
             PaintGround();

@@ -357,6 +357,48 @@ namespace TWF.Tests
             Check.Near(blade.implicitValue, 15f, 0.001f, "damage of an off-hand blade after loading");
         }
 
+        // Off-hand items equip on their own; Dual Wield only gates putting a real sword in the off hand.
+        [TwfCheck("TestRange/Off hand: off-hand items equip without Dual Wield, which is only for swords")]
+        static IEnumerator OffHandWithoutDualWield()
+        {
+            yield return Yard();
+            var owned = Profile.Data.masteriesOwned;
+            bool hadSword = owned.Contains((int)WeaponType.Sword);
+            owned.Remove((int)WeaponType.Sword);
+            try
+            {
+                ItemInstance Item(ItemSlot slot, string baseName, WeaponType weapon = WeaponType.Fists, OffHandKind kind = OffHandKind.Shield) => new ItemInstance
+                {
+                    uid = System.Guid.NewGuid().ToString(), slot = slot, weaponType = (int)weapon, offHandKind = (int)kind, rarity = Rarity.Rare, itemLevel = 20,
+                    baseName = baseName, name = baseName, implicitStat = StatType.Damage, implicitValue = 10f,
+                };
+                while (Profile.Data.inventory.Count > Profile.InventorySize - 4) Profile.Data.inventory.RemoveAt(0);
+                var shield = Item(ItemSlot.OffHand, "Iron Kite Shield");
+                var blade = Item(ItemSlot.OffHand, "Sidesword", kind: OffHandKind.Sword);
+                var axe = Item(ItemSlot.Weapon, "Axe", WeaponType.Axe);
+                var sword = Item(ItemSlot.Weapon, "Iron Sword", WeaponType.Sword);
+                Profile.Data.inventory.AddRange(new[] { shield, blade, axe, sword });
+
+                Check.That(Profile.EquipItem(shield), "A shield could not be equipped in the off hand");
+                Check.That(Profile.Equipped(ItemSlot.OffHand) == shield, "The shield is not in the off hand");
+                Check.That(!WeaponMasteries.NeedsDualWield(blade), "An off-hand blade asks for Dual Wield");
+                Check.That(Profile.EquipItem(blade), "An off-hand blade could not be equipped without Dual Wield");
+                Check.That(Profile.Equipped(ItemSlot.OffHand) == blade, "The off-hand blade is not in the off hand");
+                Check.That(!Profile.CanSwitchHand(sword), "A sword can go in the off hand without Dual Wield");
+
+                owned.Add((int)WeaponType.Sword);
+                Check.That(Profile.CanSwitchHand(sword), "With Dual Wield learned, a sword cannot go in the off hand");
+                Check.That(!Profile.CanSwitchHand(axe), "Dual Wield lets a non-sword weapon go in the off hand");
+                Check.That(!Profile.EquipInOtherHand(axe), "An axe was equipped in the off hand");
+                Check.That(axe.slot == ItemSlot.Weapon, "The axe was moved out of the main-hand slot");
+            }
+            finally
+            {
+                owned.Remove((int)WeaponType.Sword);
+                if (hadSword) owned.Add((int)WeaponType.Sword);
+            }
+        }
+
         [TwfCheck("TestRange/Loot: gold, potions and items drop and can be picked up")]
         static IEnumerator LootDrops()
         {

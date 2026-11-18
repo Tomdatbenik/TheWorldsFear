@@ -302,7 +302,7 @@ namespace TWF
             var sb = new System.Text.StringBuilder();
             sb.Append($"<color={Palette.Hex(RarityInfo.Color(item.rarity))}><b>{item.name}</b></color>\n");
             string kind = item.slot == ItemSlot.Weapon ? Weapons.Name((WeaponType)item.weaponType) + (Weapons.Get((WeaponType)item.weaponType).twoHanded ? " (two-handed)" : "")
-                : item.slot == ItemSlot.OffHand ? $"Off-hand {(OffHandKind)item.offHandKind}" + (WeaponMasteries.IsOffHandSword(item) ? " (needs Dual Wield)" : "") : item.slot.ToString();
+                : item.slot == ItemSlot.OffHand ? $"Off-hand {(OffHandKind)item.offHandKind}" + (WeaponMasteries.IsOffHandSword(item) && !IsOffHandBlade(item) ? " (needs Dual Wield)" : "") : item.slot.ToString();
             sb.Append($"<size=80%><color=#999>{item.rarity} {kind} · Item level {item.itemLevel}</color></size>\n");
             if (item.slot == ItemSlot.Weapon)
             {

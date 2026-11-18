@@ -40,6 +40,8 @@ namespace TWF
         Vector2 scroll;
         Rect panel = new Rect(10, 10, 300, 640);
 
+        int heights = -1;
+
         void Awake()
         {
             Instance = this;
@@ -48,6 +50,7 @@ namespace TWF
             Profile.NewGame(WeaponType.Sword);
             Profile.Data.inventory.Clear();
             TerrainHeight.Clear();
+            heights = TerrainHeight.Version;
             TerrainHeight.World = null;
             Build();
             var boot = FindAnyObjectByType<GameBootstrap>();
@@ -63,6 +66,7 @@ namespace TWF
         void OnDestroy()
         {
             if (Instance == this) Instance = null;
+            TerrainHeight.ClearIfStill(heights);
             Shader.SetGlobalFloat("_TWF_ReliefBoost", 0f);
         }
 

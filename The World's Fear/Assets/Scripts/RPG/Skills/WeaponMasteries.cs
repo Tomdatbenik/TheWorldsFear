@@ -87,11 +87,14 @@ namespace TWF
             }
         }
 
-        // Dual Wield: an off-hand sword only goes on once the sword mastery is learned.
         public static bool IsOffHandSword(ItemInstance item) =>
             item != null && item.slot == ItemSlot.OffHand && item.offHandKind == (int)OffHandKind.Sword;
 
-        public static bool NeedsDualWield(ItemInstance item) => IsOffHandSword(item) && !Has(WeaponType.Sword);
+        // Dual Wield is only about swords: a real sword (one made for the main hand) goes in the off hand only once the
+        // sword mastery is learned. Off-hand items, the small off-hand blades that drop as off-hand gear included,
+        // equip like any other off-hand item.
+        public static bool NeedsDualWield(ItemInstance item) =>
+            IsOffHandSword(item) && !ItemGenerator.IsOffHandBlade(item) && !Has(WeaponType.Sword);
 
         public static bool DualWielding => Active(WeaponType.Sword) && IsOffHandSword(Profile.Equipped(ItemSlot.OffHand));
     }

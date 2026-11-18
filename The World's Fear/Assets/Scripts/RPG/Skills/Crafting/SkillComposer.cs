@@ -205,10 +205,12 @@ namespace TWF
                     break;
                 default: // Dash
                     s.targeting = Targeting.Dash; s.range = 6f; s.baseCooldown = 6f; s.castLock = 0.28f;
-                    effects.Add(new DashEffect { distance = 6f, duration = 0.28f / speedMult, damageMult = 1.4f * dmg, hitRadius = 1.3f * area,
-                        status = el.status, color = el.color, invulnerable = true });
+                    var rush = new DashEffect { distance = 6f, duration = 0.28f / speedMult, damageMult = 1.4f * dmg, hitRadius = 1.3f * area,
+                        status = el.status, color = el.color, invulnerable = true };
+                    effects.Add(rush);
+                    // The lingering/split blast goes off where the rush ends.
                     if (lingering || split > 0)
-                        effects.Add(new CraftedArea { atCaster = true, radius = 1.8f * area, delay = 0.3f, ticks = lingering ? 4 : 1, interval = 0.45f,
+                        rush.onLand.Add(new CraftedArea { atCaster = true, radius = 1.8f * area, delay = 0.05f, ticks = lingering ? 4 : 1, interval = 0.45f,
                             damageMult = 0.8f * dmg, extraBlasts = split, hit = hit });
                     break;
             }

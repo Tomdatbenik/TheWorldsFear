@@ -34,6 +34,8 @@ namespace TWF
         void Awake()
         {
             Instance = this;
+            TerrainHeight.Clear();      // flat ground: nothing left over from the town or the open world
+            TerrainHeight.World = null;
 #if UNITY_EDITOR
             // Editor testing: a boss picked before entering play mode (statics reset on domain reload).
             int test = UnityEditor.SessionState.GetInt("TWF_TestBoss", -1);

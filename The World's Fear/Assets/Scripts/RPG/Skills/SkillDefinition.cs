@@ -219,6 +219,8 @@ namespace TWF
         public bool damageAtEnd;
         public StatusSpec status;
         public Color color = Color.white;
+        [Tooltip("Effects fired where the hero actually lands, once the dash is over (Vault's crash).")]
+        [SerializeReference] public List<SkillEffect> onLand = new List<SkillEffect>();
 
         public override void Apply(SkillContext ctx) => ctx.runner.StartCoroutine(Run(ctx));
 
@@ -264,6 +266,10 @@ namespace TWF
                 }
             }
 
+            if (caster == null) yield break;
+            // Where the hero really stopped: a monster or a corner in the way can cut the dash short.
+            end = body ? body.position : caster.transform.G();
+
             if (damageMult > 0f && damageAtEnd)
             {
                 VFX.Ring(end, color, hitR, 0.3f);
@@ -272,12 +278,25 @@ namespace TWF
             }
             if (invulnerable) caster.Invulnerable = false;
             MythicPowers.OnDashEnd(caster, end);
+
+            if (onLand != null && onLand.Count > 0 && !caster.IsDead)
+            {
+                ctx.origin = end;
+                ctx.point = end;
+                foreach (var e in onLand) e?.Apply(ctx);
+            }
         }
 
         public override string Describe(float power)
         {
             string move = blink ? $"Teleports {distance:0.#}m" : $"Dashes {distance:0.#}m";
             if (damageMult > 0f) move += $", dealing {Pct(damageMult * power)} damage" + (damageAtEnd ? " on landing" : " to enemies passed through");
+            if (onLand != null)
+                foreach (var e in onLand)
+                {
+                    var d = e?.Describe(power);
+                    if (!string.IsNullOrEmpty(d)) move += ". On landing: " + char.ToLower(d[0]) + d.Substring(1);
+                }
             return move;
         }
     }

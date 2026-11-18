@@ -13,7 +13,11 @@ namespace TWF
         public struct Region { public Rect rect; public float h0, h1; public bool ramp; public Vector2Int dir; }
         static readonly List<Region> regions = new List<Region>();
 
-        public static void Clear() => regions.Clear();
+        public static void Clear() { regions.Clear(); Version++; }
+        // Counts the clears: whoever filled the list keeps the count then, and on leaving clears it only if no one
+        // (the next scene, already loaded) has cleared and filled it since.
+        public static int Version { get; private set; }
+        public static void ClearIfStill(int version) { if (Version == version) Clear(); }
         public static void AddFlat(Rect r, float h) => regions.Add(new Region { rect = r, h0 = h, h1 = h });
         // Rises along +Y from h0 at the rect's bottom edge to h1 at its top edge.
         public static void AddRamp(Rect r, float h0, float h1) => AddRamp(r, h0, h1, Vector2Int.up);
