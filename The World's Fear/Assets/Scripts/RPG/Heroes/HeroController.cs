@@ -117,6 +117,8 @@ namespace TWF
             }
             RenderAssets.MakeLit(spriteRenderer);
             if (weapon) RenderAssets.MakeLit(weapon.GetComponent<SpriteRenderer>());
+            // Characters are drawn a little nearer the camera than they stand, so steep ground beside them cannot cut into them.
+            foreach (var r in GetComponentsInChildren<SpriteRenderer>(true)) RenderAssets.MakeUnit(r);
             if (animator) animator.SetOutfit(Outfit.Adventurer);
             if (weapon) weapon.gameObject.SetActive(false);
 

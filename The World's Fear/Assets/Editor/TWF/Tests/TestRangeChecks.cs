@@ -42,6 +42,33 @@ namespace TWF.Tests
             }
         }
 
+        // A character is an upright card. Steep ground beside it rises through the card and covered half the hero;
+        // characters are drawn with a depth pull so only what is clearly in front hides them.
+        [TwfCheck("TestRange/Characters are not cut into by the ground beside them (depth pull)")]
+        static IEnumerator UnitsDepthPull()
+        {
+            yield return Yard();
+            var m = SpawnAny(Open + Vector2.right * 3f);
+            yield return null;
+            foreach (var (who, root) in new[] { ("hero", HeroController.Instance.transform), ("monster", m.transform) })
+            {
+                int lit = 0;
+                foreach (var sr in root.GetComponentsInChildren<SpriteRenderer>(true))
+                {
+                    var mat = sr.sharedMaterial;
+                    if (mat == null || !mat.HasProperty("_DepthPull") || mat.shader.name != "TWF/LitSprite") continue;
+                    if (sr.name == "Shadow") continue;
+                    lit++;
+                    Check.AtLeast(mat.GetFloat("_DepthPull"), 0.5f, $"depth pull on the {who}'s sprite '{sr.name}' (material {mat.name})");
+                }
+                Check.AtLeast(lit, 1, $"lit sprites on the {who}");
+            }
+            // Scenery and the ground keep their true depth: the materials everything else shares are untouched.
+            var r = RenderAssets.Instance;
+            foreach (var shared in new[] { r.litSprite, r.litGround, r.litDetail, r.litWind, r.litEmissive })
+                Check.Near(shared.GetFloat("_DepthPull"), 0f, 0.0001f, $"depth pull on the shared material {shared.name}");
+        }
+
         [TwfCheck("TestRange/Heights: platform, stairs and slope carry the hero")]
         static IEnumerator Heights()
         {

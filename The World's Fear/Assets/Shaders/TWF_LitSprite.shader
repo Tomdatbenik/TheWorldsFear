@@ -22,6 +22,7 @@ Shader "TWF/LitSprite"
         _PathMask ("Rounded path edges (TEXCOORD1: tile uv, cut corners, filled corners)", Float) = 0
         _Frost ("Frost (a creature of the snow line: drawn in ice blues)", Range(0,1)) = 0
         _Terrain ("Terrain (slopes and what lies on them: shaded by the way each face leans)", Float) = 0
+        _DepthPull ("Depth pull (characters: drawn as if this much nearer the camera, so the ground beside them cannot cut into them)", Float) = 0
         [Enum(UnityEngine.Rendering.CullMode)] _Cull ("Cull", Float) = 0
     }
 
@@ -62,6 +63,7 @@ Shader "TWF/LitSprite"
             float4 _MainTex_TexelSize;
             half _PathMask;
             half _Terrain;
+            half _DepthPull;
         CBUFFER_END
 
         // Rounded path edges, like the ponds: m.xy is the spot in its tile (0..1), m.z the corners cut to a quarter
@@ -190,6 +192,15 @@ Shader "TWF/LitSprite"
                 o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 o.color = v.color * _Color;
                 o.fog = ComputeFogFactor(o.positionCS.z);
+                // A character is an upright card standing on the land. On a steep slope the ground beside it rises
+                // through the card and covered half the character. Its depth alone is taken as if it stood a little
+                // nearer the camera (the picture does not move), so only what is clearly in front still hides it.
+                if (_DepthPull > 0)
+                {
+                    float3 toCamera = UNITY_MATRIX_V[2].xyz;
+                    float4 nearer = TransformWorldToHClip(ws + toCamera * _DepthPull);
+                    o.positionCS.z = nearer.z / nearer.w * o.positionCS.w;
+                }
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 // The sprite's own axes in the world, for normal-mapped pixel art: right, up, toward the viewer.
                 o.tangentWS = normalize(TransformObjectToWorldDir(float3(1, 0, 0)));

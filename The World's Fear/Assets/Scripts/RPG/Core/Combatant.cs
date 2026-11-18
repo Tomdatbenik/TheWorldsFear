@@ -111,6 +111,7 @@ namespace TWF
             renderers = GetComponentsInChildren<SpriteRenderer>(true);
             baseColors = new Color[renderers.Length];
             for (int i = 0; i < renderers.Length; i++) baseColors[i] = renderers[i].color;
+            foreach (var r in renderers) RenderAssets.MakeUnit(r);
         }
 
         public void SetBaseColor(SpriteRenderer sr, Color c)

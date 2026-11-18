@@ -88,6 +88,24 @@ namespace TWF
             renderer.receiveShadows = true;
         }
 
+        // Characters (the hero, monsters): the same material with a depth pull, so steep ground beside an upright
+        // sprite does not cut into it (TWF/LitSprite, _DepthPull). One copy per material they use.
+        public const float UnitDepthPull = 1.1f;
+        static readonly System.Collections.Generic.Dictionary<Material, Material> unitMaterials = new System.Collections.Generic.Dictionary<Material, Material>();
+
+        public static void MakeUnit(Renderer renderer)
+        {
+            var m = renderer != null ? renderer.sharedMaterial : null;
+            if (m == null || !m.HasProperty("_DepthPull") || m.GetFloat("_DepthPull") > 0f) return;
+            if (!unitMaterials.TryGetValue(m, out var unit) || unit == null)
+            {
+                unit = new Material(m) { name = m.name + " (unit)" };
+                unit.SetFloat("_DepthPull", UnitDepthPull);
+                unitMaterials[m] = unit;
+            }
+            renderer.sharedMaterial = unit;
+        }
+
         // Effects, telegraphs and bars: unlit and transparent.
         public static void MakeUnlit(Renderer renderer)
         {
