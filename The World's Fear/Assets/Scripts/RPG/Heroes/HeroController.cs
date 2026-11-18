@@ -175,6 +175,7 @@ namespace TWF
             var stats = Combatant.Stats;
             Combatant.level = Profile.Data.level;   // the level gap with monsters affects damage both ways
             stats.SetBases(Class.baseStats);
+            stats.Scale = Profile.StatScale;
             stats.RemoveModifiersFrom(levelSource);
             int lv = Profile.Data.level - 1;
             foreach (var g in Class.growthPerLevel)

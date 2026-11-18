@@ -84,6 +84,37 @@ namespace TWF.Tests
             }
         }
 
+        // A crowd is cheap to draw only while monsters share textures: one sheet per animation, not one per direction.
+        [TwfCheck("TestRange/A monster's directions share one texture per animation (crowds batch)")]
+        static IEnumerator MonsterSheets()
+        {
+            yield return Yard();
+            int kinds = 0;
+            foreach (var def in MobCatalog.All)
+            {
+                MonsterGenerator.CreateMob(def);
+                if (!def.HasAnim("walk")) continue;
+                var first = def.sprites.Get("walk", 0);
+                Check.That(first.Length > 0 && first[0] != null, $"'{def.name}' has no walk frames");
+                for (int dir = 1; dir < 8; dir++)
+                {
+                    var frames = def.sprites.Get("walk", dir);
+                    Check.That(frames.Length == first.Length, $"'{def.name}' walk has {frames.Length} frames facing {dir} but {first.Length} facing 0");
+                    Check.That(frames[0].texture == first[0].texture, $"'{def.name}' walk facing {dir} is on its own texture: a crowd of them will not draw together");
+                    Check.That(frames[0].rect != first[0].rect, $"'{def.name}' walk facing {dir} shows the same picture as facing 0");
+                }
+                if (++kinds >= 6) break;
+            }
+            Check.AtLeast(kinds, 3, "monster kinds with shared sheets");
+            // Drawn from the sheet, a monster still looks like a monster.
+            var m = SpawnAny(Open + Vector2.right * 2f);
+            yield return Play.Wait(0.6f);
+            var sr = m.transform.Find("Visual").GetComponent<SpriteRenderer>();
+            Check.That(sr != null && sr.sprite != null && sr.sprite.texture != null, "A spawned monster has no sprite");
+            Check.That(sr.shadowCastingMode == (RenderAssets.MonsterShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off), "A monster's shadow does not follow the graphics quality");
+            Object.Destroy(m.gameObject);
+        }
+
         [TwfCheck("TestRange/Every monster spawns with a body and health")]
         static IEnumerator EveryMonster()
         {

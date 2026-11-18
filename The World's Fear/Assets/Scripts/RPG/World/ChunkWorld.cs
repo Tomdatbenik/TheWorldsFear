@@ -1131,6 +1131,8 @@ namespace TWF
             {
                 var n = cells[x + s.dx + 1, y + s.dy + 1];
                 if (!WorldGen.Walkable(n) || n == Cell.Hub) continue;
+                // No shadow lies on a dungeon's stairwell: the ground there is cut away.
+                if (WorldGen.InStairwell(wx + s.dx, wy + s.dy)) continue;
                 var o = new Vector3(wx + s.so.x, wy + s.so.y, -0.015f);
                 mb.Quad(o, s.su, s.outward, Vector3.back, 1, ShadowWidth, 1f);
             }

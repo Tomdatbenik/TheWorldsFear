@@ -74,24 +74,29 @@ namespace TWF
         bool hasGood;              // lastGood is a real spot it stood on
         int lastLevel = -1;        // the level of land it stands on, -1 on stairs or anywhere else with no rule
 
-        static int LevelOf(Vector2 p)
-        {
-            int x = Mathf.FloorToInt(p.x), y = Mathf.FloorToInt(p.y);
-            var c = WorldGen.CellAt(x, y);
-            return c != Cell.Stairs && WorldGen.Standable(c) ? WorldGen.ElevAt(x, y) : -1;
-        }
+        // The cell it stood in last time and what that cell is: the world's cells never change, so a body that stays
+        // in its cell (most of a crowd, most frames) needs no fresh look at the map.
+        int cellX = int.MinValue, cellY;
+        int cellLevel;
+        Cell cellKind;
 
-        void Guard()
+        void Guard(Vector2 p)
         {
             if (!KeepLevels || TerrainHeight.World == null || mobility == Mobility.Climb || mobility == Mobility.Fly) return;
-            Vector2 p = transform.G();
-            int level = LevelOf(p);
+            int cx = Mathf.FloorToInt(p.x), cy = Mathf.FloorToInt(p.y);
+            if (cx != cellX || cy != cellY)
+            {
+                cellX = cx; cellY = cy;
+                cellKind = WorldGen.CellAt(cx, cy);
+                cellLevel = cellKind != Cell.Stairs && WorldGen.Standable(cellKind) ? WorldGen.ElevAt(cx, cy) : -1;
+            }
+            int level = cellLevel;
             bool leapDown = mobility == Mobility.Leap && level >= 0 && level < lastLevel && lastLevel - level <= WorldGen.LeapDrop;
             // A jump of more than a few tiles in one step is a teleport (a waypoint, a portal), not a knock over an edge.
             bool teleported = (p - lastGood).sqrMagnitude > 9f;
             // Knocked (or dashed) into a pond, a river or lava: the shore's wall then holds it there for good, so it
             // is put back on the ground it came from. Shallow water (puddles) and bridges are ground like any other.
-            var here = WorldGen.CellAt(Mathf.FloorToInt(p.x), Mathf.FloorToInt(p.y));
+            var here = cellKind;
             if ((here == Cell.Water || here == Cell.Lava) && hasGood && !teleported)
             {
                 if (body != null) { body.position = lastGood; body.linearVelocity = Vector2.zero; }
@@ -109,15 +114,28 @@ namespace TWF
             if (level >= 0) { lastGood = p; hasGood = true; }
         }
 
+        Vector2 seenAt;
+        float seenLift;
+        bool settled;
+        int stagger = -1;
+
         void LateUpdate()
         {
-            Guard();
+            Vector2 p = transform.G();
+            // Standing still at its height: nothing to do. (Looked at again now and then, in case the ground itself
+            // changed under it: a chunk loading, a platform added.)
+            if (stagger < 0) stagger = UnityEngine.Random.Range(0, 16);
+            if (settled && p == seenAt && lift == seenLift && (Time.frameCount & 15) != stagger) return;
+            seenAt = p;
+            seenLift = lift;
+            Guard(p);
             target = TerrainHeight.At(transform.G());
             // A leaper drops fast; everyone else rises and falls at their own pace.
             float speed = mobility == Mobility.Leap && target < height ? 16f : riseSpeed;
             height = Mathf.MoveTowards(height, target, speed * Time.deltaTime);
             // Walking or dashing fast up a slope, a walker never lags far enough below the ground to sink into it.
             if (mobility == Mobility.Walk && target - height < WorldGen.LevelHeight) height = Mathf.Max(height, target - 0.08f);
+            settled = height == target;
             Apply();
             if (cam != null) cam.groundHeight = height;
             if (hero) View.GroundHeight = height;

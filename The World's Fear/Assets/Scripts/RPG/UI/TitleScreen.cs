@@ -125,9 +125,13 @@ namespace TWF
             info.rectTransform.offsetMin = info.rectTransform.offsetMax = Vector2.zero;
             classInfo = UIFactory.Text("Text", info.transform, "", 30, Palette.Text, TextAlignmentOptions.TopLeft);
             classInfo.rectTransform.Stretch(26);
-            classInfo.rectTransform.offsetMin = new Vector2(26, 130);
+            classInfo.rectTransform.offsetMin = new Vector2(26, 250);
             var start = UIFactory.Button("Start", info.transform, "Begin", StartNew, new Color(0.2f, 0.4f, 0.15f, 1f), 44);
             beginButton = start;
+            Button difficulty = null;
+            difficulty = UIFactory.Button("Difficulty", info.transform, "", () => { hardMode = !hardMode; ShowDifficulty(difficulty); }, null, 30);
+            ((RectTransform)difficulty.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 130), new Vector2(520, 104));
+            ShowDifficulty(difficulty);
             ((RectTransform)start.transform).Place(new Vector2(0.5f, 0), new Vector2(0, 26), new Vector2(420, 90));
 
             var previewPanel = UIFactory.Panel("Preview", classMenu, new Color(0.1f, 0.08f, 0.1f, 0.6f));
@@ -139,6 +143,16 @@ namespace TWF
             previewFront = PreviewLayer("AnimFront", previewPanel.transform);
             var back = UIFactory.Button("Back", previewPanel.transform, "Back", ShowMain, null, 30);
             ((RectTransform)back.transform).Place(new Vector2(0, 0), new Vector2(20, 20), new Vector2(200, 70));
+        }
+
+        bool hardMode;
+
+        void ShowDifficulty(Button b)
+        {
+            b.GetComponent<Image>().color = hardMode ? new Color(0.5f, 0.14f, 0.1f, 1f) : new Color(0.38f, 0.29f, 0.2f, 1f);
+            b.GetComponentInChildren<TextMeshProUGUI>().text = hardMode
+                ? "Difficulty: Hard\n<size=62%>All your stats 40% lower, except move speed</size>"
+                : "Difficulty: Normal\n<size=62%>Tap for hard mode</size>";
         }
 
         void Pick(WeaponType w)
@@ -295,7 +309,7 @@ namespace TWF
             icon.preserveAspect = true;
             string bosses = d.guardiansSlain.Count > 0 ? $"<br>Guardians slain: {d.guardiansSlain.Count}" : "";
             var info = UIFactory.Text("Info", card.transform,
-                $"<b><color=#ffd040>Level {d.level}</color></b><br><size=80%>{Weapons.Name(weapon)}<br>" +
+                $"<b><color=#ffd040>Level {d.level}</color></b>{(d.difficulty == 1 ? "  <size=70%><color=#ff7060>Hard</color></size>" : "")}<br><size=80%>{Weapons.Name(weapon)}<br>" +
                 $"<color=#bbb>Play time: {SettingsPanel.PlayTime(d.playTime)}<br>Furthest: {Mathf.RoundToInt(d.farthest)}m{bosses}</color></size>",
                 42, Palette.Text, TextAlignmentOptions.Top);
             info.rectTransform.Place(new Vector2(0.5f, 1), new Vector2(0, -360), new Vector2(420, 260));
@@ -394,7 +408,7 @@ namespace TWF
         void StartNew()
         {
             Profile.DeleteSave();
-            Profile.NewGame(pickedWeapon, CharacterCreator.Pending);
+            Profile.NewGame(pickedWeapon, CharacterCreator.Pending, hardMode);
             CharacterCreator.Pending = null;
             Profile.Save();
             SceneManager.LoadScene(worldScene);

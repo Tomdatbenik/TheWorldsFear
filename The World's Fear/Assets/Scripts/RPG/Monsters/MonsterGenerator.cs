@@ -92,8 +92,8 @@ namespace TWF
             var arch = d.RoleValue;
             var biome = d.BiomeValue;
             d.sprites = d.sprites ?? new MobSprites(d);
-            var idle = d.sprites.Get("idle", 6);          // 6 = facing down
-            var back = d.sprites.Get("idle", 2);
+            var idle = d.sprites.Look("idle", 6);          // 6 = facing down
+            var back = d.sprites.Look("idle", 2);
             Color tint = Color.white;
             if (!string.IsNullOrEmpty(d.tint)) ColorUtility.TryParseHtmlString(d.tint, out tint);
             else tint = BiomeTint(biome);

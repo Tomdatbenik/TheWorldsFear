@@ -19,6 +19,7 @@ namespace TWF
             Panels.Register(PanelKind.Cartographer, CartographerPanel.Create(ui.Root));
             Panels.Register(PanelKind.Reforge, ReforgePanel.Create(ui.Root));
             Panels.Register(PanelKind.Codex, CodexPanel.Create(ui.Root));
+            Panels.Register(PanelKind.Quests, QuestPanel.Create(ui.Root));
             Panels.Register(PanelKind.Settings, SettingsPanel.Create(ui.Root));
             Panels.Register(PanelKind.KeyBinds, KeyBindsPanel.Create(ui.Root));
         }

@@ -80,11 +80,24 @@ namespace TWF
         void LateUpdate()
         {
             if (target == null) return;
+            float f = target.HPFraction;
+            // A hidden bar does nothing: most monsters in a crowd are unhurt and show none.
+            if (!alwaysShow)
+            {
+                if (hideTimer > 0f) hideTimer -= Time.deltaTime;
+                bool show = !target.IsDead && (hideTimer > 0f || f < 1f || target.rank != MonsterRank.Normal);
+                if (visual.activeSelf != show) visual.SetActive(show);
+                if (!show) { delayed = f; return; }
+            }
+            else if (target.IsDead)
+            {
+                if (visual.activeSelf) visual.SetActive(false);
+                return;
+            }
             // Keep the size constant even when the parent is scaled (the Billboard handles rotation).
             var ls = target.transform.lossyScale;
             transform.localScale = new Vector3(1f / Mathf.Max(0.01f, Mathf.Abs(ls.x)), 1f / Mathf.Max(0.01f, Mathf.Abs(ls.y)), 1f);
 
-            float f = target.HPFraction;
             delayed = Mathf.MoveTowards(delayed, f, Time.deltaTime * (delayed > f ? 0.6f : 5f));
             if (delayed < f) delayed = f;
             fill.localScale = new Vector3(width * f, 1f, 1f);
@@ -92,13 +105,6 @@ namespace TWF
             float s = target.MaxHP > 0 ? Mathf.Clamp01(target.ShieldHP / target.MaxHP) : 0f;
             shield.localScale = new Vector3(width * s, 1f, 1f);
 
-            if (!alwaysShow)
-            {
-                if (hideTimer > 0f) hideTimer -= Time.deltaTime;
-                bool show = !target.IsDead && (hideTimer > 0f || f < 1f || target.rank != MonsterRank.Normal);
-                if (visual.activeSelf != show) visual.SetActive(show);
-            }
-            else if (target.IsDead && visual.activeSelf) visual.SetActive(false);
         }
     }
 }

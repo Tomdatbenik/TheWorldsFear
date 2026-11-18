@@ -64,6 +64,8 @@ namespace TWF
 
         // The sun's shadows at this quality: soft only on high.
         public static LightShadows SunShadows => Quality == High ? LightShadows.Soft : Quality == Medium ? LightShadows.Hard : LightShadows.None;
+        // Monsters cast a real shadow only on high: each is a draw of its own, and they have a soft blob under them anyway.
+        public static bool MonsterShadows => Quality == High;
         // How many dropped items may carry a light at once (the nearest to the hero keep theirs).
         public static int LootLights => Quality == High ? 6 : Quality == Medium ? 3 : 0;
 
@@ -76,6 +78,7 @@ namespace TWF
                 urp.mainLightShadowmapResolution = Quality == High ? 2048 : 1024;
             foreach (var l in Object.FindObjectsByType<Light>())
                 if (l.type == LightType.Directional && l.shadows != LightShadows.None) l.shadows = SunShadows == LightShadows.None ? LightShadows.Hard : SunShadows;
+            foreach (var m in Object.FindObjectsByType<MonsterBrain>()) m.ApplyShadows();
         }
 
         // Sprites that stand in the world: lit, cast and receive shadows.

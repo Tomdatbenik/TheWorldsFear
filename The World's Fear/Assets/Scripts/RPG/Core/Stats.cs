@@ -75,8 +75,16 @@ namespace TWF
         readonly float[] cache = new float[Count];
         readonly List<StatModifier> modifiers = new List<StatModifier>();
         bool dirty = true;
+        float scale = 1f;
 
         public event Action Changed;
+
+        // Every final value except move speed is multiplied by this (hard mode's hero: 0.6).
+        public float Scale
+        {
+            get => scale;
+            set { if (scale != value) { scale = value; MarkDirty(); } }
+        }
 
         public float this[StatType stat] => Get(stat);
 
@@ -129,7 +137,9 @@ namespace TWF
 
             for (int i = 0; i < Count; i++)
             {
-                cache[i] = StatInfo.Clamp((StatType)i, (baseValues[i] + flat[i]) * (1f + pct[i]));
+                float v = (baseValues[i] + flat[i]) * (1f + pct[i]);
+                if (i != (int)StatType.MoveSpeed) v *= scale;
+                cache[i] = StatInfo.Clamp((StatType)i, v);
             }
             dirty = false;
         }

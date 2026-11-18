@@ -96,6 +96,12 @@ namespace TWF
             return frostMaterial;
         }
 
+        // Follows the graphics quality when it changes.
+        public void ApplyShadows()
+        {
+            if (sr != null) sr.shadowCastingMode = RenderAssets.MonsterShadows ? UnityEngine.Rendering.ShadowCastingMode.On : UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+
         public static MonsterBrain Spawn(MonsterSpecies species, int level, MonsterRank rank, Vector2 position, IList<MonsterAffix> affixes = null, ZoneDefinition zone = null)
         {
             var go = new GameObject(species.name);
@@ -116,7 +122,7 @@ namespace TWF
             sr.sprite = species.look.frames[0];
             sr.color = species.bodyTint;
             sr.sortingOrder = SortOrder.Units;
-            RenderAssets.MakeLit(sr, true, species.frost ? FrostMaterial() : null);
+            RenderAssets.MakeLit(sr, RenderAssets.MonsterShadows, species.frost ? FrostMaterial() : null);
             visualGo.transform.localScale = Vector3.one * scale;
             visualGo.AddComponent<Billboard>();
 

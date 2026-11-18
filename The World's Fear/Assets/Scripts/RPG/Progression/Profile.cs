@@ -72,7 +72,10 @@ namespace TWF
         public float returnX, returnY;
         public bool runCounted;
         public float playTime;          // seconds played in this run, the clock lairs grow by
-        public List<LairRecord> lairs = new List<LairRecord>();         // this run has been added to the legacy's finished runs
+        public List<LairRecord> lairs = new List<LairRecord>();
+        public int difficulty;          // 0 = normal, 1 = hard; chosen when the hero is made
+        public string quest = "";       // id of the quest in hand (Quests); empty = the first, "done" = all finished
+        public int questBase;           // where its count stood when it began, for quests counted from their start         // this run has been added to the legacy's finished runs
     }
 
     // The player's persistent progress: level, XP, gold, skills, items.
@@ -83,6 +86,11 @@ namespace TWF
 
         static SaveData data;
         static Dictionary<string, int> ranks;
+
+        // Hard mode: every stat of the hero except move speed is 40% lower. Chosen for a new hero and kept for its life.
+        public const float HardStatScale = 0.6f;
+        public static bool Hard => Data.difficulty == 1;
+        public static float StatScale => Hard ? HardStatScale : 1f;
 
         public static event Action Changed;          // anything that the HUD shows
         public static event Action<int> LeveledUp;
@@ -183,11 +191,11 @@ namespace TWF
         public static HeroClassDefinition Class => GameDatabase.Instance.FindClass(Data.classId) ?? GameDatabase.Instance.classes[0];
 
         // A new hero: no classes, the starting weapon decides the basic attack.
-        public static void NewGame(WeaponType starterWeapon, Appearance look = null)
+        public static void NewGame(WeaponType starterWeapon, Appearance look = null, bool hard = false)
         {
             RunOver = false;
             lairIndex = null;
-            data = new SaveData { classId = "adventurer", appearance = look ?? new Appearance(), worldSeed = new System.Random().Next(1, int.MaxValue) };
+            data = new SaveData { classId = "adventurer", appearance = look ?? new Appearance(), worldSeed = new System.Random().Next(1, int.MaxValue), difficulty = hard ? 1 : 0 };
             WorldGen.SetSeed(data.worldSeed);
             ranks = null;
             exploredSet = null;

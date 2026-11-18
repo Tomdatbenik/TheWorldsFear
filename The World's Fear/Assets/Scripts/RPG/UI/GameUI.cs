@@ -30,7 +30,8 @@ namespace TWF
         GameObject bossBar;
         TextMeshProUGUI potionCount;
         readonly TextMeshProUGUI[] skillKeyLabels = new TextMeshProUGUI[HeroController.SlotCount];
-        TextMeshProUGUI potionKeyLabel, keyHint;
+        TextMeshProUGUI potionKeyLabel, keyHint, questText;
+        GameObject questTracker;
 
         public RectTransform Root => root;
         public Canvas Canvas => canvas;
@@ -94,12 +95,25 @@ namespace TWF
             goldText = UIFactory.Text("Gold", top.transform, "", 26, Palette.Gold, TextAlignmentOptions.Left);
             goldText.rectTransform.Place(new Vector2(0, 1), new Vector2(148, -104), new Vector2(260, 34));
 
+            // The quest in hand, under the status panel (and hidden with it in cutscenes). Tap it to open the quest book.
+            var quest = UIFactory.Button("QuestTracker", top.transform, "", () => Panels.Toggle(PanelKind.Quests), new Color(0.05f, 0.04f, 0.06f, 0.75f), 24);
+            ((RectTransform)quest.transform).Place(new Vector2(0, 0), new Vector2(0, -98), new Vector2(560, 88));
+            questText = quest.GetComponentInChildren<TextMeshProUGUI>();
+            questText.alignment = TextAlignmentOptions.Left;
+            questText.rectTransform.offsetMin = new Vector2(18, 8);
+            questText.rectTransform.offsetMax = new Vector2(-12, -6);
+            questText.enableAutoSizing = true;
+            questText.fontSizeMin = 14;
+            questText.fontSizeMax = 24;
+            questTracker = quest.gameObject;
+
             // Menu buttons, top right.
-            var menu = UIFactory.Rect("Menu", root).Place(new Vector2(1, 1), new Vector2(-24, -24), new Vector2(664, 100));
+            var menu = UIFactory.Rect("Menu", root).Place(new Vector2(1, 1), new Vector2(-24, -24), new Vector2(776, 100));
             var layout = menu.gameObject.AddComponent<HorizontalLayoutGroup>();
             layout.spacing = 12;
             layout.childAlignment = TextAnchor.UpperRight;
             layout.childForceExpandWidth = layout.childForceExpandHeight = true;
+            UIFactory.IconButton("QuestBtn", menu, "quest", new Color(0.95f, 0.85f, 0.55f), () => Panels.Toggle(PanelKind.Quests));
             var skillsBtn = UIFactory.IconButton("SkillsBtn", menu, "book", new Color(0.75f, 0.55f, 0.95f), () => Panels.Toggle(PanelKind.Skills));
             skillPointBadge = UIFactory.Text("Badge", skillsBtn.transform, "", 22, Color.white);
             skillPointBadge.rectTransform.Place(new Vector2(1, 1), new Vector2(10, 10), new Vector2(44, 44));
@@ -521,6 +535,15 @@ namespace TWF
             int points = data.skillPoints + data.attributePoints;
             skillPointBadge.gameObject.SetActive(points > 0);
             skillPointBadge.text = points.ToString();
+            Quests.Tick();
+            var quest = Quests.Current;
+            if (questTracker.activeSelf != (quest != null)) questTracker.SetActive(quest != null);
+            if (quest != null)
+            {
+                // A quest not read yet pulses, so a new one is noticed.
+                string title = Quests.Unread && Mathf.PingPong(Time.unscaledTime, 1f) > 0.5f ? "#ffffff" : "#ffd040";
+                questText.text = $"<color={title}><b>{(Quests.Unread ? "New quest" : "Quest")}: {quest.title}</b></color>\n<size=85%>{Quests.GoalLine(quest)}</size>";
+            }
         }
 
         void OnLevelUp(int level) => Toast($"Level {level}!  +1 skill point", Palette.Gold);
