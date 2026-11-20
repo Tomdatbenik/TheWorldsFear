@@ -22,6 +22,18 @@ namespace TWF
         [System.NonSerialized] public float focusHeight;   // lift the focus off the ground (cutscene close-ups)
         [System.NonSerialized] public float groundHeight;  // how high the hero stands (plateaus, stairs)
 
+        // A boss fight: the view widens and leans toward the boss, more the further it is from the hero.
+        public static Transform Boss;
+        public const float BossZoomNear = 1.2f, BossZoomFar = 1.5f;   // times the normal view size, boss close / far
+        public const float BossZoomReach = 14f;                       // the distance at which the view is at its widest
+        public const float BossLean = 0.3f, BossLeanMax = 3.5f;       // how far the focus moves from the hero to the boss
+        public const float BossViewMax = 13f;                         // the widened view never shows more than this (half height)
+        public const float HeightSmoothTime = 0.45f;                  // the view takes its time to follow the hero up and down
+        float zoom = 1f, zoomVelocity;
+        float heightVelocity;
+        public float Zoom => zoom;
+        public Vector3 Focus => focus;
+
         float yaw, targetYaw;
         Vector3 velocity;
         Vector3 focus;
@@ -98,6 +110,7 @@ namespace TWF
             focus = target.position;
             hasFocus = true;
             velocity = Vector3.zero;
+            heightVelocity = 0f;
             yaw = targetYaw;
             gestureActive = false;
             Apply(0f);
@@ -199,8 +212,25 @@ namespace TWF
             Vector2 ahead = Vector2.zero;
             if (HeroController.Instance != null && target == HeroController.Instance.transform)
                 ahead = Vector2.Scale(MobaInput.Move, lookAhead);
-            Vector3 goal = (target.G() + ahead).W(Mathf.Max(focusHeight, groundHeight));
+            // In a boss fight the view leans toward the boss and widens with the distance to it.
+            float wantZoom = 1f;
+            Vector2 lean = Vector2.zero;
+            if (Boss != null && Boss.gameObject.activeInHierarchy)
+            {
+                Vector2 toBoss = Boss.G() - target.G();
+                wantZoom = Mathf.Lerp(BossZoomNear, BossZoomFar, Mathf.Clamp01(toBoss.magnitude / BossZoomReach));
+                lean = Vector2.ClampMagnitude(toBoss * BossLean, BossLeanMax);
+            }
+            zoom = Mathf.SmoothDamp(zoom, wantZoom, ref zoomVelocity, 0.9f, Mathf.Infinity, Time.unscaledDeltaTime);
+            if (Mathf.Abs(zoom - wantZoom) < 0.001f) zoom = wantZoom;
+
+            // A cutscene lifts the focus off the ground; otherwise it is the hero's own height, below zero too.
+            float wantHeight = focusHeight > 0f ? Mathf.Max(focusHeight, groundHeight) : groundHeight;
+            Vector3 goal = (target.G() + ahead + lean * Mathf.InverseLerp(1f, BossZoomNear, zoom)).W(focus.y);
             focus = Vector3.SmoothDamp(focus, goal, ref velocity, smoothTime);
+            // Height on its own, slower: walking down a slope the view sinks with the hero instead of snapping after them.
+            // A cutscene's close-up keeps the quick pace it was written for.
+            focus.y = Mathf.SmoothDamp(focus.y, wantHeight, ref heightVelocity, focusHeight > 0f ? smoothTime : HeightSmoothTime);
             shake = Mathf.MoveTowards(shake, 0f, Time.unscaledDeltaTime * 1.5f);
             Apply(shake);
         }
@@ -213,7 +243,10 @@ namespace TWF
             {
                 // Whole screen pixels per art pixel, leaning zoomed-out; a small window still shows at least MinViewSize.
                 int k = Mathf.Max(1, Mathf.FloorToInt(Screen.height / (2f * distance * ZoomScale * ArtPPU)));
-                cam.orthographicSize = CinematicActive ? CinematicSize : Mathf.Max(Screen.height / (2f * ArtPPU * k), MinViewSize);
+                float size = Mathf.Max(Screen.height / (2f * ArtPPU * k), MinViewSize);
+                // The boss view leaves the pixel grid: it widens smoothly, up to BossViewMax (or stays, if the view is wider already).
+                if (zoom > 1f) size = Mathf.Max(size, Mathf.Min(size * zoom, BossViewMax));
+                cam.orthographicSize = CinematicActive ? CinematicSize : size;
             }
             // The world art has a baked view every 22.5 degrees; the camera stops on those so ground and buildings always match.
             float shownYaw = CinematicActive ? yaw : Mathf.Round(yaw / ViewStep) * ViewStep;

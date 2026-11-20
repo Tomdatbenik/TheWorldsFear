@@ -458,6 +458,7 @@ namespace TWF
         public void ShowBossBar(Combatant c)
         {
             boss = c;
+            CameraFollow.Boss = c != null ? c.transform : null;
             if (bossBar == null)
             {
                 var bg = UIFactory.Bar("BossBar", root, new Color(0.8f, 0.2f, 0.1f), out bossFill);
@@ -518,6 +519,8 @@ namespace TWF
                 hpText.text = $"{Mathf.CeilToInt(c.HP)} / {Mathf.RoundToInt(c.MaxHP)}";
                 potionCooldown.fillAmount = hero.PotionCooldownFraction;
             }
+            // The camera lets go of a boss the moment it dies (a destroyed one it drops by itself).
+            if (boss != null && boss.IsDead && CameraFollow.Boss == boss.transform) CameraFollow.Boss = null;
             if (bossBar != null)
             {
                 bossBar.SetActive(boss != null && !boss.IsDead);
