@@ -51,6 +51,8 @@ namespace TWF
         // faces, slowly; flyers drift over them; leapers may jump down. Set by the monster that owns it.
         public Mobility mobility = Mobility.Walk;
         public float riseSpeed = RiseSpeed;
+        // Until this time the body may drop down off a ledge (a charge that knocks the hero over the edge).
+        [System.NonSerialized] public float fallUntil;
         // Extra height on top of the ground for scripted moves (walking down a well, up a stair out of a dungeon).
         [System.NonSerialized] public float lift;
         float target;
@@ -95,7 +97,7 @@ namespace TWF
                 cellLevel = cellKind != Cell.Stairs && WorldGen.Standable(cellKind) ? WorldGen.ElevAt(cx, cy) : -1;
             }
             int level = cellLevel;
-            bool leapDown = mobility == Mobility.Leap && level >= 0 && level < lastLevel && lastLevel - level <= WorldGen.LeapDrop;
+            bool leapDown = (mobility == Mobility.Leap || Time.time < fallUntil) && level >= 0 && level < lastLevel && lastLevel - level <= WorldGen.LeapDrop;
             // A jump of more than a few tiles in one step is a teleport (a waypoint, a portal), not a knock over an edge.
             bool teleported = (p - lastGood).sqrMagnitude > 9f;
             // Knocked (or dashed) into a pond, a river or lava: the shore's wall then holds it there for good, so it

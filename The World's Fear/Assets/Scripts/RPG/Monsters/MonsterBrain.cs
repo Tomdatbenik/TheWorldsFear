@@ -7,7 +7,7 @@ namespace TWF
 {
     // Monster AI: idle near home, aggro on the hero, attack by archetype, leash back home.
     [RequireComponent(typeof(Combatant), typeof(GroundBody))]
-    public class MonsterBrain : MonoBehaviour
+    public partial class MonsterBrain : MonoBehaviour
     {
         public static event Action<MonsterBrain, Combatant> AnyDied;
 
@@ -277,6 +277,7 @@ namespace TWF
             attackTimer = UnityEngine.Random.Range(0.2f, 0.8f);
             specialTimer = UnityEngine.Random.Range(2f, 4f);
             wanderTarget = Home;
+            SetupTactics();
         }
 
         void ApplyAffixes()
@@ -307,7 +308,7 @@ namespace TWF
 
         bool Has(MonsterAffix a) => Affixes.Contains(a);
 
-        float CooldownScale => (Has(MonsterAffix.Fast) ? 0.7f : 1f) * (Band != null ? Band.CooldownMult : 1f);
+        float CooldownScale => (Has(MonsterAffix.Fast) ? 0.7f : 1f) * (Band != null ? Band.CooldownMult : 1f) * (Enraged ? EnragedCooldown : 1f);
 
         // The warband's commander calling a volley.
         public void OrderAttack() => attackTimer = Mathf.Min(attackTimer, 0f);
@@ -317,6 +318,7 @@ namespace TWF
         void OnDamaged(DamageInfo info, float dealt)
         {
             if (info.source != null && info.source.team == Team.Player) Aggro();
+            damageTaken += dealt;
             // Damage over time (burn, poison) ticks quietly; direct hits make a sound.
             if (!info.trueDamage && !info.silent) Sound.Play(Sfx.Hit, transform.position, 0.15f);
             if (Species.mob != null && attackLeft <= 0f && !info.silent) hurtLeft = 0.2f;
@@ -425,7 +427,7 @@ namespace TWF
                 return;
             }
             if (busy) return;
-            float speed = Combatant.MoveSpeed * (state == State.Return ? 1.5f : state == State.Idle ? 0.4f : speedMult);
+            float speed = Combatant.MoveSpeed * (state == State.Return ? 1.5f : state == State.Idle ? 0.4f : speedMult * (Fleeing ? FleeSpeed : 1f));
             Vector2 pos = transform.G();
             var move = desired;
             if (state == State.Chase && DungeonSetup.Instance != null) move = DungeonSetup.Instance.Route(pos, desired);
@@ -433,7 +435,7 @@ namespace TWF
             {
                 // Open world: round walls, cliffs, water and lava toward the hero, or back home.
                 var hero = Hero;
-                Vector2 target = state == State.Chase && hero != null ? hero.transform.G() : Home;
+                Vector2 target = state == State.Chase && hero != null ? routeGoal ?? hero.transform.G() : Home;
                 move = WorldRouter.Route(pos, target, desired, Mobility);
                 MaybeLeap(pos, move);
             }
@@ -510,6 +512,16 @@ namespace TWF
                 }
             }
 
+            routeGoal = null;
+            if (React(hero, pos, dist, toHero)) return;          // sidestep a swing, hop back from the hero
+            if (Flee(hero, pos, dist)) return;                   // wounded: run to the healer or the pack
+            if (sp.archetype == MonsterArchetype.Healer)
+            {
+                HealerFight(hero, pos, dist, toHero);
+                return;
+            }
+            if (TryPounce(hero, pos, dist)) return;              // a leaper on the ledge above drops onto the hero
+
             if (sp.archetype == MonsterArchetype.Guardian)
             {
                 GuardianFight(hero, pos, dist, toHero);
@@ -528,7 +540,11 @@ namespace TWF
                 else if (dist < sp.preferredDistance - 1f) desired = -toHero;
                 else desired = new Vector2(-toHero.y, toHero.x) * Mathf.Sign(Mathf.Sin(Time.time * 0.7f + strafeSeed));
             }
-            else desired = dist > sp.attackRange * 0.85f ? toHero : Vector2.zero;
+            else desired = dist > sp.attackRange * 0.85f ? CutAcross(hero, pos, dist, toHero) : Vector2.zero;
+
+            // A shooter climbs to high ground over the hero when there is some close by.
+            if (Ranged) SeekHighGround(hero, pos, dist);
+            if (HeroHabits.Turret && sp.archetype == MonsterArchetype.Exploder) speedMult = TurretRush;
 
             // A warband's melee take a place on a ring round the hero, so it can't all be kited in a line.
             if (Band != null && sp.preferredDistance <= 0f && dist > sp.attackRange * 0.85f)
@@ -540,6 +556,7 @@ namespace TWF
             switch (sp.archetype)
             {
                 case MonsterArchetype.Charger:
+                    if (specialTimer <= 0f && dist > 3f && dist < 10f && LineUpCharge(hero, pos)) return;   // walking round to knock the hero off a ledge
                     if (specialTimer <= 0f && dist > 3f && dist < 9f)
                     {
                         specialTimer = UnityEngine.Random.Range(5f, 7f) * CooldownScale;
@@ -550,6 +567,11 @@ namespace TWF
                     break;
 
                 case MonsterArchetype.Brute:
+                    if (CanGrab(hero, dist))
+                    {
+                        StartCoroutine(GrabAttack(hero));
+                        return;
+                    }
                     if (dist <= sp.attackRange + 1f && attackTimer <= 0f) StartCoroutine(SlamAttack(hero));
                     break;
 
@@ -689,7 +711,7 @@ namespace TWF
         void SkirmisherFight(Combatant hero, float dist, Vector2 toHero)
         {
             var sp = Species;
-            dartTimer -= Time.deltaTime;
+            dartTimer -= Time.deltaTime * (HeroHabits.Turret ? 2f : 1f);
             Vector2 around = new Vector2(-toHero.y, toHero.x) * circleSign;
             switch (dart)
             {
@@ -788,7 +810,10 @@ namespace TWF
             busy = true;
             body.linearVelocity = Vector2.zero;
             Vector2 start = transform.G();
-            Vector2 dir = (hero.transform.G() - start).normalized;
+            Vector2 aimAt = HeroHabits.Kiting ? hero.transform.G() + HeroHabits.HeroVelocity * KiteLead : hero.transform.G();
+            Vector2 dir = ledgeDir != Vector2.zero ? ledgeDir : (aimAt - start).normalized;
+            bool shove = ledgeDir != Vector2.zero;
+            ledgeDir = Vector2.zero;
             const float length = 7.5f;
             LineTelegraph.Show(start, dir, length, 1.1f, Palette.EnemyTelegraph, 0.7f);
             yield return Windup(0.7f, new Color(1f, 0.4f, 0.3f));
@@ -808,7 +833,8 @@ namespace TWF
                 if (!hit && hero != null && Vector2.Distance(transform.G(), hero.transform.G()) < Combatant.radius + hero.radius + 0.3f)
                 {
                     hit = true;
-                    Combat.Hit(Combatant, hero, 1.6f, StatusSpec.Stun(0.6f), false, 2f, -1f, Elements.Mask(Species.element));
+                    if (shove) HeroController.Instance?.AllowFall(0.7f);   // over the edge it goes
+                    Combat.Hit(Combatant, hero, 1.6f, StatusSpec.Stun(0.6f), false, shove ? ShoveKnockback : 2f, -1f, Elements.Mask(Species.element));
                 }
                 yield return new WaitForFixedUpdate();
             }

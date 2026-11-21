@@ -62,9 +62,19 @@ namespace TWF
         float potionTimer;
         public float PotionCooldownFraction => Mathf.Clamp01(potionTimer / PotionCooldown);
 
+        // Nauseous (a monster's answer to a hero who lives on potions): no drinking until then.
+        public float PotionBlockedUntil { get; set; }
+        public bool PotionBlocked => Time.time < PotionBlockedUntil;
+
         public bool UsePotion()
         {
             if (Combatant.IsDead || potionTimer > 0f || Profile.Data.potions <= 0) return false;
+            if (PotionBlocked)
+            {
+                FloatingText.Spawn(transform.position + View.Up * Combatant.HeadHeight, "Too sick to drink", new Color(0.6f, 0.85f, 0.35f), 0.8f);
+                return false;
+            }
+            HeroHabits.PotionUsed();
             Profile.Data.potions--;
             potionTimer = PotionCooldown;
             Combatant.Heal(Combatant.MaxHP * 0.45f);
@@ -268,15 +278,89 @@ namespace TWF
             Profile.AddXP(Profile.MonsterXP(victim.level, victim.rank));
         }
 
+        // ---------- Held by a monster ----------
+        // A brute's grab: the hero can't walk, but can hit back, dash out, or wriggle (the stick from side to side) free.
+        public Combatant HeldBy { get; private set; }
+        public bool Held => HeldBy != null;
+        public bool BrokeFree { get; private set; }     // how the last hold ended: wriggled or dashed out, or the holder was hurt
+        float holdLeft, holdElapsed, holdLength;
+        Vector2 lastWriggle;
+        public const float WriggleShortens = 0.3f;    // seconds off the hold for every swing of the stick
+
+        public bool Grab(Combatant by, float seconds)
+        {
+            if (by == null || Held || Combatant.IsDead || Combatant.Invulnerable) return false;
+            HeldBy = by;
+            holdLeft = holdLength = seconds;
+            holdElapsed = 0f;
+            lastWriggle = Vector2.zero;
+            BrokeFree = false;
+            if (swingRoutine != null) { StopCoroutine(swingRoutine); swingRoutine = null; }
+            FloatingText.Spawn(transform.position + View.Up * Combatant.HeadHeight, "Grabbed! Wriggle free", new Color(1f, 0.55f, 0.35f), 0.9f);
+            return true;
+        }
+
+        public void Release(bool brokeFree)
+        {
+            if (!Held) return;
+            BrokeFree = brokeFree;
+            HeldBy = null;
+            if (brokeFree) VFX.Ring(transform.position, Color.white, 0.9f, 0.2f);
+        }
+
+        void UpdateHold(float dt, Vector2 stick)
+        {
+            if (!Held) return;
+            if (HeldBy == null || HeldBy.IsDead || HeldBy.IsStunned || Combatant.IsDead) { Release(true); return; }
+            holdElapsed += dt;
+            holdLeft -= dt;
+            // Every swing of the stick to a new side loosens the grip.
+            if (stick.sqrMagnitude > 0.25f)
+            {
+                Vector2 d = stick.normalized;
+                if (lastWriggle == Vector2.zero || Vector2.Dot(d, lastWriggle) < 0.2f)
+                {
+                    if (lastWriggle != Vector2.zero)
+                    {
+                        holdLeft -= WriggleShortens;
+                        VFX.Burst(transform.position + View.Up * 0.5f, Color.white, 3, 0.3f);
+                    }
+                    lastWriggle = d;
+                }
+            }
+            if (holdLeft <= 0f) Release(holdElapsed < holdLength - 0.05f);
+        }
+
+        // A charge that may carry the hero over a ledge: for a moment it passes the plateau's edge and can drop.
+        float fallLeft;
+        Collider ownCollider;
+        public void AllowFall(float seconds)
+        {
+            var gf = GetComponent<GroundFollow>();
+            if (gf != null) gf.fallUntil = Time.time + seconds;
+            if (ownCollider == null) ownCollider = GetComponent<Collider>();
+            if (fallLeft <= 0f) LevelPass.Register(ownCollider);
+            fallLeft = seconds;
+        }
+
+        void UpdateFall(float dt)
+        {
+            if (fallLeft <= 0f) return;
+            fallLeft -= dt;
+            if (fallLeft <= 0f) LevelPass.Unregister(ownCollider);
+        }
+
         void OnDamaged(DamageInfo info, float dealt)
         {
             damageAnimTimer = 0.15f;
+            HeroHabits.HeroHit(this, info);
             if (!info.silent) CameraFollow.Shake(Mathf.Clamp(dealt / Combatant.MaxHP * 2f, 0.05f, 0.35f));
         }
 
         void OnDied(Combatant killer)
         {
             body.linearVelocity = Vector2.zero;
+            Release(false);
             Died?.Invoke();
         }
 
@@ -285,6 +369,8 @@ namespace TWF
             body.position = at;
             transform.position = at.W();
             Combatant.ResetLife();
+            Release(true);
+            PotionBlockedUntil = 0f;
             for (int i = 0; i < SlotCount; i++) cooldowns[i] = 0f;
             potionTimer = 0f;
             Profile.Data.potions = Mathf.Max(Profile.Data.potions, 1);
@@ -331,6 +417,13 @@ namespace TWF
             }
 
             moveInput = AutoWalk != Vector2.zero ? AutoWalk : MobaInput.Move;
+            UpdateFall(dt);
+            HeroHabits.Tick(this, dt, moveInput, castLock > 0f || attackRoot > 0f);
+            if (Held)
+            {
+                UpdateHold(dt, moveInput);
+                moveInput = Vector2.zero;      // held fast: the stick only wriggles
+            }
             HandleKeyboardSkills();
             if (!MobaInput.Blocked && KeyBinds.Pressed(GameAction.Potion)) UsePotion();
 
@@ -356,6 +449,15 @@ namespace TWF
 
         void FixedUpdate()
         {
+            if (Held)
+            {
+                // Pinned against the holder.
+                Vector2 at = HeldBy.transform.G(), me = body.position;
+                Vector2 away = me - at;
+                Vector2 spot = at + (away.sqrMagnitude > 0.0001f ? away.normalized : Vector2.down) * (HeldBy.radius + 0.2f);
+                body.linearVelocity = (spot - me) * 12f;
+                return;
+            }
             if (Combatant.IsDead || castLock > 0f || attackRoot > 0f || Combatant.IsStunned)
             {
                 body.linearVelocity = Vector2.zero;
@@ -397,6 +499,7 @@ namespace TWF
                 foreach (var c in Combat.HostilesInArc(Team.Player, transform.G(), dir, w.range + 2f, 50f)) { target = c; break; }
             }
             Facing = dir;
+            HeroThreat.Swing(transform.G(), dir, w.ranged ? w.range + 2f : w.range + 0.6f);
             attackAnimTimer = 0.2f;
             float handling = Combatant.Stats.Get(StatType.Handling);
             attackRoot = mastery && w.type == WeaponType.Bow ? 0f : w.rootTime * (1f - handling);
@@ -857,6 +960,9 @@ namespace TWF
 
             if (dir.sqrMagnitude < 0.0001f) dir = Facing;
             Facing = dir;
+            // A dash tears free of a grab.
+            if (Held && skill.targeting == Targeting.Dash) Release(true);
+            HeroThreat.Swing(pos, dir.normalized, Mathf.Max(range, 2f));
 
             var ctx = new SkillContext
             {

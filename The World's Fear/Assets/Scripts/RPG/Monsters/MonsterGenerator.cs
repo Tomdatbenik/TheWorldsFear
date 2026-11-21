@@ -57,6 +57,7 @@ namespace TWF
             { MonsterArchetype.Exploder, new[] { "bloat", "bomber", "popper", "burster", "volatile" } },
             { MonsterArchetype.Guardian, new[] { "bulwark", "warden", "shell", "aegis" } },
             { MonsterArchetype.Skirmisher, new[] { "dart", "slash", "flicker", "striker" } },
+            { MonsterArchetype.Healer, new[] { "mender", "tender", "soother", "binder" } },
         };
 
         // The designed mobs of a biome. While the roster is still being built, generated creatures fill the rest.
@@ -176,6 +177,23 @@ namespace TWF
             }
             frostRosters[zone.id] = list;
             return list;
+        }
+
+        // The healer of a biome: one joins some packs beyond the farms.
+        static readonly Dictionary<Biome, MonsterSpecies> healers = new Dictionary<Biome, MonsterSpecies>();
+        public static MonsterSpecies HealerFor(Biome biome)
+        {
+            if (healers.TryGetValue(biome, out var sp)) return sp;
+            // A designed healer of the biome when there is one (they are warband-only, so they join packs only this way).
+            foreach (var d in MobCatalog.ForBiome(biome))
+                if (d.RoleValue == MonsterArchetype.Healer) { sp = CreateMob(d); break; }
+            if (sp != null) { healers[biome] = sp; return sp; }
+            int seed = 4409 + (int)biome * 977;
+            sp = Create(seed, biome, MonsterArchetype.Healer);
+            sp.name = MakeName(new System.Random(seed), biome, MonsterArchetype.Healer);
+            sp.projectileColor = Palette.Heal;
+            healers[biome] = sp;
+            return sp;
         }
 
         static List<MonsterSpecies> farmRoster;
@@ -307,6 +325,12 @@ namespace TWF
                     sp.attackRange = 7f; sp.attackCooldown = R(3.2f, 4f); sp.preferredDistance = R(5f, 6f); sp.scale = R(1f, 1.1f);
                     if (biome == Biome.Ember) sp.onHitStatus = StatusSpec.Burn(0.4f, 3f);
                     else if (biome == Biome.Ruins) sp.onHitStatus = StatusSpec.Slow(0.4f, 2f);
+                    break;
+                case MonsterArchetype.Healer:
+                    // frail and slow to anger: it keeps the others standing, and runs from the hero
+                    sp.hpMult = R(0.7f, 0.85f); sp.damageMult = R(0.5f, 0.6f); sp.moveSpeed = R(2.5f, 2.9f);
+                    sp.attackRange = 6.5f; sp.attackCooldown = R(2.4f, 2.8f); sp.preferredDistance = R(5.5f, 6.5f);
+                    sp.projectileSpeed = 7f; sp.scale = R(1f, 1.1f); sp.packMultiplier = 0.5f;
                     break;
                 case MonsterArchetype.Exploder:
                     sp.hpMult = R(0.55f, 0.7f); sp.damageMult = R(2.6f, 3.2f); sp.moveSpeed = R(3.6f, 4.1f);

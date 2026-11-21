@@ -205,6 +205,56 @@
    ]
   },
   {
+   "id": "bog_strangler",
+   "name": "Bog Strangler",
+   "biome": "Marsh",
+   "role": "Brute",
+   "body": "humanoid",
+   "size": "large",
+   "w": 352,
+   "h": 256,
+   "pivotY": 0.25390625,
+   "heightUnits": 2.322222272555033,
+   "walkPerFrame": 0.16371667021512984,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
    "id": "bog_toad",
    "name": "Bog Toad",
    "biome": "Marsh",
@@ -285,6 +335,56 @@
    "faction": "undead",
    "leader": false,
    "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "bone_binder",
+   "name": "Bone Binder",
+   "biome": "Ruins",
+   "role": "Healer",
+   "body": "humanoid",
+   "size": "medium",
+   "w": 208,
+   "h": 136,
+   "pivotY": 0.2426470588235294,
+   "heightUnits": 1.3194444444444444,
+   "walkPerFrame": 0.09302083333333333,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": true,
    "anims": [
     {
      "name": "idle",
@@ -517,6 +617,56 @@
    ]
   },
   {
+   "id": "cinder_tender",
+   "name": "Cinder Tender",
+   "biome": "Ember",
+   "role": "Healer",
+   "body": "humanoid",
+   "size": "small",
+   "w": 136,
+   "h": 104,
+   "pivotY": 0.3076923076923077,
+   "heightUnits": 0.8444444570276473,
+   "walkPerFrame": 0.047626667376359295,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
    "id": "crypt_blade",
    "name": "Crypt Blade",
    "biome": "Ruins",
@@ -541,6 +691,56 @@
    "tint": "",
    "pack": 1.0,
    "faction": "undead",
+   "leader": false,
+   "warbandOnly": false,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
+   "id": "crypt_grasper",
+   "name": "Crypt Grasper",
+   "biome": "Ruins",
+   "role": "Brute",
+   "body": "humanoid",
+   "size": "large",
+   "w": 360,
+   "h": 224,
+   "pivotY": 0.20535714285714285,
+   "heightUnits": 2.322222020890978,
+   "walkPerFrame": 0.16371665247281392,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
    "leader": false,
    "warbandOnly": false,
    "anims": [
@@ -1387,6 +1587,56 @@
    ]
   },
   {
+   "id": "moss_mender",
+   "name": "Moss Mender",
+   "biome": "Forest",
+   "role": "Healer",
+   "body": "flyer",
+   "size": "small",
+   "w": 120,
+   "h": 96,
+   "pivotY": 0.16666666666666666,
+   "heightUnits": 0.7600000301996866,
+   "walkPerFrame": 0.04788000190258025,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
+    }
+   ]
+  },
+  {
    "id": "moss_slime",
    "name": "Moss Slime",
    "biome": "Forest",
@@ -1491,6 +1741,56 @@
     {
      "name": "block",
      "frames": 4
+    }
+   ]
+  },
+  {
+   "id": "reed_soother",
+   "name": "Reed Soother",
+   "biome": "Marsh",
+   "role": "Healer",
+   "body": "humanoid",
+   "size": "small",
+   "w": 136,
+   "h": 96,
+   "pivotY": 0.25,
+   "heightUnits": 0.8444444570276473,
+   "walkPerFrame": 0.044650000665336836,
+   "runPerFrame": 0.0,
+   "hp": 0.0,
+   "damage": 0.0,
+   "armor": 0.0,
+   "speed": 0.0,
+   "range": 0.0,
+   "cooldown": 0.0,
+   "keepAway": 0.0,
+   "projectileSpeed": 0.0,
+   "status": "",
+   "tint": "",
+   "pack": 1.0,
+   "faction": "",
+   "leader": false,
+   "warbandOnly": true,
+   "anims": [
+    {
+     "name": "idle",
+     "frames": 8
+    },
+    {
+     "name": "walk",
+     "frames": 8
+    },
+    {
+     "name": "attack",
+     "frames": 6
+    },
+    {
+     "name": "hurt",
+     "frames": 3
+    },
+    {
+     "name": "death",
+     "frames": 6
     }
    ]
   },

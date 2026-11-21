@@ -21,6 +21,11 @@ namespace TWF
 
         static bool rollMix(System.Random rng) => rng.NextDouble() < 0.7;
 
+        public const float HealerChance = 0.3f;
+        // Healers keep out of the start: the village, its farms and a margin past them.
+        public const float HealerMinDistance = WorldGen.FarmRingOuter + 14f;
+        public static bool HealersAllowed(Vector2 at) => at.magnitude >= HealerMinDistance;
+
         static MonsterSpecies Pick(List<MonsterSpecies> species, System.Predicate<MonsterSpecies> match, System.Random rng)
         {
             var found = species.FindAll(match);
@@ -82,6 +87,12 @@ namespace TWF
                 }
                 for (int i = 0; i < count; i++)
                     pack.Add(MonsterBrain.Spawn(i % 3 == 2 ? second : main, level, MonsterRank.Normal, Around(2.2f), null, zone));
+                // Beyond the farms some packs bring a healer, who stands back and keeps them up. Never near the start.
+                if (roster == null && !mountain && count >= 3 && HealersAllowed(center) && rng.NextDouble() < HealerChance)
+                {
+                    var healer = MonsterGenerator.HealerFor(zone.biome);
+                    pack.Add(MonsterBrain.Spawn(healer, level, MonsterRank.Normal, center + (center - Around(1f)).normalized * 3.5f, null, zone));
+                }
             }
 
             foreach (var m in pack)

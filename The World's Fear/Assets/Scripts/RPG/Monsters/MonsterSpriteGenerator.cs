@@ -130,6 +130,12 @@ namespace TWF
                     p.head = true; p.headCy = p.bodyCy + R(4.5f, 5.5f); p.headR = R(2.5f, 3.2f);
                     p.hover = true; p.arms = true; p.horns = rng.Next(1, 4); p.eyes = 1;
                     break;
+                case MonsterArchetype.Healer:
+                    // a hovering robe with a soft glowing heart
+                    p.bodyCy = R(6.5f, 7.5f); p.bodyRx = R(3.5f, 4.2f); p.bodyRy = R(4.5f, 5.5f);
+                    p.head = true; p.headCy = p.bodyCy + R(4.5f, 5.5f); p.headR = R(2.6f, 3.2f);
+                    p.hover = true; p.arms = true; p.core = true; p.horns = 0; p.eyes = rng.Next(1, 3);
+                    break;
                 case MonsterArchetype.Exploder:
                     p.bodyCy = R(6.5f, 7.5f); p.bodyRx = R(5f, 6.5f); p.bodyRy = R(5f, 6f);
                     p.legPairs = rng.Next(0, 2); p.legLength = 2;
